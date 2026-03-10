@@ -1,0 +1,179 @@
+{
+  "theme": "dark",
+  "design_philosophy": {
+    "name": "Tactical Command OS",
+    "archetype": "The Performance Pro (Defense Variant)",
+    "core_principles": [
+      "Information Density over Decoration",
+      "Optical Precision (1px borders, crisp edges)",
+      "Situational Awareness (High contrast alerts)",
+      "HUD Aesthetics (Monospace data, corner brackets)"
+    ],
+    "vibe": "Elite, Secure, Mission-Critical, Enterprise-Grade"
+  },
+  "typography": {
+    "primary_font": "Inter",
+    "heading_font": "Barlow Condensed",
+    "mono_font": "JetBrains Mono",
+    "scale": {
+      "h1": "text-4xl font-bold tracking-tight uppercase",
+      "h2": "text-2xl font-semibold tracking-tight uppercase",
+      "h3": "text-xl font-medium tracking-wide",
+      "body": "text-sm text-muted-foreground",
+      "data": "font-mono text-xs tracking-wider",
+      "label": "text-[10px] uppercase tracking-[0.15em] font-semibold text-muted-foreground/70"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#09090b",
+      "foreground": "#f4f4f5",
+      "card": "#18181b",
+      "card_foreground": "#fafafa",
+      "popover": "#18181b",
+      "popover_foreground": "#fafafa",
+      "primary": "#3b82f6",
+      "primary_foreground": "#ffffff",
+      "secondary": "#27272a",
+      "secondary_foreground": "#fafafa",
+      "muted": "#27272a",
+      "muted_foreground": "#a1a1aa",
+      "accent": "#27272a",
+      "accent_foreground": "#fafafa",
+      "destructive": "#ef4444",
+      "destructive_foreground": "#fafafa",
+      "border": "#27272a",
+      "input": "#27272a",
+      "ring": "#3b82f6"
+    },
+    "semantic": {
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "info": "#0ea5e9",
+      "tactical_grid": "rgba(59, 130, 246, 0.1)"
+    }
+  },
+  "visual_enhancers": {
+    "borders": {
+      "default": "border border-border",
+      "tactical": "border border-primary/20",
+      "corner_accent": "relative after:absolute after:bottom-0 after:right-0 after:h-2 after:w-2 after:border-b-2 after:border-r-2 after:border-primary after:content-['']"
+    },
+    "shadows": {
+      "card": "shadow-none",
+      "glow": "shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+    },
+    "gradients": {
+      "surface": "bg-gradient-to-b from-white/[0.05] to-transparent",
+      "active_item": "bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary"
+    },
+    "glassmorphism": {
+      "header": "bg-background/80 backdrop-blur-md border-b border-white/5",
+      "overlay": "bg-black/60 backdrop-blur-sm"
+    }
+  },
+  "layout_strategy": {
+    "container": "max-w-[1600px] mx-auto p-6",
+    "grid_system": "grid grid-cols-1 md:grid-cols-12 gap-6",
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-4 gap-4",
+    "spacing": {
+      "section_gap": "gap-8",
+      "widget_padding": "p-5"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "rounded-sm font-semibold uppercase tracking-wider text-xs h-9 px-4 shadow-[0_0_10px_rgba(59,130,246,0.2)] hover:shadow-[0_0_15px_rgba(59,130,246,0.4)] transition-all",
+      "outline": "rounded-sm border-white/10 hover:bg-white/5 hover:text-white uppercase tracking-wider text-xs",
+      "ghost": "hover:bg-white/5 uppercase tracking-wider text-xs"
+    },
+    "cards": {
+      "base": "rounded-sm border bg-card/50 backdrop-blur-sm",
+      "interactive": "hover:border-primary/50 transition-colors cursor-pointer group"
+    },
+    "inputs": {
+      "base": "bg-black/20 border-white/10 focus-visible:ring-primary/50 focus-visible:border-primary/50 rounded-sm"
+    },
+    "charts": {
+      "style": "tactical",
+      "grid_color": "#333",
+      "tooltip_bg": "#18181b",
+      "tooltip_border": "#333"
+    },
+    "tables": {
+      "header": "text-[10px] uppercase tracking-wider text-muted-foreground bg-white/5",
+      "row": "border-b border-white/5 hover:bg-white/[0.02] transition-colors",
+      "cell": "py-3 text-sm font-medium"
+    }
+  },
+  "image_urls": {
+    "products": [
+      {
+        "url": "https://images.unsplash.com/photo-1607867992871-34951585c280?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Advanced UAV Drone",
+        "category": "product_uav"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1770411034013-e6cb865ed21a?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Surveillance Drone",
+        "category": "product_uav"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1717749789408-f6f73c9e6aac?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Tactical Radio Equipment",
+        "category": "product_comms"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1769793153841-bc7c62bc9ac6?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Field Operator Headset",
+        "category": "product_comms"
+      }
+    ],
+    "people": [
+      {
+        "url": "https://images.unsplash.com/photo-1771343917024-0b5397850ccd?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Military Officer",
+        "category": "user_avatar"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1731363106135-83fb05b5accb?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Defense Contractor",
+        "category": "user_avatar"
+      }
+    ],
+    "placeholders": {
+      "map_bg": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop",
+      "radar": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop"
+    }
+  },
+  "universal_guidelines": [
+    "You tend to converge toward generic outputs. Avoid this.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts. Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition (e.g., transition: all).",
+    "You MUST NOT center align the app container.",
+    "Always use modern button styles (sharp, uppercase for this tactical theme).",
+    "Every interaction needs micro-animations - hover states, transitions.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Subtle grain textures/noise overlays separate good from extraordinary.",
+    "Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN.",
+    "Prioritize using pre-existing components from src/components/ui.",
+    "Components MUST use named exports.",
+    "Pages MUST use default exports.",
+    "Use 'sonner' for toasts.",
+    "All interactive elements MUST include data-testid attribute."
+  ],
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react', 'recharts', 'framer-motion', 'clsx', 'tailwind-merge' if not present.",
+    "2. THEME: Apply the dark theme classes to the root layout immediately.",
+    "3. FONTS: Add 'Barlow Condensed' and 'JetBrains Mono' via Google Fonts link in index.html.",
+    "4. LAYOUT: Create a 'Shell' component that includes the Sidebar and Topbar (Role Selector).",
+    "5. ROLE SELECTOR: This is the critical feature. Make it prominent in the Topbar (Admin / Supplier / Buyer).",
+    "6. DASHBOARDS: Create three distinct dashboard views based on the role selected.",
+    "7. DATA: Create a 'mockData.js' file with realistic defense industry data (Orion Defense, Falcon Aerospace, etc.).",
+    "8. CHARTS: Use Recharts with the custom colors defined in the palette. Ensure tooltips are styled (dark bg, border).",
+    "9. TABLES: Use Shadcn Table component. Add status badges (Approved=Green, Pending=Amber, Rejected=Red).",
+    "10. NAVIGATION: Sidebar links must change based on the selected role."
+  ]
+}
