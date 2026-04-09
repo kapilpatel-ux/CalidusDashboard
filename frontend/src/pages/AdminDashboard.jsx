@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +38,8 @@ import { RatingStars } from "@/components/shared/RatingStars";
 import {
   Building2, Users, Package, Clock, Star, FolderTree, Eye, Check, X, Ban, Trash2, Edit, Plus,
   ChevronRight, ChevronDown, TrendingUp, Mail, Phone, MapPin, Award, Calendar, AlertTriangle,
-  FileWarning, FileX, FileCheck
+  FileWarning, FileX, FileCheck, Globe, Truck, Shield, Tag, Layers, Ruler, Weight, Box,
+  FileText, Video, Image, ExternalLink, Download
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area,
@@ -61,6 +64,16 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
   }
   return null;
+};
+
+// Helper function to get supplier by ID
+const getSupplierById = (supplierId, suppliers) => {
+  return suppliers.find(s => s.id === supplierId) || null;
+};
+
+// Helper function to get supplier's product count
+const getSupplierProductCount = (supplierId, products) => {
+  return products.filter(p => p.supplierId === supplierId).length;
 };
 
 export const AdminDashboard = () => {
@@ -179,7 +192,22 @@ export const AdminDashboard = () => {
   };
 
   const openViewSheet = (type, item) => {
-    setViewSheet({ open: true, type, item });
+    // Enrich product with supplier data when viewing
+    if (type === "product" && item.supplierId) {
+      const supplier = getSupplierById(item.supplierId, suppliers);
+      const productCount = getSupplierProductCount(item.supplierId, products);
+      setViewSheet({ 
+        open: true, 
+        type, 
+        item: { 
+          ...item, 
+          supplier,
+          supplierProductCount: productCount
+        } 
+      });
+    } else {
+      setViewSheet({ open: true, type, item });
+    }
   };
 
   const openEditDialog = (type, item) => {
@@ -254,6 +282,14 @@ export const AdminDashboard = () => {
     return { enquiries: buyerEnquiries, ratings: buyerRatings };
   };
 
+  // Navigate to supplier detail from product view
+  const handleViewSupplier = (supplier) => {
+    setViewSheet({ open: false, type: "", item: null });
+    setTimeout(() => {
+      openViewSheet("supplier", supplier);
+    }, 100);
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
@@ -272,7 +308,9 @@ export const AdminDashboard = () => {
       case "products":
         return (
           <ProductManagement 
-            products={products} 
+            products={products}
+            suppliers={suppliers}
+            categories={categoriesData}
             onView={(item) => openViewSheet("product", item)}
             onApprove={(item) => openConfirmDialog("approve-product", item, `Approve product "${item.name}"?`)}
             onReject={(item) => openConfirmDialog("reject-product", item, `Reject product "${item.name}"?`)}
@@ -543,33 +581,389 @@ export const AdminDashboard = () => {
         </SheetContent>
       </Sheet>
 
-      {/* View Product Sheet */}
+      {/* ENHANCED View Product Sheet - Matches Supplier Input Data Structure */}
       <Sheet open={viewSheet.open && viewSheet.type === "product"} onOpenChange={(open) => setViewSheet({ ...viewSheet, open })}>
-        <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
+        <SheetContent className="w-[700px] sm:max-w-[700px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Product Details</SheetTitle>
           </SheetHeader>
           {viewSheet.item && (
-            <div className="mt-6 space-y-6">
-              <img src={viewSheet.item.image} alt={viewSheet.item.name} className="w-full h-48 object-cover rounded-sm bg-muted" />
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">{viewSheet.item.name}</h3>
-                  <p className="text-sm text-muted-foreground">{viewSheet.item.category} • {viewSheet.item.subcategory}</p>
-                </div>
-                <StatusBadge status={viewSheet.item.status} />
-              </div>
-              <Separator />
-              <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-xs uppercase text-muted-foreground">Lead Time</p><p className="text-sm font-medium">{viewSheet.item.leadTime}</p></div>
-                <div><p className="text-xs uppercase text-muted-foreground">Origin</p><p className="text-sm font-medium">{viewSheet.item.countryOfOrigin}</p></div>
-              </div>
-              <Separator />
-              <div><h4 className="text-xs uppercase text-muted-foreground mb-2">Description</h4><p className="text-sm">{viewSheet.item.description}</p></div>
-              <Separator />
-              <div><h4 className="text-xs uppercase text-muted-foreground mb-2">Specifications</h4>
-                {viewSheet.item.specifications?.map((spec, idx) => (<div key={idx} className="flex items-center gap-2 text-sm"><ChevronRight className="h-3 w-3 text-primary" />{spec}</div>))}
-              </div>
+            <div className="mt-6">
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 mb-6">
+                  <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                  <TabsTrigger value="specs" className="text-xs">Specs</TabsTrigger>
+                  <TabsTrigger value="media" className="text-xs">Media</TabsTrigger>
+                  <TabsTrigger value="supplier" className="text-xs">Supplier</TabsTrigger>
+                </TabsList>
+
+                {/* OVERVIEW TAB */}
+                <TabsContent value="overview" className="space-y-6 mt-0">
+                  {/* Product Image Gallery */}
+                  {viewSheet.item.images?.length > 0 ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {viewSheet.item.images.slice(0, 4).map((img, idx) => (
+                        <img 
+                          key={idx} 
+                          src={img.url || img} 
+                          alt={`${viewSheet.item.name} ${idx + 1}`} 
+                          className={`w-full h-20 object-cover rounded-sm bg-muted ${idx === (viewSheet.item.primaryImageIndex || 0) ? 'ring-2 ring-primary' : ''}`} 
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <img src={viewSheet.item.image} alt={viewSheet.item.name} className="w-full h-48 object-cover rounded-sm bg-muted" />
+                  )}
+
+                  {/* Product Header */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-semibold">{viewSheet.item.name}</h3>
+                      <p className="text-sm text-muted-foreground">{viewSheet.item.category} • {viewSheet.item.subcategory}</p>
+                    </div>
+                    <StatusBadge status={viewSheet.item.status} />
+                  </div>
+
+                  {/* Short Description */}
+                  {viewSheet.item.shortDescription && (
+                    <div className="p-3 bg-muted/20 rounded-sm">
+                      <p className="text-sm">{viewSheet.item.shortDescription}</p>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Origin & Delivery */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                      <Truck className="h-4 w-4" />Origin & Delivery
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-3 bg-muted/30 rounded-sm">
+                        <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Globe className="h-3 w-3" />Country</p>
+                        <p className="text-sm font-medium mt-1">{viewSheet.item.countryOfOrigin || "N/A"}</p>
+                      </div>
+                      <div className="p-3 bg-muted/30 rounded-sm">
+                        <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />Lead Time</p>
+                        <p className="text-sm font-medium mt-1">{viewSheet.item.leadTime || "N/A"}</p>
+                      </div>
+                      <div className="p-3 bg-muted/30 rounded-sm">
+                        <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" />Availability</p>
+                        <p className="text-sm font-medium mt-1 capitalize">{viewSheet.item.availability?.replace('-', ' ') || "N/A"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Detailed Description */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">Detailed Description</h4>
+                    <p className="text-sm">{viewSheet.item.description || "No description provided"}</p>
+                  </div>
+
+                  {/* Application / Use Case */}
+                  {viewSheet.item.applicationUseCase && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">Application / Use Case</h4>
+                        <p className="text-sm">{viewSheet.item.applicationUseCase}</p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Industry Tags */}
+                  {viewSheet.item.industryTags?.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                          <Tag className="h-4 w-4" />Industry Tags
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {viewSheet.item.industryTags.map((tag, idx) => (
+                            <Badge key={idx} variant="secondary">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Rating */}
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase text-muted-foreground">Product Rating</p>
+                      {viewSheet.item.rating > 0 ? (
+                        <RatingStars rating={viewSheet.item.rating} size="md" />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">No ratings yet</span>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* SPECS TAB */}
+                <TabsContent value="specs" className="space-y-6 mt-0">
+                  {/* Technical Specifications */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                      <Layers className="h-4 w-4" />Technical Specifications
+                    </h4>
+                    {viewSheet.item.specifications?.length > 0 ? (
+                      <div className="space-y-2">
+                        {viewSheet.item.specifications.map((spec, idx) => {
+                          // Handle both string format "Key: Value" and object format {key, value}
+                          const isString = typeof spec === 'string';
+                          const [key, ...valueParts] = isString ? spec.split(':') : [spec.key, spec.value];
+                          const value = isString ? valueParts.join(':').trim() : spec.value;
+                          return (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-muted/20 rounded-sm">
+                              <span className="text-sm text-muted-foreground">{key?.trim() || spec}</span>
+                              <span className="text-sm font-medium">{value || ''}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No specifications provided</p>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Dimensions & Physical Details */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                      <Ruler className="h-4 w-4" />Dimensions & Physical Details
+                    </h4>
+                    {viewSheet.item.dimensions ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {viewSheet.item.dimensions.length && (
+                          <div className="p-3 bg-muted/30 rounded-sm">
+                            <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Ruler className="h-3 w-3" />Length</p>
+                            <p className="text-sm font-medium mt-1">{viewSheet.item.dimensions.length}</p>
+                          </div>
+                        )}
+                        {viewSheet.item.dimensions.width && (
+                          <div className="p-3 bg-muted/30 rounded-sm">
+                            <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Ruler className="h-3 w-3" />Width</p>
+                            <p className="text-sm font-medium mt-1">{viewSheet.item.dimensions.width}</p>
+                          </div>
+                        )}
+                        {viewSheet.item.dimensions.height && (
+                          <div className="p-3 bg-muted/30 rounded-sm">
+                            <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Ruler className="h-3 w-3" />Height</p>
+                            <p className="text-sm font-medium mt-1">{viewSheet.item.dimensions.height}</p>
+                          </div>
+                        )}
+                        {viewSheet.item.dimensions.weight && (
+                          <div className="p-3 bg-muted/30 rounded-sm">
+                            <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Weight className="h-3 w-3" />Weight</p>
+                            <p className="text-sm font-medium mt-1">{viewSheet.item.dimensions.weight}</p>
+                          </div>
+                        )}
+                        {viewSheet.item.dimensions.volume && (
+                          <div className="p-3 bg-muted/30 rounded-sm">
+                            <p className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Box className="h-3 w-3" />Volume</p>
+                            <p className="text-sm font-medium mt-1">{viewSheet.item.dimensions.volume}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No dimension data provided</p>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Certifications */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                      <Shield className="h-4 w-4" />Certifications & Compliance
+                    </h4>
+                    {viewSheet.item.certifications?.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {viewSheet.item.certifications.map((cert, idx) => (
+                          <Badge key={idx} variant="outline" className="gap-1">
+                            <Award className="h-3 w-3" />{cert}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No certifications listed</p>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* MEDIA TAB */}
+                <TabsContent value="media" className="space-y-6 mt-0">
+                  {/* Product Images */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                      <Image className="h-4 w-4" />Product Images
+                    </h4>
+                    {viewSheet.item.images?.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-3">
+                        {viewSheet.item.images.map((img, idx) => (
+                          <div key={idx} className={`relative rounded-sm overflow-hidden ${idx === (viewSheet.item.primaryImageIndex || 0) ? 'ring-2 ring-primary' : ''}`}>
+                            <img src={img.url || img} alt={`Product ${idx + 1}`} className="w-full h-24 object-cover bg-muted" />
+                            {idx === (viewSheet.item.primaryImageIndex || 0) && (
+                              <span className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] px-1 rounded">Primary</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 border-2 border-dashed border-border rounded-sm text-center">
+                        <Image className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">No images uploaded</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Documents */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />Documents
+                    </h4>
+                    <div className="space-y-2">
+                      {/* Datasheet */}
+                      <div className="p-3 bg-muted/30 rounded-sm flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Product Datasheet</span>
+                        </div>
+                        {viewSheet.item.datasheet ? (
+                          <Button variant="ghost" size="sm" className="gap-1">
+                            <Download className="h-3 w-3" />Download
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Not uploaded</span>
+                        )}
+                      </div>
+
+                      {/* Technical Documents */}
+                      {viewSheet.item.technicalDocs?.length > 0 ? (
+                        viewSheet.item.technicalDocs.map((doc, idx) => (
+                          <div key={idx} className="p-3 bg-muted/30 rounded-sm flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Layers className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">{doc.name}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" className="gap-1">
+                              <Download className="h-3 w-3" />Download
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-3 bg-muted/30 rounded-sm flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Layers className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Technical Documents</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">None uploaded</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Video */}
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                      <Video className="h-4 w-4" />Product Video
+                    </h4>
+                    {viewSheet.item.videoUrl ? (
+                      <div className="p-3 bg-muted/30 rounded-sm">
+                        <a href={viewSheet.item.videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                          <ExternalLink className="h-4 w-4" />Watch Product Video
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No video available</p>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* SUPPLIER TAB */}
+                <TabsContent value="supplier" className="space-y-6 mt-0">
+                  {viewSheet.item.supplier ? (
+                    <>
+                      {/* Supplier Header */}
+                      <div className="p-4 bg-primary/5 border border-primary/20 rounded-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="h-14 w-14 rounded-sm bg-primary/20 flex items-center justify-center">
+                            <Building2 className="h-7 w-7 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold">{viewSheet.item.supplier.name}</h3>
+                            <p className="text-sm text-muted-foreground">{viewSheet.item.supplier.type}</p>
+                            <StatusBadge status={viewSheet.item.supplier.status} className="mt-1" />
+                          </div>
+                          <Button variant="outline" size="sm" className="gap-1" onClick={() => handleViewSupplier(viewSheet.item.supplier)} data-testid="view-supplier-profile-btn">
+                            <Eye className="h-3 w-3" />View Profile
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Supplier Stats */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="p-3 bg-muted/30 rounded-sm text-center">
+                          <p className="text-xs uppercase text-muted-foreground">Rating</p>
+                          <div className="mt-1">
+                            <RatingStars rating={viewSheet.item.supplier.rating} size="sm" />
+                          </div>
+                        </div>
+                        <div className="p-3 bg-muted/30 rounded-sm text-center">
+                          <p className="text-xs uppercase text-muted-foreground">Total Products</p>
+                          <p className="text-2xl font-bold font-['Barlow_Condensed'] mt-1">{viewSheet.item.supplierProductCount || viewSheet.item.supplier.productsCount}</p>
+                        </div>
+                        <div className="p-3 bg-muted/30 rounded-sm text-center">
+                          <p className="text-xs uppercase text-muted-foreground">Country</p>
+                          <p className="text-sm font-medium mt-1">{viewSheet.item.supplier.country}</p>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Contact Info */}
+                      <div>
+                        <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">Contact Information</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm"><Mail className="h-4 w-4 text-muted-foreground" />{viewSheet.item.supplier.email}</div>
+                          <div className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4 text-muted-foreground" />{viewSheet.item.supplier.phone}</div>
+                          <div className="flex items-center gap-2 text-sm"><MapPin className="h-4 w-4 text-muted-foreground" />{viewSheet.item.supplier.country}</div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Certifications */}
+                      <div>
+                        <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">Supplier Certifications</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {viewSheet.item.supplier.certifications?.map((cert, idx) => (
+                            <Badge key={idx} variant="outline" className="gap-1">
+                              <Award className="h-3 w-3" />{cert}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">Supplier information not available</p>
+                      <p className="text-sm text-muted-foreground mt-1">Supplier: {viewSheet.item.supplierName || 'Unknown'}</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </SheetContent>
@@ -898,11 +1292,24 @@ const SupplierManagement = ({ suppliers, onView, onApprove, onReject, onSuspend,
   );
 };
 
-// Product Management Section
-const ProductManagement = ({ products, onView, onApprove, onReject, onEdit, onDelete }) => {
+// ENHANCED Product Management Section with Supplier Column & Filters
+const ProductManagement = ({ products, suppliers, categories, onView, onApprove, onReject, onEdit, onDelete }) => {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   
-  const filteredProducts = statusFilter === "all" ? products : products.filter(p => p.status === statusFilter);
+  // Get unique supplier names from products
+  const uniqueSuppliers = [...new Set(products.map(p => p.supplierName))].filter(Boolean);
+  
+  // Get unique categories from products
+  const uniqueCategories = [...new Set(products.map(p => p.category))].filter(Boolean);
+  
+  const filteredProducts = products.filter(p => {
+    const matchesStatus = statusFilter === "all" || p.status === statusFilter;
+    const matchesSupplier = supplierFilter === "all" || p.supplierName === supplierFilter;
+    const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+    return matchesStatus && matchesSupplier && matchesCategory;
+  });
 
   const columns = [
     { 
@@ -917,9 +1324,17 @@ const ProductManagement = ({ products, onView, onApprove, onReject, onEdit, onDe
         </div>
       )
     },
-    { key: "supplierName", label: "Supplier" },
+    { 
+      key: "supplierName", label: "Supplier",
+      render: (value, row) => (
+        <div className="flex items-center gap-2">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm">{value || 'Unknown'}</span>
+        </div>
+      )
+    },
     { key: "category", label: "Category" },
-    { key: "rating", label: "Rating", render: (value) => <RatingStars rating={value} size="sm" /> },
+    { key: "rating", label: "Rating", render: (value) => value > 0 ? <RatingStars rating={value} size="sm" /> : <span className="text-xs text-muted-foreground">No ratings</span> },
     { key: "status", label: "Status", render: (value) => <StatusBadge status={value} /> },
     {
       key: "actions", label: "Actions",
@@ -941,24 +1356,53 @@ const ProductManagement = ({ products, onView, onApprove, onReject, onEdit, onDe
 
   return (
     <div className="space-y-6" data-testid="product-management">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold font-['Barlow_Condensed'] uppercase tracking-wide mb-1">Product Management</h1>
           <p className="text-sm text-muted-foreground">Manage product listings and approvals</p>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] bg-black/20" data-testid="product-status-filter">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          {/* Supplier Filter */}
+          <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+            <SelectTrigger className="w-[180px] bg-black/20" data-testid="product-supplier-filter">
+              <SelectValue placeholder="Supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Suppliers</SelectItem>
+              {uniqueSuppliers.map(supplier => (
+                <SelectItem key={supplier} value={supplier}>{supplier}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {/* Category Filter */}
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[180px] bg-black/20" data-testid="product-category-filter">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {uniqueCategories.map(category => (
+                <SelectItem key={category} value={category}>{category}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px] bg-black/20" data-testid="product-status-filter">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <DataTable columns={columns} data={filteredProducts} searchPlaceholder="Search products..." searchKey="name" pageSize={5} testId="products-table" />
+      <DataTable columns={columns} data={filteredProducts} searchPlaceholder="Search products or suppliers..." searchKey="name" pageSize={5} testId="products-table" />
     </div>
   );
 };
