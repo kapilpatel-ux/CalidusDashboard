@@ -1084,41 +1084,14 @@ const AdminOverview = ({ stats, analyticsData, documentStats, onNavigate }) => {
         <StatCard title="Categories" value={stats.totalCategories} icon={FolderTree} testId="stat-total-categories" />
       </div>
 
-      {/* Document Expiry Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Document Expiry Card - Only Expired */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <button onClick={() => onNavigate('suppliers')} className="stat-card bg-red-500/5 border-red-500/20 text-left hover:border-red-500/40 transition-colors" data-testid="stat-expired-docs">
           <div className="flex items-center gap-3">
             <FileX className="h-5 w-5 text-red-400" />
             <div>
               <p className="data-label">Expired Documents</p>
               <p className="text-2xl font-bold font-['Barlow_Condensed']">{documentStats.expired}</p>
-            </div>
-          </div>
-        </button>
-        <button onClick={() => onNavigate('suppliers')} className="stat-card bg-amber-500/5 border-amber-500/20 text-left hover:border-amber-500/40 transition-colors" data-testid="stat-expiring-7">
-          <div className="flex items-center gap-3">
-            <FileWarning className="h-5 w-5 text-amber-400" />
-            <div>
-              <p className="data-label">Expiring in 7 Days</p>
-              <p className="text-2xl font-bold font-['Barlow_Condensed']">{documentStats.expiring7}</p>
-            </div>
-          </div>
-        </button>
-        <button onClick={() => onNavigate('suppliers')} className="stat-card bg-amber-500/5 border-amber-500/20 text-left hover:border-amber-500/40 transition-colors" data-testid="stat-expiring-15">
-          <div className="flex items-center gap-3">
-            <FileWarning className="h-5 w-5 text-yellow-400" />
-            <div>
-              <p className="data-label">Expiring in 15 Days</p>
-              <p className="text-2xl font-bold font-['Barlow_Condensed']">{documentStats.expiring15}</p>
-            </div>
-          </div>
-        </button>
-        <button onClick={() => onNavigate('suppliers')} className="stat-card bg-blue-500/5 border-blue-500/20 text-left hover:border-blue-500/40 transition-colors" data-testid="stat-expiring-30">
-          <div className="flex items-center gap-3">
-            <Clock className="h-5 w-5 text-blue-400" />
-            <div>
-              <p className="data-label">Expiring in 30 Days</p>
-              <p className="text-2xl font-bold font-['Barlow_Condensed']">{documentStats.expiring30}</p>
             </div>
           </div>
         </button>
