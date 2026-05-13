@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import logo from "@/assets/images/calidusheader.png";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -166,10 +168,11 @@ export const DashboardShell = ({ children }) => {
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg tracking-tight font-['Barlow_Condensed'] uppercase">
-                DefenseLink
-              </span>
+              {/* <Shield className="h-6 w-6 text-primary" /> */}
+              <img src={logo} alt="logo" className="h-8 w-28 text-primary" />
+              {/* <span className="font-bold text-lg tracking-tight font-['Barlow_Condensed'] uppercase">
+                Calidus Dashboard
+              </span> */}
             </div>
           )}
           <Button
@@ -243,10 +246,11 @@ export const DashboardShell = ({ children }) => {
           <aside className="absolute left-0 top-0 bottom-0 w-64 bg-card border-r border-border">
             <div className="h-16 flex items-center justify-between px-4 border-b border-border">
               <div className="flex items-center gap-2">
-                <Shield className="h-6 w-6 text-primary" />
+                <img src={logo} alt="logo" className="h-8 w-24 text-primary" />
+                {/* <Shield className="h-6 w-6 text-primary" />
                 <span className="font-bold text-lg tracking-tight font-['Barlow_Condensed'] uppercase">
                   DefenseLink
-                </span>
+                </span> */}
               </div>
               <Button
                 variant="ghost"
