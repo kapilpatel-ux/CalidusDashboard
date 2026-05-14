@@ -2,7 +2,7 @@ import { useState, createContext, useContext } from "react";
 import "@/App.css";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardShell } from "@/components/layout/DashboardShell";
-import { AdminDashboard } from "@/pages/AdminDashboard";
+import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { SupplierDashboard } from "@/pages/SupplierDashboard";
 import { BuyerDashboard } from "@/pages/BuyerDashboard";
 
