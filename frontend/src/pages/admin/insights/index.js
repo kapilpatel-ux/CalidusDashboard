@@ -1,0 +1,1 @@
+export { PlatformInsights } from "./PlatformInsightsPage";

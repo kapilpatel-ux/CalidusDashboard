@@ -1,0 +1,1 @@
+export { BuyerEnquiries } from "./EnquiriesPage";

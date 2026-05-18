@@ -16,6 +16,7 @@ export const AddCategoryDialog = ({
   newCategory,
   setNewCategory,
   onAddCategory,
+  isAdding = false,
 }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -62,11 +63,15 @@ export const AddCategoryDialog = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isAdding}>
             Cancel
           </Button>
-          <Button onClick={onAddCategory} data-testid="add-category-submit-btn">
-            Add Category
+          <Button
+            onClick={onAddCategory}
+            disabled={isAdding || !newCategory.name.trim()}
+            data-testid="add-category-submit-btn"
+          >
+            {isAdding ? "Adding..." : "Add Category"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,0 +1,1 @@
+export { EnquiryManagement } from "./EnquiryManagementPage";

@@ -1,0 +1,1 @@
+export { BuyerManagement } from "./BuyerManagementPage";

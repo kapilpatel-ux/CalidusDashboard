@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useRole, useNavigation } from "@/App";
 import { toast } from "sonner";
 import { 
@@ -58,27 +59,75 @@ import { notifications, messages, supplierNotifications } from "@/data/mockData"
 // Navigation items for each role
 const navigationConfig = {
   admin: [
-    { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "suppliers", label: "Supplier Management", icon: Building2 },
-    { id: "products", label: "Product Management", icon: Package },
-    { id: "ratings", label: "Ratings Moderation", icon: Star },
-    { id: "categories", label: "Category Management", icon: FolderTree },
-    { id: "buyers", label: "Buyer Management", icon: Users },
-    { id: "analytics", label: "Platform Insights", icon: BarChart3 },
+    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/admin/overview" },
+    { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
+    { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
+    { id: "ratingsmoderation", label: "Ratings Moderation", icon: Star, path: "/admin/ratingsmoderation" },
+    { id: "categorymanagement", label: "Category Management", icon: FolderTree, path: "/admin/categorymanagement" },
+    { id: "buyermanagement", label: "Buyer Management", icon: Users, path: "/admin/buyermanagement" },
+    { id: "enquirymanagement", label: "Enquiry Management", icon: Inbox, path: "/admin/enquirymanagement" },
+    { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
+    { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
+    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
   ],
   supplier: [
-    { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "profile", label: "Company Profile", icon: Building2 },
-    { id: "products", label: "Product Management", icon: Package },
-    { id: "enquiries", label: "Enquiries", icon: Inbox },
-    { id: "ratings", label: "Ratings & Reviews", icon: Star },
+    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/supplier/overview" },
+    { id: "profile", label: "Company Profile", icon: Building2, path: "/supplier/companyprofile" },
+    { id: "products", label: "Product Management", icon: Package, path: "/supplier/productmanagement" },
+    { id: "enquiries", label: "Enquiries", icon: Inbox, path: "/supplier/enquiries" },
+    { id: "ratings", label: "Ratings & Reviews", icon: Star, path: "/supplier/ratings" },
   ],
   buyer: [
-    { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "enquiries", label: "My Enquiries", icon: Inbox },
-    { id: "ratings", label: "Ratings", icon: Star },
-    { id: "profile", label: "Profile Management", icon: UserCircle },
+    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/buyer/overview" },
+    { id: "enquiries", label: "My Enquiries", icon: Inbox, path: "/buyer/enquiries" },
+    { id: "ratings", label: "Ratings", icon: Star, path: "/buyer/ratings" },
+    { id: "profile", label: "Profile Management", icon: UserCircle, path: "/buyer/profile" },
   ],
+};
+
+const adminLegacyLinkMap = {
+  overview: "overview",
+  suppliers: "suppliermanagement",
+  suppliermanagement: "suppliermanagement",
+  products: "productmanagement",
+  productmanagement: "productmanagement",
+  ratings: "ratingsmoderation",
+  ratingsmoderation: "ratingsmoderation",
+  categories: "categorymanagement",
+  categorymanagement: "categorymanagement",
+  buyers: "buyermanagement",
+  buyermanagement: "buyermanagement",
+  enquiries: "enquirymanagement",
+  enquirymanagement: "enquirymanagement",
+  notifications: "notificationmanagement",
+  notificationmanagement: "notificationmanagement",
+  users: "usermanagement",
+  usermanagement: "usermanagement",
+  analytics: "platforminsights",
+  platforminsights: "platforminsights",
+};
+
+const adminPathBySection = navigationConfig.admin.reduce((acc, item) => {
+  acc[item.id] = item.path;
+  return acc;
+}, {});
+
+const buyerPathBySection = navigationConfig.buyer.reduce((acc, item) => {
+  acc[item.id] = item.path;
+  return acc;
+}, {});
+
+const supplierPathBySection = navigationConfig.supplier.reduce((acc, item) => {
+  acc[item.id] = item.path;
+  return acc;
+}, {});
+
+const supplierRouteSectionMap = {
+  overview: "overview",
+  companyprofile: "profile",
+  productmanagement: "products",
+  enquiries: "enquiries",
+  ratings: "ratings",
 };
 
 const roleLabels = {
@@ -117,6 +166,8 @@ const getNotificationColor = (type, urgent) => {
 export const DashboardShell = ({ children }) => {
   const { currentRole, setCurrentRole } = useRole();
   const { activeSection, setActiveSection } = useNavigation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsList, setNotificationsList] = useState(
@@ -126,6 +177,17 @@ export const DashboardShell = ({ children }) => {
 
   const navItems = navigationConfig[currentRole] || [];
   const RoleIcon = roleIcons[currentRole];
+  const adminPathSection = location.pathname.split("/")[2] || "overview";
+  const buyerPathSection = location.pathname.split("/")[2] || "overview";
+  const supplierPathSection = location.pathname.split("/")[2] || "overview";
+  const currentActiveSection =
+    currentRole === "admin"
+      ? (adminLegacyLinkMap[adminPathSection] || "overview")
+      : currentRole === "buyer"
+        ? buyerPathSection
+        : currentRole === "supplier"
+          ? (supplierRouteSectionMap[supplierPathSection] || activeSection)
+          : activeSection;
 
   const unreadNotifications = notificationsList.filter(n => !n.read).length;
   const unreadMessages = messagesList.reduce((acc, m) => acc + m.unread, 0);
@@ -135,13 +197,32 @@ export const DashboardShell = ({ children }) => {
       n.id === notification.id ? { ...n, read: true } : n
     ));
     if (notification.link) {
-      setActiveSection(notification.link);
+      const adminSection = adminLegacyLinkMap[notification.link];
+      if (currentRole === "admin" && adminSection) {
+        setActiveSection(adminSection);
+        navigate(adminPathBySection[adminSection]);
+      } else if (currentRole === "buyer" && buyerPathBySection[notification.link]) {
+        setActiveSection(notification.link);
+        navigate(buyerPathBySection[notification.link]);
+      } else if (currentRole === "supplier" && supplierPathBySection[notification.link]) {
+        setActiveSection(notification.link);
+        navigate(supplierPathBySection[notification.link]);
+      } else {
+        setActiveSection(notification.link);
+      }
     }
     toast.info(notification.title);
   };
 
   const handleMessageClick = (message) => {
     setActiveSection('enquiries');
+    if (currentRole === "admin") {
+      navigate("/admin/overview");
+    } else if (currentRole === "buyer") {
+      navigate("/buyer/enquiries");
+    } else if (currentRole === "supplier") {
+      navigate("/supplier/enquiries");
+    }
     toast.info(`Opening conversation: ${message.productName}`);
   };
 
@@ -154,6 +235,14 @@ export const DashboardShell = ({ children }) => {
   const handleRoleChange = (role) => {
     setCurrentRole(role);
     setNotificationsList(role === 'supplier' ? supplierNotifications : notifications);
+    navigate(role === "admin" ? "/admin/overview" : role === "buyer" ? "/buyer/overview" : "/supplier/overview");
+  };
+
+  const handleNavigationClick = (item) => {
+    setActiveSection(item.id);
+    if ((currentRole === "admin" || currentRole === "buyer" || currentRole === "supplier") && item.path) {
+      navigate(item.path);
+    }
   };
 
   return (
@@ -191,11 +280,11 @@ export const DashboardShell = ({ children }) => {
           <nav className="space-y-1 px-2">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeSection === item.id;
+              const isActive = currentActiveSection === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => handleNavigationClick(item)}
                   data-testid={`nav-${item.id}`}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-medium transition-all ${
                     isActive
@@ -266,12 +355,12 @@ export const DashboardShell = ({ children }) => {
               <nav className="space-y-1 px-2">
                 {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = activeSection === item.id;
+                  const isActive = currentActiveSection === item.id;
                   return (
                     <button
                       key={item.id}
                       onClick={() => {
-                        setActiveSection(item.id);
+                        handleNavigationClick(item);
                         setMobileMenuOpen(false);
                       }}
                       data-testid={`mobile-nav-${item.id}`}
@@ -524,7 +613,14 @@ export const DashboardShell = ({ children }) => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   data-testid="user-menu-profile"
-                  onClick={() => setActiveSection('profile')}
+                  onClick={() => {
+                    setActiveSection("profile");
+                    if (currentRole === "buyer") {
+                      navigate("/buyer/profile");
+                    } else if (currentRole === "supplier") {
+                      navigate("/supplier/companyprofile");
+                    }
+                  }}
                 >
                   <User className="mr-2 h-4 w-4" />
                   Profile
