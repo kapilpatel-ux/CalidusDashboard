@@ -32,7 +32,8 @@ export const AuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, completeAuth } = useAuth();
-  const [mode, setMode] = useState(location.pathname.includes("signup") ? "signup" : "login");
+  // const [mode, setMode] = useState(location.pathname.includes("signup") ? "signup" : "login");
+  const [mode] = useState("login");
   const [form, setForm] = useState(initialForm);
   const [login, { isLoading: isLoggingIn }] = useLoginMutation();
   const [signup, { isLoading: isSigningUp }] = useSignupMutation();
@@ -75,16 +76,16 @@ export const AuthPage = () => {
         <div className="hidden lg:flex flex-col justify-between border-r border-border p-8">
           <div>
             <img src={logo} alt="Calidus" className="h-10 w-36 object-contain mb-10" />
-            <p className="data-label mb-3">Secure Access Console</p>
+            {/* <p className="data-label mb-3">Secure Access Console</p> */}
             <h1 className="font-['Barlow_Condensed'] text-5xl font-bold uppercase tracking-wide leading-none">
-              Calidus Dashboard
+              Login To Calidus Dashboard
             </h1>
-            <p className="mt-4 text-sm text-muted-foreground leading-6">
+            {/* <p className="mt-4 text-sm text-muted-foreground leading-6">
               Sign in to manage supplier approvals, buyer enquiries, product listings, and platform operations from one role-aware workspace.
-            </p>
+            </p> */}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          {/* <div className="grid grid-cols-3 gap-3">
             {["admin", "supplier", "buyer"].map((role) => {
               const Icon = roleIcons[role];
               return (
@@ -94,7 +95,7 @@ export const AuthPage = () => {
                 </div>
               );
             })}
-          </div>
+          </div> */}
         </div>
 
         <div className="p-6 sm:p-8">
@@ -102,11 +103,12 @@ export const AuthPage = () => {
             <img src={logo} alt="Calidus" className="h-9 w-32 object-contain" />
           </div>
 
-          <Tabs value={mode} onValueChange={setMode}>
-            <TabsList className="grid w-full grid-cols-2 bg-black/20">
+          {/* <Tabs value={mode} onValueChange={setMode}> */}
+          <Tabs value={mode}>
+            {/* <TabsList className="grid w-full grid-cols-2 bg-black/20">
               <TabsTrigger value="login" data-testid="auth-login-tab">Login</TabsTrigger>
               <TabsTrigger value="signup" data-testid="auth-signup-tab">Signup</TabsTrigger>
-            </TabsList>
+            </TabsList> */}
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
               <div>
@@ -116,7 +118,7 @@ export const AuthPage = () => {
                 </h2>
               </div>
 
-              <TabsContent value="signup" className="mt-0 space-y-4">
+              {/* <TabsContent value="signup" className="mt-0 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field icon={User} label="Full Name">
                     <Input value={form.name} onChange={(event) => updateForm("name", event.target.value)} className="bg-black/20" required data-testid="signup-name" />
@@ -163,7 +165,7 @@ export const AuthPage = () => {
                     </Select>
                   </Field>
                 )}
-              </TabsContent>
+              </TabsContent> */}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field icon={Mail} label="Email">
@@ -179,9 +181,9 @@ export const AuthPage = () => {
                 {isSignup ? (isSigningUp ? "Creating..." : "Create Account") : (isLoggingIn ? "Signing in..." : "Login")}
               </Button>
 
-              <p className="text-xs text-muted-foreground">
+              {/* <p className="text-xs text-muted-foreground">
                 {isSignup ? "After signup, your selected role controls dashboard access." : `Successful login redirects to ${targetPath}.`}
-              </p>
+              </p> */}
             </form>
           </Tabs>
         </div>
