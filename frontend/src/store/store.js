@@ -9,6 +9,7 @@ import { dashboardApi } from "./api/admin/dashboardApi";
 import { enquiryApi } from "./api/admin/enquiryApi";
 import { notificationApi } from "./api/admin/notificationApi";
 import { userApi } from "./api/admin/userApi";
+import { authApi } from "./api/auth/authApi";
 import { supplierOverviewApi } from "./api/supplier/supplierOverviewApi";
 import { supplierProductApi } from "./api/supplier/supplierProductApi";
 import { supplierProfileApi } from "./api/supplier/supplierProfileApi";
@@ -28,6 +29,7 @@ export const store = configureStore({
     [enquiryApi.reducerPath]: enquiryApi.reducer,
     [notificationApi.reducerPath]: notificationApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
+    [authApi.reducerPath]: authApi.reducer,
     [supplierOverviewApi.reducerPath]: supplierOverviewApi.reducer,
     [supplierProductApi.reducerPath]: supplierProductApi.reducer,
     [supplierProfileApi.reducerPath]: supplierProfileApi.reducer,
@@ -36,5 +38,5 @@ export const store = configureStore({
     [buyerRatingApi.reducerPath]: buyerRatingApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(supplierApi.middleware, productApi.middleware, ratingApi.middleware, categoryApi.middleware, buyerApi.middleware, analyticsApi.middleware, dashboardApi.middleware, enquiryApi.middleware, notificationApi.middleware, userApi.middleware, supplierOverviewApi.middleware, supplierProductApi.middleware, supplierProfileApi.middleware, buyerEnquiryApi.middleware, buyerProfileApi.middleware, buyerRatingApi.middleware),
+    getDefaultMiddleware().concat(supplierApi.middleware, productApi.middleware, ratingApi.middleware, categoryApi.middleware, buyerApi.middleware, analyticsApi.middleware, dashboardApi.middleware, enquiryApi.middleware, notificationApi.middleware, userApi.middleware, authApi.middleware, supplierOverviewApi.middleware, supplierProductApi.middleware, supplierProfileApi.middleware, buyerEnquiryApi.middleware, buyerProfileApi.middleware, buyerRatingApi.middleware),
 });

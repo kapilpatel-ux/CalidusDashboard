@@ -28,6 +28,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { RatingStars } from "@/components/shared/RatingStars";
 import { Calendar, Edit, Eye, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/App";
 import { currentBuyer } from "@/data/mockData";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import {
@@ -37,12 +38,13 @@ import {
 } from "@/store/api/buyer/buyerRatingApi";
 
 export const BuyerRatings = () => {
+  const { currentUser } = useAuth();
   const [submitRatingDialog, setSubmitRatingDialog] = useState(false);
   const [editRatingDialog, setEditRatingDialog] = useState({ open: false, item: null });
   const [viewSheet, setViewSheet] = useState({ open: false, item: null });
   const [newRating, setNewRating] = useState({ productId: "", rating: 5, review: "" });
   const [editRatingForm, setEditRatingForm] = useState({ rating: 5, review: "" });
-  const buyerId = currentBuyer.id;
+  const buyerId = currentUser?.profileId || currentBuyer.id;
   const { data: ratings = [], isLoading: isRatingsLoading, isError: isRatingsError } = useGetBuyerRatingsQuery(buyerId);
   const { data: products = [], isLoading: isProductsLoading } = useGetProductsQuery();
   const [createBuyerRating, { isLoading: isCreating }] = useCreateBuyerRatingMutation();

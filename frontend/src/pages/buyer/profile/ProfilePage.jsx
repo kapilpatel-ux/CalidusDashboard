@@ -12,6 +12,7 @@ import {
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Building2, Edit, Mail, MapPin, User } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/App";
 import { currentBuyer } from "@/data/mockData";
 import {
   useGetBuyerProfileQuery,
@@ -19,7 +20,8 @@ import {
 } from "@/store/api/buyer/buyerProfileApi";
 
 export const BuyerProfile = () => {
-  const buyerId = currentBuyer.id;
+  const { currentUser } = useAuth();
+  const buyerId = currentUser?.profileId || currentBuyer.id;
   const { data: buyer = {}, isLoading, error } = useGetBuyerProfileQuery(buyerId);
   const [updateBuyerProfile, { isLoading: isSaving }] = useUpdateBuyerProfileMutation();
   const [editProfileDialog, setEditProfileDialog] = useState(false);

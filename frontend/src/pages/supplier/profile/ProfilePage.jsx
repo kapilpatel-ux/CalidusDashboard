@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import { useGetSupplierProfileQuery, useUpdateSupplierProfileMutation } from "@/store/api/supplier/supplierProfileApi";
 
 export const SupplierProfile = () => {
-  const { data: supplier = {}, isLoading, error } = useGetSupplierProfileQuery(currentSupplier.id);
+  const { currentUser } = useAuth();
+  const supplierId = currentUser?.profileId || currentSupplier.id;
+  const { data: supplier = {}, isLoading, error } = useGetSupplierProfileQuery(supplierId);
   const [updateSupplierProfile, { isLoading: isSaving }] = useUpdateSupplierProfileMutation();
   const [editProfileDialog, setEditProfileDialog] = useState(false);
   const [uploadDocDialog, setUploadDocDialog] = useState({ open: false, document: null });

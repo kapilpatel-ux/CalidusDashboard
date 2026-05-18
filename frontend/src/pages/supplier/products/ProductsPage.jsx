@@ -19,6 +19,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { RatingStars } from "@/components/shared/RatingStars";
+import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import {
   useDeleteSupplierProductMutation,
@@ -38,7 +39,8 @@ const emptyEditForm = {
 };
 
 export const SupplierProducts = () => {
-  const supplierId = currentSupplier.id;
+  const { currentUser } = useAuth();
+  const supplierId = currentUser?.profileId || currentSupplier.id;
   const { data: products = [], isLoading, isError } = useGetSupplierProductsQuery(supplierId);
   const [updateSupplierProduct, { isLoading: isSaving }] = useUpdateSupplierProductMutation();
   const [deleteSupplierProduct, { isLoading: isDeleting }] = useDeleteSupplierProductMutation();

@@ -29,6 +29,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { Building2, Calendar, Eye, Plus, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/App";
 import { currentBuyer } from "@/data/mockData";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import {
@@ -37,11 +38,12 @@ import {
 } from "@/store/api/buyer/buyerEnquiryApi";
 
 export const BuyerEnquiries = () => {
+  const { currentUser } = useAuth();
   const [statusFilter, setStatusFilter] = useState("all");
   const [newEnquiryDialog, setNewEnquiryDialog] = useState(false);
   const [viewSheet, setViewSheet] = useState({ open: false, item: null });
   const [newEnquiry, setNewEnquiry] = useState({ productId: "", message: "" });
-  const buyerId = currentBuyer.id;
+  const buyerId = currentUser?.profileId || currentBuyer.id;
   const { data: enquiries = [], isLoading: isEnquiriesLoading, isError: isEnquiriesError } = useGetBuyerEnquiriesQuery(buyerId);
   const { data: products = [], isLoading: isProductsLoading } = useGetProductsQuery();
   const [createBuyerEnquiry, { isLoading: isCreating }] = useCreateBuyerEnquiryMutation();

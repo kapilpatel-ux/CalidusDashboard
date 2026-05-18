@@ -14,6 +14,7 @@ export const env = {
   mongoUrl: required("MONGO_URL"),
   dbName: process.env.DB_NAME || "calidus_dashboard",
   port: Number(process.env.PORT || 8000),
+  jwtSecret: process.env.JWT_SECRET || "calidus-dashboard-dev-secret",
   corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:3000")
     .split(",")
     .map((origin) => origin.trim())

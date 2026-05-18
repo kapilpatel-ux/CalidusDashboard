@@ -15,12 +15,15 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
+import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import { useGetSupplierOverviewQuery } from "@/store/api/supplier/supplierOverviewApi";
 
 export const SupplierOverview = () => {
   const navigate = useNavigate();
-  const { data, isLoading, error } = useGetSupplierOverviewQuery(currentSupplier.id);
+  const { currentUser } = useAuth();
+  const supplierId = currentUser?.profileId || currentSupplier.id;
+  const { data, isLoading, error } = useGetSupplierOverviewQuery(supplierId);
 
   if (isLoading) return <p>Loading supplier overview...</p>;
   if (error) return <p>Failed to load supplier overview.</p>;

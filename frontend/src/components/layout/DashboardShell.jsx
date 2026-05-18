@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useRole, useNavigation } from "@/App";
+import { useAuth, useRole, useNavigation } from "@/App";
 import { toast } from "sonner";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -165,6 +158,7 @@ const getNotificationColor = (type, urgent) => {
 
 export const DashboardShell = ({ children }) => {
   const { currentRole, setCurrentRole } = useRole();
+  const { currentUser, logout } = useAuth();
   const { activeSection, setActiveSection } = useNavigation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -174,6 +168,8 @@ export const DashboardShell = ({ children }) => {
     currentRole === 'supplier' ? supplierNotifications : notifications
   );
   const [messagesList] = useState(messages);
+  const displayName = currentUser?.name || roleLabels[currentRole];
+  const displayCompany = currentUser?.company || roleLabels[currentRole];
 
   const navItems = navigationConfig[currentRole] || [];
   const RoleIcon = roleIcons[currentRole];
@@ -229,13 +225,6 @@ export const DashboardShell = ({ children }) => {
   const markAllNotificationsRead = () => {
     setNotificationsList(prev => prev.map(n => ({ ...n, read: true })));
     toast.success("All notifications marked as read");
-  };
-
-  // Update notifications when role changes
-  const handleRoleChange = (role) => {
-    setCurrentRole(role);
-    setNotificationsList(role === 'supplier' ? supplierNotifications : notifications);
-    navigate(role === "admin" ? "/admin/overview" : role === "buyer" ? "/buyer/overview" : "/supplier/overview");
   };
 
   const handleNavigationClick = (item) => {
@@ -317,7 +306,7 @@ export const DashboardShell = ({ children }) => {
                   {currentRole}
                 </p>
                 <p className="text-sm font-medium truncate">
-                  {roleLabels[currentRole]}
+                  {displayCompany}
                 </p>
               </div>
             </div>
@@ -396,40 +385,16 @@ export const DashboardShell = ({ children }) => {
             <Menu className="h-5 w-5" />
           </Button>
 
-          {/* Role Selector */}
+          {/* Role Identity */}
           <div className="flex items-center gap-4">
             <div className="hidden sm:block">
               <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-muted-foreground/70 mb-1">
-                Select Role
+                Signed in as
               </p>
-              <Select value={currentRole} onValueChange={handleRoleChange}>
-                <SelectTrigger 
-                  className="w-[180px] h-9 bg-black/20 border-border rounded-sm text-sm"
-                  data-testid="role-selector"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin" data-testid="role-option-admin">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      <span>Admin</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="supplier" data-testid="role-option-supplier">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <span>Supplier</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="buyer" data-testid="role-option-buyer">
-                    <div className="flex items-center gap-2">
-                      <UserCircle className="h-4 w-4" />
-                      <span>Buyer</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="h-9 min-w-[180px] rounded-sm border border-border bg-black/20 px-3 flex items-center gap-2 text-sm" data-testid="role-identity">
+                <RoleIcon className="h-4 w-4 text-primary" />
+                <span className="capitalize">{currentRole}</span>
+              </div>
             </div>
           </div>
 
@@ -604,7 +569,7 @@ export const DashboardShell = ({ children }) => {
                     <User className="h-4 w-4 text-primary" />
                   </div>
                   <span className="hidden lg:inline text-sm font-medium">
-                    {roleLabels[currentRole].split(" ")[0]}
+                    {displayName.split(" ")[0]}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
@@ -636,7 +601,11 @@ export const DashboardShell = ({ children }) => {
                 <DropdownMenuItem 
                   className="text-destructive" 
                   data-testid="user-menu-logout"
-                  onClick={() => toast.info("Logout functionality would trigger here")}
+                  onClick={() => {
+                    logout();
+                    navigate("/login", { replace: true });
+                    toast.success("Logged out successfully");
+                  }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout

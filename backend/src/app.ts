@@ -15,6 +15,7 @@ import { ratingRoutes } from "./modules/admin/ratings/rating.routes.js";
 import { statusRoutes } from "./modules/admin/status/status.routes.js";
 import { supplierRoutes } from "./modules/admin/suppliers/supplier.routes.js";
 import { userRoutes } from "./modules/admin/users/user.routes.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
 import { buyerEnquiryRoutes } from "./modules/buyer/enquiries/buyerEnquiry.routes.js";
 import { buyerProfileRoutes } from "./modules/buyer/profile/buyerProfile.routes.js";
 import { buyerRatingRoutes } from "./modules/buyer/ratings/buyerRating.routes.js";
@@ -32,6 +33,7 @@ app.get("/api", (_req, res) => {
   res.json({ message: "Hello World" });
 });
 
+app.use("/api/auth", authRoutes);
 app.use("/api/status", statusRoutes);
 app.use("/api/suppliers", supplierOverviewRoutes);
 app.use("/api/suppliers", supplierProductRoutes);
