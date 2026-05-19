@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import logo from "@/assets/images/calidusheader.png";
 import { useGetSuppliersQuery } from "@/store/api/admin/supplierApi";
 import { useCreateContactSupplierMutation } from "@/store/api/contactSupplierApi";
 import {
@@ -84,15 +85,21 @@ export default function ContactSupplierPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background tactical-grid noise-overlay flex items-center justify-center p-4">
-      <div className="relative w-full max-w-[734px] rounded-[5px] border-2 border-[#26262B] bg-[#101214] p-[50px]">
+    <div className="min-h-screen bg-background tactical-grid noise-overlay p-4">
+      <header className="fixed left-0 top-0 z-40 flex w-full items-center border-b border-[#26262B] bg-[#111417]/95 px-4 py-3 shadow-sm shadow-black/20 backdrop-blur sm:px-8">
+        <img src={logo} alt="Calidus" className="h-10 w-36 object-contain" />
+      </header>
+
+      <div className="relative mx-auto mt-24 w-full max-w-[734px] rounded-[5px] border-2 border-[#26262B] bg-[#101214] p-[50px]">
         <button type="button" onClick={() => navigate(-1)} className="absolute right-[50px] top-[50px] text-white">
           <X size={24} />
         </button>
 
-        <h1 className="font-['Barlow_Condensed'] text-[30px] font-semibold uppercase leading-none text-white">
-          Contact supplier
-        </h1>
+        <div className="pr-12">
+          <h1 className="font-['Barlow_Condensed'] text-[30px] font-semibold uppercase leading-none text-white">
+            Contact supplier
+          </h1>
+        </div>
 
         <form onSubmit={handleSubmit} className="mt-[38px] space-y-[30px]">
           <Field label="Full name">
