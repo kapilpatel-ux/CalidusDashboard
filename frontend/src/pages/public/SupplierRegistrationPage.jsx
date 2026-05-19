@@ -340,22 +340,21 @@ export const SupplierRegistrationPage = () => {
 
   return (
     <div className="min-h-screen bg-background tactical-grid noise-overlay">
-      <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md">
+      <header className="fixed left-0 top-0 z-40 h-16 w-full border-b border-border bg-background/90 backdrop-blur-md">
         <div className="h-full max-w-6xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logo} alt="Calidus" className="h-8 w-28" />
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate("/login")}>
+            <Button onClick={() => navigate("/login")}>
               Login
             </Button>
-            <Button onClick={() => navigate("/signup")}>Register</Button>
           </div>
         </div>
       </header>
 
-      <section className="relative">
+      <section className="relative pt-16">
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-3xl md:text-5xl font-extrabold font-['Barlow_Condensed'] uppercase tracking-tight">

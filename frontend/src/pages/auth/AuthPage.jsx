@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Building2, Lock, Mail, Phone, Shield, User, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -180,6 +180,13 @@ export const AuthPage = () => {
                 <Lock className="h-4 w-4" />
                 {isSignup ? (isSigningUp ? "Creating..." : "Create Account") : (isLoggingIn ? "Signing in..." : "Login")}
               </Button>
+
+              <p className="text-center text-sm text-muted-foreground">
+                For supplier registration{" "}
+                <Link to="/supplier-registration" className="font-semibold text-[#3C83F6] hover:text-[#6aa2ff]">
+                  Register
+                </Link>
+              </p>
 
               {/* <p className="text-xs text-muted-foreground">
                 {isSignup ? "After signup, your selected role controls dashboard access." : `Successful login redirects to ${targetPath}.`}
