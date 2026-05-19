@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,10 @@ export const AddProductDialog = ({
   const { data: products = [], isLoading: isProductsLoading } =
     useGetProductsQuery(undefined, { skip: !open });
 
-  const productOptions = Array.isArray(products) ? products : [];
+  const productOptions = useMemo(
+    () => (Array.isArray(products) ? products : []),
+    [products],
+  );
   const selectedIds = Array.isArray(newProduct.productIds)
     ? newProduct.productIds
     : [];
