@@ -38,7 +38,7 @@ export const updateRatingStatus = asyncHandler(async (req: Request, res: Respons
 export const updateReplyStatus = asyncHandler(async (req: Request, res: Response) => {
   const updated = await RatingModel.findOneAndUpdate(
     { id: req.params.ratingId },
-    { $set: { replyStatus: req.body.status } },
+    { $set: { replyStatus: req.body.status, supplierReplyStatus: req.body.status } },
     { new: true, projection: { _id: 0 } },
   ).lean();
   if (!updated) throw new HttpError(404, "Rating not found");

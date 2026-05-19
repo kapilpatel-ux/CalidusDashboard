@@ -11,12 +11,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { RatingStars } from "@/components/shared/RatingStars";
 import { Eye, Check, X, Trash2, Ban, RotateCcw } from "lucide-react";
-import {
-  useGetRatingsQuery,
-  useUpdateRatingStatusMutation,
-  useUpdateReplyStatusMutation,
-  useDeleteRatingMutation,
-} from "@/store/api/admin/ratingApi";
+import { useGetRatingsQuery } from "@/store/api/admin/ratingApi";
 import { useAdminActions } from "../AdminContext";
 
 export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
@@ -25,10 +20,6 @@ export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
   const handleConfirmAction = onConfirmAction || openConfirmDialog;
 
   const { data: ratings = [], isLoading } = useGetRatingsQuery();
-
-  const [updateRatingStatus] = useUpdateRatingStatusMutation();
-  const [updateReplyStatus] = useUpdateReplyStatusMutation();
-  const [deleteRating] = useDeleteRatingMutation();
 
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -55,7 +46,7 @@ export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
       label: "Reply",
       render: (value, row) =>
         value ? (
-          <StatusBadge status={row.supplierReplyStatus || "pending"} />
+          <StatusBadge status={row.supplierReplyStatus || row.replyStatus || "pending"} />
         ) : (
           <span className="text-xs text-muted-foreground">No reply</span>
         ),
@@ -156,7 +147,7 @@ export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
             />
           )}
 
-          {row.supplierReply && row.supplierReplyStatus === "pending" && (
+          {row.supplierReply && (row.supplierReplyStatus || row.replyStatus || "pending") === "pending" && (
             <>
               <ActionButton
                 icon={Check}

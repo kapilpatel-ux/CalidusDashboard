@@ -157,10 +157,22 @@ export const AdminProvider = () => {
           toast.warning(`Product "${item.name}" suspended`);
           break;
         case "approve-rating":
+          await store.dispatch(
+            ratingApi.endpoints.updateRatingStatus.initiate({
+              id: item.id,
+              status: "approved",
+            })
+          ).unwrap();
           setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, status: "approved" } : r));
           toast.success("Rating approved and now visible");
           break;
         case "reject-rating":
+          await store.dispatch(
+            ratingApi.endpoints.updateRatingStatus.initiate({
+              id: item.id,
+              status: "rejected",
+            })
+          ).unwrap();
           setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, status: "rejected" } : r));
           toast.error("Rating rejected and hidden");
           break;
@@ -174,15 +186,28 @@ export const AdminProvider = () => {
           toast.warning(`Rating for "${item.productName}" suspended`);
           break;
         case "remove-rating":
+          await store.dispatch(ratingApi.endpoints.deleteRating.initiate(item.id)).unwrap();
           setRatingsData((prev) => prev.filter((r) => r.id !== item.id));
           toast.success("Rating removed");
           break;
         case "approve-reply":
-          setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, supplierReplyStatus: "approved" } : r));
+          await store.dispatch(
+            ratingApi.endpoints.updateReplyStatus.initiate({
+              id: item.id,
+              status: "approved",
+            })
+          ).unwrap();
+          setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, replyStatus: "approved", supplierReplyStatus: "approved" } : r));
           toast.success("Supplier reply approved and now visible");
           break;
         case "reject-reply":
-          setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, supplierReplyStatus: "rejected", supplierReply: null } : r));
+          await store.dispatch(
+            ratingApi.endpoints.updateReplyStatus.initiate({
+              id: item.id,
+              status: "rejected",
+            })
+          ).unwrap();
+          setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, replyStatus: "rejected", supplierReplyStatus: "rejected" } : r));
           toast.error("Supplier reply rejected");
           break;
         case "suspend-buyer":
@@ -228,7 +253,7 @@ export const AdminProvider = () => {
           break;
       }
     } catch (error) {
-      toast.error(error.message || "Supplier operation failed");
+      toast.error(error?.data?.message || error.message || "Operation failed");
     }
 
     setConfirmDialog({ open: false, type: "", item: null, message: "" });
