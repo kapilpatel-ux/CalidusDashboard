@@ -20,6 +20,7 @@ export const DataTable = ({
   pageSize = 5,
   className,
   testId,
+  toolbarRight,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,20 +41,25 @@ export const DataTable = ({
 
   return (
     <div className={cn("space-y-4", className)} data-testid={testId}>
-      {/* Search */}
-      {searchKey && (
-        <div className="relative w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-9 h-9 bg-black/20 border-border rounded-sm"
-            data-testid={`${testId}-search`}
-          />
+      {(searchKey || toolbarRight) && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Search */}
+          {searchKey && (
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-9 h-9 bg-black/20 border-border rounded-sm"
+                data-testid={`${testId}-search`}
+              />
+            </div>
+          )}
+          {toolbarRight && <div className="ml-auto flex items-center">{toolbarRight}</div>}
         </div>
       )}
 

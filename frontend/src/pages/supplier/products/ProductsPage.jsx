@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Edit, Eye, Package, Trash2 } from "lucide-react";
+import { Edit, Eye, Package, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +22,7 @@ import { RatingStars } from "@/components/shared/RatingStars";
 import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import {
+  useCreateSupplierProductMutation,
   useDeleteSupplierProductMutation,
   useGetSupplierProductsQuery,
   useUpdateSupplierProductMutation,
@@ -30,40 +31,209 @@ import {
 const emptyEditForm = {
   name: "",
   category: "",
-  subcategory: "",
-  shortDescription: "",
-  description: "",
-  leadTime: "",
   countryOfOrigin: "",
-  technicalSpecs: "",
+  keyFeatures: "",
+  supplierName: "",
+  supplierCountry: "",
+  yearsInBusiness: "",
+  activeProducts: "",
+  layerCount: "",
+  material: "",
+  coating: "",
+  temperatureRange: "",
+  ipcClass: "",
+  dimensions: "",
+  weight: "",
+  operatingTemperature: "",
+  operationalRange: "",
+  applicationUseCase: "",
 };
+
+const emptyAddForm = {
+  name: "",
+  category: "",
+  countryOfOrigin: "",
+  keyFeatures: "",
+  supplierName: "",
+  supplierCountry: "",
+  yearsInBusiness: "",
+  activeProducts: "",
+  layerCount: "",
+  material: "",
+  coating: "",
+  temperatureRange: "",
+  ipcClass: "",
+  dimensions: "",
+  weight: "",
+  operatingTemperature: "",
+  operationalRange: "",
+  applicationUseCase: "",
+};
+
+const productCategories = ["Electronics", "Aerospace", "Defense", "PCB", "Mechanical", "Communication", "General"];
+const countryOptions = ["India", "United States", "United Kingdom", "Germany", "France", "Israel", "Singapore", "Japan"];
+const applicationAreas = ["Aerospace", "Defense", "Industrial", "Naval", "Avionics", "Communication", "Automotive"];
+
+const FormSection = ({ title, children }) => (
+  <section className="bg-[#101214]">
+    <div className="border-b border-[#29292E] px-5 py-5">
+      <h2 className="font-['Barlow_Condensed'] text-[22px] font-semibold uppercase leading-none text-white">{title}</h2>
+    </div>
+    <div className="grid gap-x-8 gap-y-8 px-5 py-8 md:grid-cols-2">{children}</div>
+  </section>
+);
+
+const ProductTextField = ({ label, value, onChange, placeholder, required = false }) => {
+  const fieldId = `add-product-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+  return (
+    <div className="space-y-3">
+      <Label htmlFor={fieldId} className="text-[13px] font-medium uppercase tracking-normal text-[#A1A1AA] sm:text-[18px]">
+        {label}
+        {required && <span className="ml-1 text-[#3C83F6]">*</span>}
+      </Label>
+      <Input
+        id={fieldId}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="h-[51px] rounded-[5px] border-[#29292E] bg-[#0E1012] px-[15px] text-base text-white placeholder:text-[#9D9DA5]"
+      />
+    </div>
+  );
+};
+
+const ProductSelectField = ({ label, value, onChange, placeholder, options, required = false }) => {
+  const fieldId = `add-product-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+  return (
+    <div className="space-y-3">
+      <Label htmlFor={fieldId} className="text-[13px] font-medium uppercase tracking-normal text-[#A1A1AA] sm:text-[18px]">
+        {label}
+        {required && <span className="ml-1 text-[#3C83F6]">*</span>}
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={fieldId} className="h-[51px] rounded-[5px] border-[#29292E] bg-[#0E1012] px-[15px] text-base text-[#9D9DA5]">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+const technicalSpecsToList = (technicalSpecs) =>
+  technicalSpecs
+    .split("\n")
+    .map((specification) => specification.trim())
+    .filter(Boolean);
+
+const formatDetailLabel = (label) =>
+  label
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (character) => character.toUpperCase());
+
+const objectEntriesToDetails = (details = {}) =>
+  Object.entries(details).filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "");
 
 export const SupplierProducts = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId || currentSupplier.id;
   const { data: products = [], isLoading, isError } = useGetSupplierProductsQuery(supplierId);
+  const [createSupplierProduct, { isLoading: isCreating }] = useCreateSupplierProductMutation();
   const [updateSupplierProduct, { isLoading: isSaving }] = useUpdateSupplierProductMutation();
   const [deleteSupplierProduct, { isLoading: isDeleting }] = useDeleteSupplierProductMutation();
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewSheet, setViewSheet] = useState({ open: false, product: null });
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialog, setEditDialog] = useState({ open: false, product: null });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null });
+  const [addForm, setAddForm] = useState(emptyAddForm);
   const [editForm, setEditForm] = useState(emptyEditForm);
 
   const getProductId = (product) => product?.id || product?._id;
+  const setAddField = (field, value) => setAddForm((current) => ({ ...current, [field]: value }));
+  const setEditField = (field, value) => setEditForm((current) => ({ ...current, [field]: value }));
+
+  const resetAddDialog = (open) => {
+    setAddDialogOpen(open);
+    if (!open) setAddForm(emptyAddForm);
+  };
 
   const openEditDialog = (product) => {
+    const supplierSnapshot = product.supplierSnapshot || {};
+    const technicalDetails = product.technicalSpecificationDetails || {};
+
     setEditForm({
       name: product.name || "",
       category: product.category || "",
-      subcategory: product.subcategory || "",
-      shortDescription: product.shortDescription || "",
-      description: product.description || "",
-      leadTime: product.leadTime || "",
       countryOfOrigin: product.countryOfOrigin || "",
-      technicalSpecs: product.technicalSpecs || "",
+      keyFeatures: product.shortDescription || product.description || "",
+      supplierName: supplierSnapshot.name || product.supplierName || currentSupplier.name || "",
+      supplierCountry: supplierSnapshot.country || product.supplierCountry || product.countryOfOrigin || "",
+      yearsInBusiness: supplierSnapshot.yearsInBusiness || "",
+      activeProducts: supplierSnapshot.activeProducts || "",
+      layerCount: technicalDetails.layerCount || "",
+      material: technicalDetails.material || "",
+      coating: technicalDetails.coating || "",
+      temperatureRange: technicalDetails.temperatureRange || "",
+      ipcClass: technicalDetails.ipcClass || "",
+      dimensions: technicalDetails.dimensions || "",
+      weight: technicalDetails.weight || "",
+      operatingTemperature: technicalDetails.operatingTemperature || "",
+      operationalRange: technicalDetails.operationalRange || "",
+      applicationUseCase: product.applicationUseCase || "",
     });
     setEditDialog({ open: true, product });
+  };
+
+  const buildProductPayload = (form) => {
+    const specifications = [
+      form.layerCount && `Layer Count: ${form.layerCount}`,
+      form.material && `Material: ${form.material}`,
+      form.coating && `Coating: ${form.coating}`,
+      form.temperatureRange && `Temperature Range: ${form.temperatureRange}`,
+      form.ipcClass && `IPC Class: ${form.ipcClass}`,
+      form.dimensions && `Dimensions: ${form.dimensions}`,
+      form.weight && `Weight: ${form.weight}`,
+      form.operatingTemperature && `Operating Temperature: ${form.operatingTemperature}`,
+      form.operationalRange && `Operational Range: ${form.operationalRange}`,
+      form.applicationUseCase && `Application Areas: ${form.applicationUseCase}`,
+    ].filter(Boolean);
+
+    return {
+      name: form.name.trim(),
+      category: form.category,
+      countryOfOrigin: form.countryOfOrigin,
+      shortDescription: form.keyFeatures,
+      description: form.keyFeatures,
+      specifications,
+      technicalSpecs: specifications.join("\n"),
+      applicationUseCase: form.applicationUseCase,
+      supplierSnapshot: {
+        name: form.supplierName,
+        country: form.supplierCountry,
+        yearsInBusiness: form.yearsInBusiness,
+        activeProducts: form.activeProducts,
+      },
+      technicalSpecificationDetails: {
+        layerCount: form.layerCount,
+        material: form.material,
+        coating: form.coating,
+        temperatureRange: form.temperatureRange,
+        ipcClass: form.ipcClass,
+        dimensions: form.dimensions,
+        weight: form.weight,
+        operatingTemperature: form.operatingTemperature,
+        operationalRange: form.operationalRange,
+      },
+    };
   };
 
   const saveProduct = async () => {
@@ -73,7 +243,12 @@ export const SupplierProducts = () => {
       return;
     }
 
-    const payload = { ...editForm };
+    if (!editForm.name.trim() || !editForm.category.trim()) {
+      toast.error("Product name and category are required");
+      return;
+    }
+
+    const payload = buildProductPayload(editForm);
 
     try {
       const updatedProduct = await updateSupplierProduct({
@@ -85,6 +260,23 @@ export const SupplierProducts = () => {
       toast.success(`Product "${updatedProduct.name}" updated`);
     } catch (error) {
       toast.error(error?.data?.message || "Failed to update product");
+    }
+  };
+
+  const createProduct = async () => {
+    if (!addForm.name.trim() || !addForm.category.trim()) {
+      toast.error("Product name and category are required");
+      return;
+    }
+
+    const payload = buildProductPayload(addForm);
+
+    try {
+      const createdProduct = await createSupplierProduct({ supplierId, payload }).unwrap();
+      resetAddDialog(false);
+      toast.success(`Product "${createdProduct.name}" created for review`);
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to create product");
     }
   };
 
@@ -148,7 +340,12 @@ export const SupplierProducts = () => {
     },
   ];
 
-  const detailProduct = viewSheet.product;
+  const selectedProductId = getProductId(viewSheet.product);
+  const detailProduct = selectedProductId
+    ? products.find((product) => getProductId(product) === selectedProductId) || viewSheet.product
+    : viewSheet.product;
+  const supplierSnapshotDetails = objectEntriesToDetails(detailProduct?.supplierSnapshot);
+  const technicalSpecificationDetails = objectEntriesToDetails(detailProduct?.technicalSpecificationDetails);
 
   return (
     <div className="space-y-6" data-testid="supplier-product-management">
@@ -157,18 +354,12 @@ export const SupplierProducts = () => {
           <h1 className="text-2xl font-bold font-['Barlow_Condensed'] uppercase tracking-wide mb-1">Product Management</h1>
           <p className="text-sm text-muted-foreground">Manage your product listings</p>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] bg-black/20" data-testid="product-status-filter">
-            <SelectValue placeholder="Filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
+        <Button onClick={() => resetAddDialog(true)} className="h-10 bg-[#3C83F6] px-5 text-sm font-semibold hover:bg-[#2f72df]" data-testid="supplier-add-product-button">
+          <Plus className="h-4 w-4" />
+          Add Product
+        </Button>
       </div>
+
       {isLoading ? (
         <div className="dashboard-card">
           <div className="dashboard-card-content py-8 text-center text-sm text-muted-foreground">
@@ -182,8 +373,73 @@ export const SupplierProducts = () => {
           </div>
         </div>
       ) : (
-        <DataTable columns={columns} data={filteredProducts} searchPlaceholder="Search products..." searchKey="name" pageSize={5} testId="supplier-products-table" />
+        <DataTable
+          columns={columns}
+          data={filteredProducts}
+          searchPlaceholder="Search products..."
+          searchKey="name"
+          pageSize={5}
+          testId="supplier-products-table"
+          toolbarRight={
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px] bg-black/20" data-testid="product-status-filter">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          }
+        />
       )}
+
+      <Dialog open={addDialogOpen} onOpenChange={resetAddDialog}>
+        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto border-[#29292E] bg-[#090B0A] p-0 text-white">
+          <DialogHeader className="px-6 pt-6 sm:px-8">
+            <DialogTitle className="font-['Barlow_Condensed'] text-3xl font-semibold uppercase leading-none">Add New Product</DialogTitle>
+            <DialogDescription className="sr-only">Create a product listing for admin review.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-7 px-6 pb-6 sm:px-8 sm:pb-8">
+            <FormSection title="Overview">
+              <ProductTextField label="Product Name" value={addForm.name} onChange={(value) => setAddField("name", value)} placeholder="Enter product name" required />
+              <ProductSelectField label="Category" value={addForm.category} onChange={(value) => setAddField("category", value)} placeholder="Select category" options={productCategories} required />
+              <ProductSelectField label="Country" value={addForm.countryOfOrigin} onChange={(value) => setAddField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
+              <ProductTextField label="Key Features" value={addForm.keyFeatures} onChange={(value) => setAddField("keyFeatures", value)} placeholder="Enter key features" />
+            </FormSection>
+
+            <FormSection title="Supplier Snapshot">
+              <ProductTextField label="Supplier Name" value={addForm.supplierName} onChange={(value) => setAddField("supplierName", value)} placeholder="Enter supplier name" />
+              <ProductSelectField label="Country" value={addForm.supplierCountry} onChange={(value) => setAddField("supplierCountry", value)} placeholder="Select country" options={countryOptions} />
+              <ProductTextField label="Years in Business" value={addForm.yearsInBusiness} onChange={(value) => setAddField("yearsInBusiness", value)} placeholder="Enter years in business" />
+              <ProductTextField label="Active Products" value={addForm.activeProducts} onChange={(value) => setAddField("activeProducts", value)} placeholder="Enter active products" />
+            </FormSection>
+
+            <FormSection title="Technical Specifications">
+              <ProductTextField label="Layer Count" value={addForm.layerCount} onChange={(value) => setAddField("layerCount", value)} placeholder="Up to 24 layers" />
+              <ProductTextField label="Material" value={addForm.material} onChange={(value) => setAddField("material", value)} placeholder="FR-4 / Polyimide" />
+              <ProductTextField label="Coating" value={addForm.coating} onChange={(value) => setAddField("coating", value)} placeholder="MIL-I-46058 Conformal" />
+              <ProductTextField label="Temperature Range" value={addForm.temperatureRange} onChange={(value) => setAddField("temperatureRange", value)} placeholder="-55C to +125C" />
+              <ProductTextField label="IPC Class" value={addForm.ipcClass} onChange={(value) => setAddField("ipcClass", value)} placeholder="Class 3 (Military)" />
+              <ProductTextField label="Dimensions" value={addForm.dimensions} onChange={(value) => setAddField("dimensions", value)} placeholder="Custom" />
+              <ProductTextField label="Weight" value={addForm.weight} onChange={(value) => setAddField("weight", value)} placeholder="Variable" />
+              <ProductTextField label="Operating Temperature" value={addForm.operatingTemperature} onChange={(value) => setAddField("operatingTemperature", value)} placeholder="-55C to +125C" />
+              <ProductTextField label="Operational Range" value={addForm.operationalRange} onChange={(value) => setAddField("operationalRange", value)} placeholder="N/A" />
+              <ProductSelectField label="Application Areas" value={addForm.applicationUseCase} onChange={(value) => setAddField("applicationUseCase", value)} placeholder="Select application areas" options={applicationAreas} />
+            </FormSection>
+          </div>
+
+          <DialogFooter className="border-t border-[#29292E] px-6 py-5 sm:px-8">
+            <Button variant="outline" className="border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={() => resetAddDialog(false)} disabled={isCreating}>Cancel</Button>
+            <Button onClick={createProduct} disabled={isCreating || !addForm.name.trim() || !addForm.category.trim()} className="bg-[#3C83F6] px-6 text-white hover:bg-[#2f72df]" data-testid="supplier-add-product-submit">
+              {isCreating ? "Adding..." : "Add Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={viewSheet.open} onOpenChange={(open) => setViewSheet({ open, product: open ? viewSheet.product : null })}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
@@ -237,6 +493,41 @@ export const SupplierProducts = () => {
                 </div>
               </div>
 
+              {detailProduct.applicationUseCase && (
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Application Areas</p>
+                  <p className="mt-1 text-sm leading-6">{detailProduct.applicationUseCase}</p>
+                </div>
+              )}
+
+              {supplierSnapshotDetails.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Supplier Snapshot</p>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    {supplierSnapshotDetails.map(([key, value]) => (
+                      <div key={key} className="rounded-sm border border-border bg-black/20 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{formatDetailLabel(key)}</p>
+                        <p className="mt-1 font-medium">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {technicalSpecificationDetails.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Technical Specification Details</p>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    {technicalSpecificationDetails.map(([key, value]) => (
+                      <div key={key} className="rounded-sm border border-border bg-black/20 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{formatDetailLabel(key)}</p>
+                        <p className="mt-1 font-medium">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {Array.isArray(detailProduct.specifications) && detailProduct.specifications.length > 0 && (
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">Specifications</p>
@@ -262,74 +553,44 @@ export const SupplierProducts = () => {
       </Sheet>
 
       <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ open, product: open ? editDialog.product : null })}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Edit Product</DialogTitle>
-            <DialogDescription>Changes to an approved listing will move it back to pending review.</DialogDescription>
+        <DialogContent className="flex max-h-[95vh] max-w-6xl flex-col overflow-hidden border-[#29292E] bg-[#090B0A] p-0 text-white">
+          <DialogHeader className="shrink-0 px-6 pt-6 sm:px-8">
+            <DialogTitle className="font-['Barlow_Condensed'] text-3xl font-semibold uppercase leading-none">Edit Product</DialogTitle>
+            <DialogDescription className="text-[#A1A1AA]">Changes to an approved listing will move it back to pending review.</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="supplier-product-name">Product Name</Label>
-              <Input id="supplier-product-name" value={editForm.name} onChange={(event) => setEditForm({ ...editForm, name: event.target.value })} className="bg-black/20" />
-            </div>
+          <div className="flex-1 space-y-7 overflow-y-auto px-6 py-6 sm:px-8">
+            <FormSection title="Overview">
+              <ProductTextField label="Product Name" value={editForm.name} onChange={(value) => setEditField("name", value)} placeholder="Enter product name" required />
+              <ProductSelectField label="Category" value={editForm.category} onChange={(value) => setEditField("category", value)} placeholder="Select category" options={productCategories} required />
+              <ProductSelectField label="Country" value={editForm.countryOfOrigin} onChange={(value) => setEditField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
+              <ProductTextField label="Key Features" value={editForm.keyFeatures} onChange={(value) => setEditField("keyFeatures", value)} placeholder="Enter key features" />
+            </FormSection>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="supplier-product-category">Category</Label>
-                <Input id="supplier-product-category" value={editForm.category} onChange={(event) => setEditForm({ ...editForm, category: event.target.value })} className="bg-black/20" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-product-subcategory">Subcategory</Label>
-                <Input id="supplier-product-subcategory" value={editForm.subcategory} onChange={(event) => setEditForm({ ...editForm, subcategory: event.target.value })} className="bg-black/20" />
-              </div>
-            </div>
+            <FormSection title="Supplier Snapshot">
+              <ProductTextField label="Supplier Name" value={editForm.supplierName} onChange={(value) => setEditField("supplierName", value)} placeholder="Enter supplier name" />
+              <ProductSelectField label="Country" value={editForm.supplierCountry} onChange={(value) => setEditField("supplierCountry", value)} placeholder="Select country" options={countryOptions} />
+              <ProductTextField label="Years in Business" value={editForm.yearsInBusiness} onChange={(value) => setEditField("yearsInBusiness", value)} placeholder="Enter years in business" />
+              <ProductTextField label="Active Products" value={editForm.activeProducts} onChange={(value) => setEditField("activeProducts", value)} placeholder="Enter active products" />
+            </FormSection>
 
-            <div className="space-y-2">
-              <Label htmlFor="supplier-product-short-description">Short Description</Label>
-              <Input
-                id="supplier-product-short-description"
-                value={editForm.shortDescription}
-                onChange={(event) => setEditForm({ ...editForm, shortDescription: event.target.value })}
-                className="bg-black/20"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="supplier-product-description">Description</Label>
-              <Textarea
-                id="supplier-product-description"
-                value={editForm.description}
-                onChange={(event) => setEditForm({ ...editForm, description: event.target.value })}
-                className="min-h-24 bg-black/20"
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="supplier-product-lead-time">Lead Time</Label>
-                <Input id="supplier-product-lead-time" value={editForm.leadTime} onChange={(event) => setEditForm({ ...editForm, leadTime: event.target.value })} className="bg-black/20" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-product-origin">Country of Origin</Label>
-                <Input id="supplier-product-origin" value={editForm.countryOfOrigin} onChange={(event) => setEditForm({ ...editForm, countryOfOrigin: event.target.value })} className="bg-black/20" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="supplier-product-technical-specs">Technical Specs</Label>
-              <Textarea
-                id="supplier-product-technical-specs"
-                value={editForm.technicalSpecs}
-                onChange={(event) => setEditForm({ ...editForm, technicalSpecs: event.target.value })}
-                className="min-h-20 bg-black/20"
-              />
-            </div>
+            <FormSection title="Technical Specifications">
+              <ProductTextField label="Layer Count" value={editForm.layerCount} onChange={(value) => setEditField("layerCount", value)} placeholder="Up to 24 layers" />
+              <ProductTextField label="Material" value={editForm.material} onChange={(value) => setEditField("material", value)} placeholder="FR-4 / Polyimide" />
+              <ProductTextField label="Coating" value={editForm.coating} onChange={(value) => setEditField("coating", value)} placeholder="MIL-I-46058 Conformal" />
+              <ProductTextField label="Temperature Range" value={editForm.temperatureRange} onChange={(value) => setEditField("temperatureRange", value)} placeholder="-55C to +125C" />
+              <ProductTextField label="IPC Class" value={editForm.ipcClass} onChange={(value) => setEditField("ipcClass", value)} placeholder="Class 3 (Military)" />
+              <ProductTextField label="Dimensions" value={editForm.dimensions} onChange={(value) => setEditField("dimensions", value)} placeholder="Custom" />
+              <ProductTextField label="Weight" value={editForm.weight} onChange={(value) => setEditField("weight", value)} placeholder="Variable" />
+              <ProductTextField label="Operating Temperature" value={editForm.operatingTemperature} onChange={(value) => setEditField("operatingTemperature", value)} placeholder="-55C to +125C" />
+              <ProductTextField label="Operational Range" value={editForm.operationalRange} onChange={(value) => setEditField("operationalRange", value)} placeholder="N/A" />
+              <ProductSelectField label="Application Areas" value={editForm.applicationUseCase} onChange={(value) => setEditField("applicationUseCase", value)} placeholder="Select application areas" options={applicationAreas} />
+            </FormSection>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialog({ open: false, product: null })} disabled={isSaving}>Cancel</Button>
-            <Button onClick={saveProduct} disabled={isSaving || !editForm.name.trim()} data-testid="supplier-edit-product-save">
+          <DialogFooter className="shrink-0 border-t border-[#29292E] px-6 py-5 sm:px-8">
+            <Button variant="outline" className="border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={() => setEditDialog({ open: false, product: null })} disabled={isSaving}>Cancel</Button>
+            <Button onClick={saveProduct} disabled={isSaving || !editForm.name.trim() || !editForm.category.trim()} className="bg-[#3C83F6] px-6 text-white hover:bg-[#2f72df]" data-testid="supplier-edit-product-save">
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>

@@ -4,6 +4,7 @@ import "@/App.css";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { AuthPage } from "@/pages/auth/AuthPage";
+import ContactSupplierPage from "@/pages/ContactSupplierPage";
 import {
   AdminProvider,
   AdminOverview,
@@ -158,6 +159,7 @@ function App() {
 
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/signup" element={<Navigate to="/" replace />} />
+        <Route path="/contact-supplier" element={<ContactSupplierPage />} />
         <Route path="*" element={<Navigate to={currentRole === "admin" ? "/admin/overview" : currentRole === "buyer" ? "/buyer/overview" : "/supplier/overview"} replace />} />
       </Routes>
     </DashboardShell>
@@ -176,6 +178,7 @@ function App() {
               <Routes>
                 <Route path="/login" element={<AuthPage />} />
                 <Route path="/signup" element={<AuthPage />} />
+                <Route path="/contact-supplier" element={<ContactSupplierPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             )}

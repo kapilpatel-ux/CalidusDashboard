@@ -19,6 +19,8 @@ import { authRoutes } from "./modules/auth/auth.routes.js";
 import { buyerEnquiryRoutes } from "./modules/buyer/enquiries/buyerEnquiry.routes.js";
 import { buyerProfileRoutes } from "./modules/buyer/profile/buyerProfile.routes.js";
 import { buyerRatingRoutes } from "./modules/buyer/ratings/buyerRating.routes.js";
+import { contactSupplierRoutes } from "./modules/contactsupplier/contactSupplier.routes.js";
+import { supplierEnquiryRoutes } from "./modules/supplier/enquiries/supplierEnquiry.routes.js";
 import { supplierOverviewRoutes } from "./modules/supplier/overview/supplierOverview.routes.js";
 import { supplierProductRoutes } from "./modules/supplier/products/supplierProduct.routes.js";
 import { supplierProfileRoutes } from "./modules/supplier/profile/supplierProfile.routes.js";
@@ -36,6 +38,7 @@ app.get("/api", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/status", statusRoutes);
 app.use("/api/suppliers", supplierOverviewRoutes);
+app.use("/api/suppliers", supplierEnquiryRoutes);
 app.use("/api/suppliers", supplierProductRoutes);
 app.use("/api/suppliers", supplierProfileRoutes);
 app.use("/api/suppliers", supplierRoutes);
@@ -51,6 +54,7 @@ app.use("/api/admin/dashboard", dashboardRoutes);
 app.use("/api/admin/enquiries", enquiryRoutes);
 app.use("/api/admin/notifications", notificationRoutes);
 app.use("/api/admin/users", userRoutes);
+app.use("/api/contact-supplier", contactSupplierRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
