@@ -15,9 +15,18 @@ export const useAdminDialogs = () => {
   });
 
   const [addCategoryDialog, setAddCategoryDialog] = useState(false);
+  const [addUserDialog, setAddUserDialog] = useState(false);
 
   const [newCategory, setNewCategory] = useState({
     name: "",
+  });
+
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    role: "",
   });
 
   const [addProductDialog, setAddProductDialog] = useState({
@@ -42,8 +51,14 @@ export const useAdminDialogs = () => {
     addCategoryDialog,
     setAddCategoryDialog,
 
+    addUserDialog,
+    setAddUserDialog,
+
     newCategory,
     setNewCategory,
+
+    newUser,
+    setNewUser,
 
     addProductDialog,
     setAddProductDialog,

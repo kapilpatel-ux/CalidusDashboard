@@ -11,15 +11,36 @@ export const userApi = createApi({
       query: () => "/api/admin/users",
       providesTags: ["User"],
     }),
+    createUser: builder.mutation({
+      query: (payload) => ({
+        url: "/api/admin/users",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["User"],
+    }),
     updateUserStatus: builder.mutation({
-      query: ({ id, role, status }) => ({
-        url: `/api/admin/users/${role}/${id}/status`,
+      query: ({ id, status }) => ({
+        url: `/api/admin/users/${id}/status`,
         method: "PATCH",
         body: { status },
+      }),
+      invalidatesTags: ["User"],
+    }),
+    updateUser: builder.mutation({
+      query: ({ id, payload }) => ({
+        url: `/api/admin/users/${id}`,
+        method: "PATCH",
+        body: payload,
       }),
       invalidatesTags: ["User"],
     }),
   }),
 });
 
-export const { useGetUsersQuery, useUpdateUserStatusMutation } = userApi;
+export const {
+  useGetUsersQuery,
+  useCreateUserMutation,
+  useUpdateUserStatusMutation,
+  useUpdateUserMutation,
+} = userApi;

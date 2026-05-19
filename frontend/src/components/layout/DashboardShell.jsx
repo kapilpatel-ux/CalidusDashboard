@@ -63,6 +63,30 @@ const navigationConfig = {
     { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
     { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
   ],
+  sub_admin: [
+    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/admin/overview" },
+    { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
+    { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
+    { id: "ratingsmoderation", label: "Ratings Moderation", icon: Star, path: "/admin/ratingsmoderation" },
+    { id: "categorymanagement", label: "Category Management", icon: FolderTree, path: "/admin/categorymanagement" },
+    { id: "buyermanagement", label: "Buyer Management", icon: Users, path: "/admin/buyermanagement" },
+    { id: "enquirymanagement", label: "Enquiry Management", icon: Inbox, path: "/admin/enquirymanagement" },
+    { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
+    { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
+    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
+  ],
+  content_manager: [
+    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/admin/overview" },
+    { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
+    { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
+    { id: "ratingsmoderation", label: "Ratings Moderation", icon: Star, path: "/admin/ratingsmoderation" },
+    { id: "categorymanagement", label: "Category Management", icon: FolderTree, path: "/admin/categorymanagement" },
+    { id: "buyermanagement", label: "Buyer Management", icon: Users, path: "/admin/buyermanagement" },
+    { id: "enquirymanagement", label: "Enquiry Management", icon: Inbox, path: "/admin/enquirymanagement" },
+    { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
+    { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
+    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
+  ],
   supplier: [
     { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/supplier/overview" },
     { id: "profile", label: "Company Profile", icon: Building2, path: "/supplier/companyprofile" },
@@ -125,12 +149,16 @@ const supplierRouteSectionMap = {
 
 const roleLabels = {
   admin: "Platform Administrator",
+  sub_admin: "Sub Administrator",
+  content_manager: "Content Manager",
   supplier: "Orion Defense Systems",
   buyer: "James Mitchell",
 };
 
 const roleIcons = {
   admin: Shield,
+  sub_admin: Shield,
+  content_manager: Shield,
   supplier: Building2,
   buyer: UserCircle,
 };

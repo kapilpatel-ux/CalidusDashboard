@@ -77,6 +77,7 @@ function App() {
   const [currentRole, setCurrentRole] = useState(authState.user?.role || "buyer");
   const [activeSection, setActiveSection] = useState("overview");
   const isAuthenticated = Boolean(authState.token && authState.user);
+  const isAdminRole = ["admin", "sub_admin", "content_manager"].includes(currentRole);
 
   const handleRoleChange = (role) => {
     setCurrentRole(role);
@@ -113,7 +114,7 @@ function App() {
         <Route
           path="/"
           element={
-            currentRole === "admin"
+            isAdminRole
               ? <Navigate to="/admin/overview" replace />
               : currentRole === "buyer"
                 ? <Navigate to="/buyer/overview" replace />
@@ -124,7 +125,7 @@ function App() {
         <Route
           path="/admin"
           element={
-            currentRole === "admin"
+            isAdminRole
               ? <AdminProvider />
               : <Navigate to="/" replace />
           }
@@ -161,7 +162,7 @@ function App() {
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/signup" element={<Navigate to="/" replace />} />
         <Route path="/contact-supplier" element={<ContactSupplierPage />} />
-        <Route path="*" element={<Navigate to={currentRole === "admin" ? "/admin/overview" : currentRole === "buyer" ? "/buyer/overview" : "/supplier/overview"} replace />} />
+        <Route path="*" element={<Navigate to={isAdminRole ? "/admin/overview" : currentRole === "buyer" ? "/buyer/overview" : "/supplier/overview"} replace />} />
       </Routes>
     </DashboardShell>
   );

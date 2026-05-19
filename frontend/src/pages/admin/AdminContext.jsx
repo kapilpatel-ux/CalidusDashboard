@@ -5,8 +5,10 @@ import { getBuyerDetails } from "./utils/helpers";
 import { ConfirmDialog } from "./dialogs/ConfirmDialog";
 import { EditProductDialog } from "./dialogs/EditProductDialog";
 import { EditCategoryDialog } from "./dialogs/EditCategoryDialog";
+import { EditUserDialog } from "./dialogs/EditUserDialog";
 import { AddCategoryDialog } from "./dialogs/AddCategoryDialog";
 import { AddProductDialog } from "./dialogs/AddProductDialog";
+import { AddUserDialog } from "./dialogs/AddUserDialog";
 import { useAdminDialogs } from "./hooks/useAdminDialogs";
 import { useViewSheet } from "./hooks/useViewSheet";
 import { SupplierDetailSheet } from "./sheets/SupplierDetailSheet";
@@ -19,6 +21,7 @@ import { productApi } from "@/store/api/admin/productApi";
 import { categoryApi, useCreateCategoryMutation } from "@/store/api/admin/categoryApi";
 import { supplierApi as supplierRtkApi } from "@/store/api/admin/supplierApi";
 import { buyerApi } from "@/store/api/admin/buyerApi";
+import { userApi } from "@/store/api/admin/userApi";
 
 const AdminActionsContext = createContext({
   openConfirmDialog: () => {},
@@ -26,6 +29,7 @@ const AdminActionsContext = createContext({
   openViewSheet: () => {},
   openBuyerSheet: () => {},
   openAddCategoryDialog: () => {},
+  openAddUserDialog: () => {},
   openAddProductDialog: () => {},
 });
 
@@ -39,6 +43,7 @@ export const AdminProvider = () => {
   const [categoriesData, setCategoriesData] = useState([]);
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
   const [isAssigningProducts, setIsAssigningProducts] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const {
     confirmDialog,
@@ -47,8 +52,12 @@ export const AdminProvider = () => {
     setEditDialog,
     addCategoryDialog,
     setAddCategoryDialog,
+    addUserDialog,
+    setAddUserDialog,
     newCategory,
     setNewCategory,
+    newUser,
+    setNewUser,
     addProductDialog,
     setAddProductDialog,
     newProduct,
@@ -258,6 +267,24 @@ export const AdminProvider = () => {
           ).unwrap();
           toast.success(`Buyer "${item.name}" deleted`);
           break;
+        case "suspend-user":
+          await store.dispatch(
+            userApi.endpoints.updateUserStatus.initiate({
+              id: item.id,
+              status: "suspended",
+            })
+          ).unwrap();
+          toast.warning(`User "${item.name || item.email}" suspended`);
+          break;
+        case "activate-user":
+          await store.dispatch(
+            userApi.endpoints.updateUserStatus.initiate({
+              id: item.id,
+              status: "active",
+            })
+          ).unwrap();
+          toast.success(`User "${item.name || item.email}" activated`);
+          break;
         case "delete-category":
           await store.dispatch(
             categoryApi.endpoints.deleteCategory.initiate(item.id)
@@ -307,6 +334,26 @@ export const AdminProvider = () => {
           return;
         }
         break;
+      case "user":
+        try {
+          await store
+            .dispatch(
+              userApi.endpoints.updateUser.initiate({
+                id: editForm.id,
+                payload: {
+                  name: editForm.name,
+                  email: editForm.email,
+                  role: editForm.role,
+                },
+              })
+            )
+            .unwrap();
+          toast.success(`User "${editForm.name || editForm.email}" updated`);
+        } catch (error) {
+          toast.error(error?.data?.message || error?.message || "Failed to update user");
+          return;
+        }
+        break;
       case "category":
         await store.dispatch(
           categoryApi.endpoints.updateCategory.initiate({
@@ -350,6 +397,30 @@ export const AdminProvider = () => {
       } catch (error) {
         toast.error(error?.data?.message || error?.message || "Failed to add category");
       }
+    }
+  };
+
+  const handleAddUser = async () => {
+    const payload = {
+      name: String(newUser.name || "").trim(),
+      email: String(newUser.email || "").trim(),
+      phone: String(newUser.phone || "").trim(),
+      password: String(newUser.password || ""),
+      role: String(newUser.role || "").trim(),
+    };
+
+    if (!payload.name || !payload.email || !payload.phone || !payload.password || !payload.role) return;
+
+    try {
+      setIsCreatingUser(true);
+      await store.dispatch(userApi.endpoints.createUser.initiate(payload)).unwrap();
+      toast.success(`User "${payload.name}" created`);
+      setAddUserDialog(false);
+      setNewUser({ name: "", email: "", phone: "", password: "", role: "" });
+    } catch (error) {
+      toast.error(error?.data?.message || error?.message || "Failed to create user");
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -404,6 +475,7 @@ export const AdminProvider = () => {
     openViewSheet,
     openBuyerSheet: (item) => openViewSheet("buyer", item),
     openAddCategoryDialog: () => setAddCategoryDialog(true),
+    openAddUserDialog: () => setAddUserDialog(true),
     openAddProductDialog: (category) => {
       setAddProductDialog({ open: true, category });
       setNewProduct({
@@ -439,6 +511,14 @@ export const AdminProvider = () => {
         onSave={handleEditSave}
       />
 
+      <EditUserDialog
+        editDialog={editDialog}
+        setEditDialog={setEditDialog}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        onSave={handleEditSave}
+      />
+
       <AddCategoryDialog
         open={addCategoryDialog}
         setOpen={setAddCategoryDialog}
@@ -446,6 +526,15 @@ export const AdminProvider = () => {
         setNewCategory={setNewCategory}
         onAddCategory={handleAddCategory}
         isAdding={isCreatingCategory}
+      />
+
+      <AddUserDialog
+        open={addUserDialog}
+        setOpen={setAddUserDialog}
+        newUser={newUser}
+        setNewUser={setNewUser}
+        onAddUser={handleAddUser}
+        isAdding={isCreatingUser}
       />
 
       <AddProductDialog
