@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { COUNTRIES } from "@/data/countries";
 
 const productOptions = [
   { id: "prd003", name: "Tactical Communication Module TCM-200" },
@@ -25,9 +27,11 @@ const productOptions = [
 
 const initialForm = {
   fullName: "",
+  company: "",
+  buyerCountry: "",
+  supplierCountry: "",
   supplierId: "",
   email: "",
-  country: "",
   productId: "",
 };
 
@@ -42,7 +46,21 @@ export default function ContactSupplierPage() {
   } = useGetSuppliersQuery();
 
   const selectedProduct = productOptions.find((product) => product.id === form.productId);
-  const availableSuppliers = suppliers.filter((supplier) => supplier.status !== "suspended");
+  const supplierCountry = String(form.supplierCountry || "").trim();
+  const nonSuspendedSuppliers = suppliers.filter((supplier) => supplier.status !== "suspended");
+  const supplierCountryOptions = Array.from(
+    new Set(
+      nonSuspendedSuppliers
+        .map((s) => String(s?.country || "").trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+
+  const normalize = (value) => String(value || "").trim().toLowerCase();
+  const availableSuppliers = nonSuspendedSuppliers.filter((supplier) => {
+    if (!supplierCountry || supplierCountry === "all") return true;
+    return normalize(supplier.country) === normalize(supplierCountry);
+  });
   const selectedSupplier = availableSuppliers.find((supplier) => supplier.id === form.supplierId);
 
   const updateField = (field, value) => {
@@ -54,8 +72,10 @@ export default function ContactSupplierPage() {
 
     const fullName = form.fullName.trim();
     const email = form.email.trim();
+    const company = form.company.trim();
+    const buyerCountry = String(form.buyerCountry || "").trim();
 
-    if (!fullName || !selectedSupplier || !email || !form.country || !selectedProduct) {
+    if (!fullName || !company || !email || !buyerCountry || !selectedSupplier || !selectedProduct) {
       toast.error("Please complete all fields");
       return;
     }
@@ -63,10 +83,11 @@ export default function ContactSupplierPage() {
     try {
       const created = await createContactSupplier({
         fullName,
+        company,
         supplierId: selectedSupplier.id,
         supplierCompany: selectedSupplier.name,
         email,
-        country: form.country,
+        country: buyerCountry,
         productId: selectedProduct.id,
         productName: selectedProduct.name,
       }).unwrap();
@@ -102,83 +123,148 @@ export default function ContactSupplierPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-[38px] space-y-[30px]">
-          <Field label="Full name">
-            <Input
-              value={form.fullName}
-              onChange={(event) => updateField("fullName", event.target.value)}
-              required
-              placeholder="Enter full name"
-              className="h-[51px] border-[#29292E] bg-[#070709] text-white placeholder:text-[#9D9DA5]"
-            />
-          </Field>
+          <div className="rounded-sm border border-[#26262B] bg-[#0B0D10] p-6 space-y-6">
+            <p className="font-['Barlow_Condensed'] text-[20px] font-semibold uppercase tracking-wide text-white">
+              Create account
+            </p>
 
-          <Field label="Supplier company">
-            <Select
-              value={form.supplierId}
-              onValueChange={(value) => updateField("supplierId", value)}
-              disabled={isSuppliersLoading || isSuppliersError}
-              required
-            >
-              <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
-                <SelectValue
-                  placeholder={
-                    isSuppliersLoading
-                      ? "Loading suppliers..."
-                      : isSuppliersError
-                        ? "Unable to load suppliers"
-                        : "Select supplier company"
-                  }
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Field label="Full name">
+                <Input
+                  value={form.fullName}
+                  onChange={(event) => updateField("fullName", event.target.value)}
+                  required
+                  placeholder="Enter full name"
+                  className="h-[51px] border-[#29292E] bg-[#070709] text-white placeholder:text-[#9D9DA5]"
                 />
-              </SelectTrigger>
-              <SelectContent>
-                {availableSuppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
+              </Field>
 
-          <Field label="Email">
-            <Input
-              value={form.email}
-              onChange={(event) => updateField("email", event.target.value)}
-              required
-              type="email"
-              placeholder="Enter your email"
-              className="h-[51px] border-[#29292E] bg-[#070709] text-white placeholder:text-[#9D9DA5]"
-            />
-          </Field>
+              <Field label="Company">
+                <Input
+                  value={form.company}
+                  onChange={(event) => updateField("company", event.target.value)}
+                  required
+                  placeholder="Enter company name"
+                  className="h-[51px] border-[#29292E] bg-[#070709] text-white placeholder:text-[#9D9DA5]"
+                />
+              </Field>
+            </div>
 
-          <Field label="Country">
-            <Select value={form.country} onValueChange={(value) => updateField("country", value)} required>
-              <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
-                <SelectValue placeholder="Select country" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="uae">UAE</SelectItem>
-                <SelectItem value="india">India</SelectItem>
-                <SelectItem value="uk">United Kingdom</SelectItem>
-                <SelectItem value="germany">Germany</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Field label="Email">
+                <Input
+                  value={form.email}
+                  onChange={(event) => updateField("email", event.target.value)}
+                  required
+                  type="email"
+                  placeholder="Enter your email"
+                  className="h-[51px] border-[#29292E] bg-[#070709] text-white placeholder:text-[#9D9DA5]"
+                />
+              </Field>
 
-          <Field label="Product">
-            <Select value={form.productId} onValueChange={(value) => updateField("productId", value)} required>
-              <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
-                <SelectValue placeholder="Select product" />
-              </SelectTrigger>
-              <SelectContent>
-                {productOptions.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
+              <Field label="Country">
+                <Select
+                  value={form.buyerCountry}
+                  onValueChange={(value) => updateField("buyerCountry", value)}
+                  required
+                >
+                  <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-72">
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          </div>
+
+          <div className="rounded-sm border border-[#26262B] bg-[#0B0D10] p-6 space-y-6">
+            <p className="font-['Barlow_Condensed'] text-[20px] font-semibold uppercase tracking-wide text-white">
+              Supplier details
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Field label="Supplier country">
+                <Select
+                  value={form.supplierCountry}
+                  onValueChange={(value) => {
+                    updateField("supplierCountry", value);
+                    updateField("supplierId", "");
+                  }}
+                >
+                  <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+                    <SelectValue placeholder="Select supplier country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-72">
+                      <SelectItem value="all">All Countries</SelectItem>
+                      {supplierCountryOptions.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field label="Supplier company">
+                <Select
+                  value={form.supplierId}
+                  onValueChange={(value) => updateField("supplierId", value)}
+                  disabled={isSuppliersLoading || isSuppliersError}
+                  required
+                >
+                  <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+                    <SelectValue
+                      placeholder={
+                        isSuppliersLoading
+                          ? "Loading suppliers..."
+                          : isSuppliersError
+                            ? "Unable to load suppliers"
+                            : availableSuppliers.length === 0
+                              ? "No suppliers found"
+                              : "Select supplier company"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-72">
+                      {availableSuppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            <Field label="Product">
+              <Select value={form.productId} onValueChange={(value) => updateField("productId", value)} required>
+                <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+                  <SelectValue placeholder="Select product" />
+                </SelectTrigger>
+                <SelectContent>
+                  <ScrollArea className="h-72">
+                    {productOptions.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
 
           <div className="flex justify-end gap-5 pt-2">
             <Button type="button" onClick={() => navigate(-1)} variant="outline" className="h-[50px] w-[144px] border-[#29292E] bg-transparent text-[18px] font-semibold text-white hover:bg-[#070709]">

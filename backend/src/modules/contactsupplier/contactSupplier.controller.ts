@@ -21,7 +21,7 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
 
   if (!existingUser) {
     buyerId = createReadableId("BUY");
-    buyerCompany = "Independent Buyer";
+    buyerCompany = String(req.body.company || "").trim() || "Independent Buyer";
 
     await BuyerModel.create({
       id: buyerId,
@@ -61,7 +61,7 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
     buyerName: req.body.fullName,
     buyerCompany,
 
-    message: `Contact email: ${email}\nCountry: ${req.body.country}`,
+    message: `Contact email: ${email}\nCompany: ${buyerCompany}\nCountry: ${req.body.country}`,
 
     date: dateOnly(),
 

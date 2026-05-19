@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const createContactSupplierSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required"),
+  company: z.string().trim().min(1, "Company is required").optional(),
   supplierId: z.string().trim().min(1, "Supplier is required").optional(),
   supplierCompany: z.string().trim().min(1, "Supplier company is required"),
   email: z.string().trim().email("Valid email is required"),
