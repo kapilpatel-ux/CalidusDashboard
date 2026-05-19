@@ -140,7 +140,7 @@ export const BuyerManagement = ({ onView } = {}) => {
         data={filteredBuyers}
         searchPlaceholder="Search buyers..."
         searchKey="name"
-        pageSize={5}
+        pageSize={10}
         testId="buyers-table"
       />
     </div>

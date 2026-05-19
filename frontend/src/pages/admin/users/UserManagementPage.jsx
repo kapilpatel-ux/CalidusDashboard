@@ -61,7 +61,7 @@ export const UserManagement = () => {
           </SelectContent>
         </Select>
       </div>
-      <DataTable columns={columns} data={filteredUsers} searchPlaceholder="Search users..." searchKey="name" pageSize={5} testId="admin-users-table" />
+      <DataTable columns={columns} data={filteredUsers} searchPlaceholder="Search users..." searchKey="name" pageSize={10} testId="admin-users-table" />
     </div>
   );
 };

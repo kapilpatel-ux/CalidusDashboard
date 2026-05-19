@@ -132,7 +132,7 @@ export const BuyerEnquiries = () => {
             </div>
           </div>
         ) : (
-          <DataTable columns={columns} data={filteredEnquiries} searchPlaceholder="Search enquiries..." searchKey="productName" pageSize={5} testId="buyer-enquiries-table" />
+          <DataTable columns={columns} data={filteredEnquiries} searchPlaceholder="Search enquiries..." searchKey="productName" pageSize={10} testId="buyer-enquiries-table" />
         )}
       </div>
 

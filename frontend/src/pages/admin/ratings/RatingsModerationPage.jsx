@@ -229,7 +229,7 @@ export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
         data={filteredRatings}
         searchPlaceholder="Search ratings..."
         searchKey="productName"
-        pageSize={5}
+        pageSize={10}
         testId="ratings-table"
       />
     </div>

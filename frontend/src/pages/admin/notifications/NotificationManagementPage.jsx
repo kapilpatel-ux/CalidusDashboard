@@ -67,7 +67,7 @@ export const NotificationManagement = () => {
         <div className="stat-card"><p className="data-label">Unread</p><p className="text-2xl font-bold">{notifications.filter((n) => !n.read).length}</p></div>
         <div className="stat-card"><p className="data-label">Read</p><p className="text-2xl font-bold">{notifications.filter((n) => n.read).length}</p></div>
       </div>
-      <DataTable columns={columns} data={filteredNotifications} searchPlaceholder="Search notifications..." searchKey="title" pageSize={5} testId="admin-notifications-table" />
+      <DataTable columns={columns} data={filteredNotifications} searchPlaceholder="Search notifications..." searchKey="title" pageSize={10} testId="admin-notifications-table" />
     </div>
   );
 };

@@ -232,7 +232,7 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
         data={filteredSuppliers}
         searchPlaceholder="Search suppliers..."
         searchKey="name"
-        pageSize={5}
+        pageSize={10}
         testId="suppliers-table"
       />
     </div>

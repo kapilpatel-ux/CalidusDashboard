@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -40,24 +39,6 @@ export const AddCategoryDialog = ({
               placeholder="Enter category name"
               className="bg-black/20 mt-1"
               data-testid="new-category-name"
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-              Subcategories (comma separated)
-            </Label>
-            <Textarea
-              value={newCategory.subcategories}
-              onChange={(e) =>
-                setNewCategory({
-                  ...newCategory,
-                  subcategories: e.target.value,
-                })
-              }
-              placeholder="Sub 1, Sub 2, Sub 3"
-              className="bg-black/20 mt-1"
-              data-testid="new-category-subcategories"
             />
           </div>
         </div>

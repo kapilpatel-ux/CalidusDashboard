@@ -17,7 +17,7 @@ export const DataTable = ({
   data,
   searchPlaceholder = "Search...",
   searchKey,
-  pageSize = 5,
+  pageSize = 10,
   className,
   testId,
   toolbarRight,

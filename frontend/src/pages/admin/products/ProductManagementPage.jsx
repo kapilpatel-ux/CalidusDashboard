@@ -263,7 +263,7 @@ export const ProductManagement = ({
         data={filteredProducts}
         searchPlaceholder="Search products or suppliers..."
         searchKey="name"
-        pageSize={5}
+        pageSize={10}
         testId="products-table"
       />
     </div>

@@ -164,6 +164,8 @@ export const DashboardShell = ({ children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
   const [notificationsList, setNotificationsList] = useState(
     currentRole === 'supplier' ? supplierNotifications : notifications
   );
@@ -213,7 +215,8 @@ export const DashboardShell = ({ children }) => {
   const handleMessageClick = (message) => {
     setActiveSection('enquiries');
     if (currentRole === "admin") {
-      navigate("/admin/overview");
+      setActiveSection("enquirymanagement");
+      navigate("/admin/enquirymanagement");
     } else if (currentRole === "buyer") {
       navigate("/buyer/enquiries");
     } else if (currentRole === "supplier") {
@@ -222,9 +225,33 @@ export const DashboardShell = ({ children }) => {
     toast.info(`Opening conversation: ${message.productName}`);
   };
 
-  const markAllNotificationsRead = () => {
-    setNotificationsList(prev => prev.map(n => ({ ...n, read: true })));
-    toast.success("All notifications marked as read");
+  const handleViewAllNotifications = () => {
+    setNotificationsOpen(false);
+    if (currentRole === "admin") {
+      setActiveSection("notificationmanagement");
+      navigate("/admin/notificationmanagement");
+      return;
+    }
+    toast.info("Notifications page is available for admin only.");
+  };
+
+  const handleViewAllEnquiries = () => {
+    setMessagesOpen(false);
+    if (currentRole === "admin") {
+      setActiveSection("enquirymanagement");
+      navigate("/admin/enquirymanagement");
+      return;
+    }
+    if (currentRole === "buyer") {
+      setActiveSection("enquiries");
+      navigate("/buyer/enquiries");
+      return;
+    }
+    if (currentRole === "supplier") {
+      setActiveSection("enquiries");
+      navigate("/supplier/enquiries");
+      return;
+    }
   };
 
   const handleNavigationClick = (item) => {
@@ -411,7 +438,7 @@ export const DashboardShell = ({ children }) => {
             </div>
 
             {/* Notifications */}
-            <Popover>
+            <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <PopoverTrigger asChild>
                 <Button 
                   variant="ghost" 
@@ -430,17 +457,15 @@ export const DashboardShell = ({ children }) => {
               <PopoverContent className="w-80 p-0" align="end">
                 <div className="p-3 border-b border-border flex items-center justify-between">
                   <h4 className="font-semibold text-sm">Notifications</h4>
-                  {unreadNotifications > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-xs h-7"
-                      onClick={markAllNotificationsRead}
-                      data-testid="mark-all-read-btn"
-                    >
-                      Mark all read
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={handleViewAllNotifications}
+                    data-testid="view-all-notifications-btn"
+                  >
+                    View all
+                  </Button>
                 </div>
                 <ScrollArea className="h-[300px]">
                   {notificationsList.length === 0 ? (
@@ -492,7 +517,7 @@ export const DashboardShell = ({ children }) => {
             </Popover>
 
             {/* Messages */}
-            <Popover>
+            <Popover open={messagesOpen} onOpenChange={setMessagesOpen}>
               <PopoverTrigger asChild>
                 <Button 
                   variant="ghost" 
@@ -509,8 +534,17 @@ export const DashboardShell = ({ children }) => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80 p-0" align="end">
-                <div className="p-3 border-b border-border">
-                  <h4 className="font-semibold text-sm">Messages</h4>
+                <div className="p-3 border-b border-border flex items-center justify-between">
+                  <h4 className="font-semibold text-sm">Enquiries</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={handleViewAllEnquiries}
+                    data-testid="view-all-enquiries-btn"
+                  >
+                    View all
+                  </Button>
                 </div>
                 <ScrollArea className="h-[300px]">
                   {messagesList.length === 0 ? (

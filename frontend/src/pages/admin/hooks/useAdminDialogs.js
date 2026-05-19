@@ -16,17 +16,19 @@ export const useAdminDialogs = () => {
 
   const [addCategoryDialog, setAddCategoryDialog] = useState(false);
 
-  const [addSubcategoryDialog, setAddSubcategoryDialog] = useState({
+  const [newCategory, setNewCategory] = useState({
+    name: "",
+  });
+
+  const [addProductDialog, setAddProductDialog] = useState({
     open: false,
     category: null,
   });
 
-  const [newCategory, setNewCategory] = useState({
-    name: "",
-    subcategories: "",
+  const [newProduct, setNewProduct] = useState({
+    productIds: [],
+    category: "",
   });
-
-  const [newSubcategory, setNewSubcategory] = useState("");
 
   const [editForm, setEditForm] = useState({});
 
@@ -40,14 +42,14 @@ export const useAdminDialogs = () => {
     addCategoryDialog,
     setAddCategoryDialog,
 
-    addSubcategoryDialog,
-    setAddSubcategoryDialog,
-
     newCategory,
     setNewCategory,
 
-    newSubcategory,
-    setNewSubcategory,
+    addProductDialog,
+    setAddProductDialog,
+
+    newProduct,
+    setNewProduct,
 
     editForm,
     setEditForm,

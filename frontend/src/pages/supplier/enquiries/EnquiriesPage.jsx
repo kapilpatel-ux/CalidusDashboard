@@ -142,7 +142,7 @@ export const SupplierEnquiries = () => {
             data={filteredEnquiries}
             searchPlaceholder="Search enquiries..."
             searchKey="buyerName"
-            pageSize={5}
+            pageSize={10}
             testId="supplier-enquiries-table"
             toolbarRight={
               <Select value={statusFilter} onValueChange={setStatusFilter}>

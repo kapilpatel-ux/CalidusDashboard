@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { AuthPage } from "@/pages/auth/AuthPage";
 import ContactSupplierPage from "@/pages/ContactSupplierPage";
+import { SupplierRegistrationPage } from "@/pages/public/SupplierRegistrationPage";
 import {
   AdminProvider,
   AdminOverview,
@@ -179,6 +180,7 @@ function App() {
                 <Route path="/login" element={<AuthPage />} />
                 <Route path="/signup" element={<AuthPage />} />
                 <Route path="/contact-supplier" element={<ContactSupplierPage />} />
+                <Route path="/supplier-registration" element={<SupplierRegistrationPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             )}

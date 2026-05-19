@@ -70,7 +70,7 @@ export const EnquiryManagement = () => {
             </SelectContent>
           </Select>
         </div>
-        <DataTable columns={columns} data={filteredEnquiries} searchPlaceholder="Search enquiries..." searchKey="buyerName" pageSize={5} testId="admin-enquiries-table" />
+        <DataTable columns={columns} data={filteredEnquiries} searchPlaceholder="Search enquiries..." searchKey="buyerName" pageSize={10} testId="admin-enquiries-table" />
       </div>
 
       <Sheet open={viewSheet.open} onOpenChange={(open) => setViewSheet({ ...viewSheet, open })}>

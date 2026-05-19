@@ -6,7 +6,7 @@ import { ConfirmDialog } from "./dialogs/ConfirmDialog";
 import { EditProductDialog } from "./dialogs/EditProductDialog";
 import { EditCategoryDialog } from "./dialogs/EditCategoryDialog";
 import { AddCategoryDialog } from "./dialogs/AddCategoryDialog";
-import { AddSubcategoryDialog } from "./dialogs/AddSubcategoryDialog";
+import { AddProductDialog } from "./dialogs/AddProductDialog";
 import { useAdminDialogs } from "./hooks/useAdminDialogs";
 import { useViewSheet } from "./hooks/useViewSheet";
 import { SupplierDetailSheet } from "./sheets/SupplierDetailSheet";
@@ -17,7 +17,7 @@ import { store } from "@/store/store";
 import { ratingApi } from "@/store/api/admin/ratingApi";
 import { productApi } from "@/store/api/admin/productApi";
 import { categoryApi, useCreateCategoryMutation } from "@/store/api/admin/categoryApi";
-import { supplierApi } from "@/lib/api";
+import { supplierApi as supplierRtkApi } from "@/store/api/admin/supplierApi";
 import { buyerApi } from "@/store/api/admin/buyerApi";
 
 const AdminActionsContext = createContext({
@@ -26,7 +26,7 @@ const AdminActionsContext = createContext({
   openViewSheet: () => {},
   openBuyerSheet: () => {},
   openAddCategoryDialog: () => {},
-  openAddSubcategoryDialog: () => {},
+  openAddProductDialog: () => {},
 });
 
 export const useAdminActions = () => useContext(AdminActionsContext);
@@ -38,6 +38,7 @@ export const AdminProvider = () => {
   const [ratingsData, setRatingsData] = useState([]);
   const [categoriesData, setCategoriesData] = useState([]);
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
+  const [isAssigningProducts, setIsAssigningProducts] = useState(false);
 
   const {
     confirmDialog,
@@ -46,12 +47,12 @@ export const AdminProvider = () => {
     setEditDialog,
     addCategoryDialog,
     setAddCategoryDialog,
-    addSubcategoryDialog,
-    setAddSubcategoryDialog,
     newCategory,
     setNewCategory,
-    newSubcategory,
-    setNewSubcategory,
+    addProductDialog,
+    setAddProductDialog,
+    newProduct,
+    setNewProduct,
     editForm,
     setEditForm,
   } = useAdminDialogs();
@@ -65,7 +66,13 @@ export const AdminProvider = () => {
   useEffect(() => {
     const loadSuppliers = async () => {
       try {
-        const apiSuppliers = await supplierApi.list();
+        const apiSuppliers = await store
+          .dispatch(
+            supplierRtkApi.endpoints.getSuppliers.initiate(undefined, {
+              forceRefetch: true,
+            })
+          )
+          .unwrap();
         if (Array.isArray(apiSuppliers) && apiSuppliers.length > 0) {
           setSuppliers(apiSuppliers);
         }
@@ -102,22 +109,39 @@ export const AdminProvider = () => {
     try {
       switch (type) {
         case "approve-supplier":
-          await supplierApi.updateStatus(item.id, "active");
+          await store.dispatch(
+            supplierRtkApi.endpoints.updateSupplierStatus.initiate({
+              id: item.id,
+              status: "active",
+            })
+          ).unwrap();
           setSuppliers((prev) => prev.map((s) => s.id === item.id ? { ...s, status: "active" } : s));
           toast.success(`Supplier "${item.name}" approved successfully`);
           break;
         case "reject-supplier":
-          await supplierApi.updateStatus(item.id, "rejected");
+          await store.dispatch(
+            supplierRtkApi.endpoints.updateSupplierStatus.initiate({
+              id: item.id,
+              status: "rejected",
+            })
+          ).unwrap();
           setSuppliers((prev) => prev.map((s) => s.id === item.id ? { ...s, status: "rejected" } : s));
           toast.error(`Supplier "${item.name}" rejected`);
           break;
         case "suspend-supplier":
-          await supplierApi.updateStatus(item.id, "suspended");
+          await store.dispatch(
+            supplierRtkApi.endpoints.updateSupplierStatus.initiate({
+              id: item.id,
+              status: "suspended",
+            })
+          ).unwrap();
           setSuppliers((prev) => prev.map((s) => s.id === item.id ? { ...s, status: "suspended" } : s));
           toast.warning(`Supplier "${item.name}" suspended`);
           break;
         case "delete-supplier":
-          await supplierApi.remove(item.id);
+          await store.dispatch(
+            supplierRtkApi.endpoints.deleteSupplier.initiate(item.id)
+          ).unwrap();
           setSuppliers((prev) => prev.filter((s) => s.id !== item.id));
           toast.success(`Supplier "${item.name}" deleted`);
           break;
@@ -313,11 +337,7 @@ export const AdminProvider = () => {
     if (newCategory.name.trim()) {
       const payload = {
         name: newCategory.name,
-        subcategories: newCategory.subcategories
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .map((name) => ({ name })),
+        subcategories: [],
         productCount: 0,
       };
 
@@ -333,26 +353,41 @@ export const AdminProvider = () => {
     }
   };
 
-  const handleAddSubcategory = async () => {
-    if (newSubcategory.trim() && addSubcategoryDialog.category) {
-      const category = addSubcategoryDialog.category;
+  const handleAddProduct = async () => {
+    const categoryName = newProduct.category?.trim();
+    const productIds = Array.isArray(newProduct.productIds) ? newProduct.productIds : [];
+    if (!categoryName || productIds.length === 0) return;
 
-      await store.dispatch(
-        categoryApi.endpoints.updateCategory.initiate({
-          id: category.id,
-          payload: {
-            ...category,
-            subcategories: [
-              ...(category.subcategories || []),
-              { name: newSubcategory },
-            ],
-          },
+    setIsAssigningProducts(true);
+    try {
+      await Promise.all(
+        productIds.map((id) =>
+          store
+            .dispatch(
+              productApi.endpoints.updateProduct.initiate({
+                id,
+                payload: { category: categoryName },
+              })
+            )
+            .unwrap()
+        )
+      );
+      store.dispatch(
+        productApi.util.updateQueryData("getProducts", undefined, (draft) => {
+          if (!Array.isArray(draft)) return;
+          for (const id of productIds) {
+            const product = draft.find((p) => p?.id === id);
+            if (product) product.category = categoryName;
+          }
         })
-      ).unwrap();
-
-      toast.success(`Subcategory "${newSubcategory}" added to ${category.name}`);
-      setNewSubcategory("");
-      setAddSubcategoryDialog({ open: false, category: null });
+      );
+      toast.success(`${productIds.length} product(s) assigned to category`);
+      setAddProductDialog({ open: false, category: null });
+      setNewProduct({ productIds: [], category: "" });
+    } catch (error) {
+      toast.error(error?.data?.message || error?.message || "Failed to assign products");
+    } finally {
+      setIsAssigningProducts(false);
     }
   };
 
@@ -369,7 +404,13 @@ export const AdminProvider = () => {
     openViewSheet,
     openBuyerSheet: (item) => openViewSheet("buyer", item),
     openAddCategoryDialog: () => setAddCategoryDialog(true),
-    openAddSubcategoryDialog: (category) => setAddSubcategoryDialog({ open: true, category }),
+    openAddProductDialog: (category) => {
+      setAddProductDialog({ open: true, category });
+      setNewProduct({
+        productIds: [],
+        category: category?.name || "",
+      });
+    },
   };
 
   return (
@@ -407,12 +448,13 @@ export const AdminProvider = () => {
         isAdding={isCreatingCategory}
       />
 
-      <AddSubcategoryDialog
-        addSubcategoryDialog={addSubcategoryDialog}
-        setAddSubcategoryDialog={setAddSubcategoryDialog}
-        newSubcategory={newSubcategory}
-        setNewSubcategory={setNewSubcategory}
-        onAddSubcategory={handleAddSubcategory}
+      <AddProductDialog
+        open={addProductDialog.open}
+        setOpen={(open) => setAddProductDialog({ ...addProductDialog, open })}
+        newProduct={newProduct}
+        setNewProduct={setNewProduct}
+        onAddProduct={handleAddProduct}
+        isAdding={isAssigningProducts}
       />
 
       <SupplierDetailSheet

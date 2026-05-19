@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,13 +8,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 export const ConfirmDialog = ({ confirmDialog, setConfirmDialog, onConfirm }) => {
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    if (isConfirming) return;
+    setIsConfirming(true);
+    try {
+      await onConfirm?.();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <Dialog
       open={confirmDialog.open}
-      onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+      onOpenChange={(open) => {
+        if (isConfirming) return;
+        setConfirmDialog({ ...confirmDialog, open });
+      }}
     >
       <DialogContent>
         <DialogHeader>
@@ -30,13 +46,19 @@ export const ConfirmDialog = ({ confirmDialog, setConfirmDialog, onConfirm }) =>
           <Button
             variant="outline"
             onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+            disabled={isConfirming}
             data-testid="confirm-cancel-btn"
           >
             Cancel
           </Button>
 
-          <Button onClick={onConfirm} data-testid="confirm-action-btn">
-            Confirm
+          <Button
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            data-testid="confirm-action-btn"
+          >
+            {isConfirming && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isConfirming ? "Processing..." : "Confirm"}
           </Button>
         </DialogFooter>
       </DialogContent>

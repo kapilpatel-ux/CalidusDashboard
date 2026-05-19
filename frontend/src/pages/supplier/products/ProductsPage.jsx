@@ -378,7 +378,7 @@ export const SupplierProducts = () => {
           data={filteredProducts}
           searchPlaceholder="Search products..."
           searchKey="name"
-          pageSize={5}
+          pageSize={10}
           testId="supplier-products-table"
           toolbarRight={
             <Select value={statusFilter} onValueChange={setStatusFilter}>
