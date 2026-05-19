@@ -12,10 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Loader2, Building2, MapPin, FileText, CheckCircle, Upload } from "lucide-react";
 import { useCreateSupplierMutation } from "@/store/api/admin/supplierApi";
 import logo from "@/assets/images/calidusheader.png";
+import { COUNTRIES } from "@/data/countries";
 
 const steps = [
   { id: "company", label: "Company Info", icon: Building2 },
@@ -24,23 +26,7 @@ const steps = [
   { id: "review", label: "Review", icon: CheckCircle },
 ];
 
-const supplierTypeOptions = [
-  { value: "Tier 1", label: "Tier 1" },
-  { value: "Tier 2", label: "Tier 2" },
-  { value: "OEM", label: "OEM" },
-  { value: "Distributor", label: "Distributor" },
-];
-
-const countryOptions = [
-  "India",
-  "United States",
-  "United Kingdom",
-  "France",
-  "Germany",
-  "Israel",
-  "Sweden",
-  "UAE",
-];
+const countryOptions = COUNTRIES;
 
 const currencyOptions = [
   { value: "USD", label: "USD ($)" },
@@ -58,6 +44,7 @@ const certificationOptions = [
 ];
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneDigits = (value) => String(value || "").replace(/\D/g, "");
 
 export const SupplierRegistrationPage = () => {
   const navigate = useNavigate();
@@ -73,7 +60,6 @@ export const SupplierRegistrationPage = () => {
   const [form, setForm] = useState({
     name: "",
     contactPerson: "",
-    type: "",
     email: "",
     phone: "",
     currency: "",
@@ -195,14 +181,14 @@ export const SupplierRegistrationPage = () => {
     if (!stepId || stepId === "company") {
       requireField("name", "Company name is required");
       requireField("contactPerson", "Contact person is required");
-      requireField("type", "Supplier type is required");
       requireField("email", "Email is required");
       if (String(form.email || "").trim() && !emailRegex.test(String(form.email).trim())) {
         nextErrors.email = "Enter a valid email address";
       }
       requireField("phone", "Phone is required");
-      if (String(form.phone || "").trim() && String(form.phone).replace(/\D/g, "").length < 7) {
-        nextErrors.phone = "Enter a valid phone number";
+      const digits = phoneDigits(form.phone);
+      if (String(form.phone || "").trim() && (digits.length < 10 || digits.length > 15)) {
+        nextErrors.phone = "Enter a valid phone number (10–15 digits)";
       }
       requireField("licenseNumber", "License number is required");
       requireField("currency", "Supplier currency is required");
@@ -304,7 +290,7 @@ export const SupplierRegistrationPage = () => {
 
     const payload = {
       name: form.name.trim(),
-      type: form.type.trim(),
+      type: "OEM",
       country: form.country.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
@@ -457,28 +443,6 @@ export const SupplierRegistrationPage = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Supplier Type *
-                    </Label>
-                    <Select value={form.type} onValueChange={(v) => setField("type", v)}>
-                      <SelectTrigger
-                        className={`bg-black/20 mt-1 ${errors.type ? "border-red-500/50" : ""}`}
-                        data-testid="supplier-reg-type"
-                      >
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                        <SelectContent>
-                          {supplierTypeOptions.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.type && <p className="text-xs text-red-400 mt-1">{errors.type}</p>}
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -499,6 +463,7 @@ export const SupplierRegistrationPage = () => {
                           Phone *
                         </Label>
                         <Input
+                          type="tel"
                           value={form.phone}
                           onChange={(e) => setField("phone", e.target.value)}
                           className={`bg-black/20 mt-1 ${errors.phone ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
@@ -652,7 +617,7 @@ export const SupplierRegistrationPage = () => {
 
                   <div>
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Country
+                      Country *
                     </Label>
                     <Select value={form.country} onValueChange={(v) => setField("country", v)}>
                       <SelectTrigger
@@ -661,12 +626,14 @@ export const SupplierRegistrationPage = () => {
                       >
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {countryOptions.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
+                    <SelectContent>
+                        <ScrollArea className="h-72">
+                          {countryOptions.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </ScrollArea>
                       </SelectContent>
                     </Select>
                     {errors.country && <p className="text-xs text-red-400 mt-1">{errors.country}</p>}
@@ -773,10 +740,6 @@ export const SupplierRegistrationPage = () => {
                         <div>
                           <p className="text-xs text-muted-foreground">Company Name</p>
                           <p className="font-medium mt-1">{form.name || "-"}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Supplier Type</p>
-                          <p className="font-medium mt-1">{form.type || "-"}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Contact Person</p>
