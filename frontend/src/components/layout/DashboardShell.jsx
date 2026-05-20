@@ -97,7 +97,7 @@ const navigationConfig = {
   ],
   buyer: [
     { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/buyer/overview" },
-    // { id: "enquiries", label: "My Enquiries", icon: Inbox, path: "/buyer/enquiries" },
+    { id: "enquiries", label: "My Enquiries", icon: Inbox, path: "/buyer/enquiries" },
     { id: "ratings", label: "Ratings", icon: Star, path: "/buyer/ratings" },
     { id: "profile", label: "Profile Management", icon: UserCircle, path: "/buyer/profile" },
   ],

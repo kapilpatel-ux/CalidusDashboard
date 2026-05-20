@@ -10,6 +10,8 @@ export const supplierOverviewApi = createApi({
     getSupplierOverview: builder.query({
       query: (supplierId) => `/api/suppliers/${supplierId}/overview`,
       providesTags: ["SupplierOverview"],
+      keepUnusedDataFor: 0,
+      refetchOnMountOrArgChange: true,
     }),
   }),
 });

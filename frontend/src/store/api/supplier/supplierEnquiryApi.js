@@ -10,6 +10,8 @@ export const supplierEnquiryApi = createApi({
     getSupplierEnquiries: builder.query({
       query: (supplierId) => `/api/suppliers/${supplierId}/enquiries`,
       providesTags: ["SupplierEnquiry"],
+      keepUnusedDataFor: 0,
+      refetchOnMountOrArgChange: true,
     }),
 
     replyToSupplierEnquiry: builder.mutation({

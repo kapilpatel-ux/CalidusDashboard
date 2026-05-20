@@ -25,11 +25,66 @@ export const SupplierProfile = () => {
   const documentInputRef = useRef(null);
 
   const openEdit = () => {
-    setProfileForm({ ...supplier });
+    setProfileForm({
+      ...supplier,
+      documents: (supplier.documents || []).map((document) => ({ ...document })),
+    });
     setEditProfileDialog(true);
   };
 
+  const validateDocumentFile = (file) => {
+    if (!file) {
+      toast.error("Please select a PDF or DOC file first");
+      return false;
+    }
+
+    const allowedTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PDF, DOC, and DOCX files are allowed");
+      return false;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File must be 10MB or smaller");
+      return false;
+    }
+
+    return true;
+  };
+
+  const getDocumentStatus = (documents = []) => {
+    if (documents.some((document) => document.status === "expired")) return "expired";
+    if (documents.some((document) => document.status === "expiring")) return "expiring";
+    return "active";
+  };
+
+  const applyUploadedFileToDocument = (document, file) => ({
+    ...document,
+    status: "active",
+    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+    uploadedAt: new Date().toISOString(),
+  });
+
+  const handleEditDocumentFile = (index, file) => {
+    if (!validateDocumentFile(file)) return;
+
+    const updatedDocuments = (profileForm.documents || []).map((document, documentIndex) =>
+      documentIndex === index ? applyUploadedFileToDocument(document, file) : document
+    );
+
+    setProfileForm({
+      ...profileForm,
+      documents: updatedDocuments,
+      documentStatus: getDocumentStatus(updatedDocuments),
+    });
+  };
+
   const handleSaveProfile = async () => {
+    const documents = profileForm.documents || [];
+
     try {
       const updated = await updateSupplierProfile({
         supplierId: supplier.id,
@@ -39,6 +94,8 @@ export const SupplierProfile = () => {
           country: profileForm.country,
           email: profileForm.email,
           phone: profileForm.phone,
+          documents,
+          documentStatus: getDocumentStatus(documents),
         },
       }).unwrap();
       setProfileForm(updated);
@@ -54,40 +111,18 @@ export const SupplierProfile = () => {
   if (error) return <p>Failed to load company profile.</p>;
 
   const handleUploadDocument = async () => {
-    if (!selectedDocumentFile) {
-      toast.error("Please select a PDF or DOC file first");
-      return;
-    }
-
-    const allowedTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-    if (!allowedTypes.includes(selectedDocumentFile.type)) {
-      toast.error("Only PDF, DOC, and DOCX files are allowed");
-      return;
-    }
-
-    if (selectedDocumentFile.size > 10 * 1024 * 1024) {
-      toast.error("File must be 10MB or smaller");
-      return;
-    }
+    if (!validateDocumentFile(selectedDocumentFile)) return;
 
     const updatedDocs = (supplier.documents || []).map((doc) =>
       doc.name === uploadDocDialog.document.name
-        ? {
-            ...doc,
-            status: "active",
-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-            fileName: selectedDocumentFile.name,
-            fileType: selectedDocumentFile.type,
-            fileSize: selectedDocumentFile.size,
-            uploadedAt: new Date().toISOString(),
-          }
+        ? applyUploadedFileToDocument(doc, selectedDocumentFile)
         : doc
     );
 
     try {
       await updateSupplierProfile({
         supplierId: supplier.id,
-        payload: { documents: updatedDocs, documentStatus: "active" },
+        payload: { documents: updatedDocs, documentStatus: getDocumentStatus(updatedDocs) },
       }).unwrap();
       toast.success(`${uploadDocDialog.document.name} re-uploaded successfully`);
       setUploadDocDialog({ open: false, document: null });
@@ -170,7 +205,7 @@ export const SupplierProfile = () => {
       </div>
 
       <Dialog open={editProfileDialog} onOpenChange={setEditProfileDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Edit Company Profile</DialogTitle>
           </DialogHeader>
@@ -242,6 +277,53 @@ export const SupplierProfile = () => {
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
               <Input value={profileForm.phone || ""} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="bg-black/20 mt-1" />
+            </div>
+            <div className="pt-2 border-t border-border">
+              <div className="mb-3">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Documents</Label>
+                <p className="text-xs text-muted-foreground mt-1">Existing documents are shown below. Choose a new file to replace any document.</p>
+              </div>
+              <div className="space-y-3">
+                {(profileForm.documents || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground rounded-sm border border-border p-3">No documents uploaded yet.</p>
+                ) : (
+                  (profileForm.documents || []).map((doc, idx) => (
+                    <div key={`${doc.name}-${idx}`} className="rounded-sm border border-border bg-black/10 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {doc.status === "expired" ? <FileX className="h-4 w-4 shrink-0 text-red-400" /> :
+                             doc.status === "expiring" ? <FileWarning className="h-4 w-4 shrink-0 text-amber-400" /> :
+                             <FileCheck className="h-4 w-4 shrink-0 text-emerald-400" />}
+                            <p className="text-sm font-medium truncate">{doc.name}</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">Expires: {doc.expiryDate || "N/A"}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Current file: {doc.fileName || "No file name saved"}
+                          </p>
+                        </div>
+                        <span className={`text-xs uppercase ${
+                          doc.status === "expired" ? "text-red-400" :
+                          doc.status === "expiring" ? "text-amber-400" :
+                          "text-emerald-400"
+                        }`}>
+                          {doc.status || "active"}
+                        </span>
+                      </div>
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        className="mt-3 bg-black/20"
+                        onChange={(event) => {
+                          handleEditDocumentFile(idx, event.target.files?.[0] || null);
+                          event.target.value = "";
+                        }}
+                        data-testid={`edit-profile-doc-input-${idx}`}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -48,6 +48,10 @@ export const BuyerEnquiries = () => {
   const { data: products = [], isLoading: isProductsLoading } = useGetProductsQuery();
   const [createBuyerEnquiry, { isLoading: isCreating }] = useCreateBuyerEnquiryMutation();
   const approvedProducts = products.filter((product) => product.status === "approved");
+  const selectedProduct = approvedProducts.find((product) => product.id === newEnquiry.productId);
+  const selectedProductLabel = selectedProduct
+    ? `${selectedProduct.name} - ${selectedProduct.supplierName}`
+    : "Choose a product";
 
   const filteredEnquiries = statusFilter === "all"
     ? enquiries
@@ -137,22 +141,30 @@ export const BuyerEnquiries = () => {
       </div>
 
       <Dialog open={newEnquiryDialog} onOpenChange={setNewEnquiryDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-lg min-w-0 overflow-hidden">
+          <DialogHeader className="min-w-0">
             <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Send New Enquiry</DialogTitle>
             <DialogDescription>Send an enquiry to a supplier about a specific product</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
+          <div className="min-w-0 space-y-4 py-4">
+            <div className="min-w-0">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Select Product *</Label>
               <Select value={newEnquiry.productId} onValueChange={(value) => setNewEnquiry({ ...newEnquiry, productId: value })}>
-                <SelectTrigger className="bg-black/20 mt-1" data-testid="enquiry-product-select">
-                  <SelectValue placeholder="Choose a product" />
+                <SelectTrigger className="mt-1 w-full min-w-0 max-w-full overflow-hidden bg-black/20 [&>svg]:shrink-0" data-testid="enquiry-product-select">
+                  <span className="block min-w-0 flex-1 truncate text-left">
+                    {selectedProductLabel}
+                  </span>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  align="start"
+                  sideOffset={6}
+                  className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] overflow-x-hidden"
+                >
                   {approvedProducts.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - {product.supplierName}
+                    <SelectItem key={product.id} value={product.id} className="min-w-0 whitespace-normal break-words pr-8">
+                      <span className="min-w-0 break-words">
+                        {product.name} - {product.supplierName}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -165,12 +177,12 @@ export const BuyerEnquiries = () => {
                 value={newEnquiry.message}
                 onChange={(event) => setNewEnquiry({ ...newEnquiry, message: event.target.value })}
                 placeholder="Type your enquiry message..."
-                className="bg-black/20 mt-1 min-h-[150px]"
+                className="mt-1 min-h-[150px] w-full max-w-full bg-black/20"
                 data-testid="enquiry-message"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="min-w-0 flex-wrap gap-2">
             <Button variant="outline" onClick={() => setNewEnquiryDialog(false)}>Cancel</Button>
             <Button onClick={handleSendEnquiry} disabled={isCreating} className="gap-2" data-testid="send-enquiry-btn">
               <Send className="h-4 w-4" />

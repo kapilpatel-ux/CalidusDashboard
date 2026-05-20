@@ -10,6 +10,8 @@ export const enquiryApi = createApi({
     getEnquiries: builder.query({
       query: () => "/api/admin/enquiries",
       providesTags: ["Enquiry"],
+      keepUnusedDataFor: 0,
+      refetchOnMountOrArgChange: true,
     }),
     updateEnquiryStatus: builder.mutation({
       query: ({ id, status }) => ({

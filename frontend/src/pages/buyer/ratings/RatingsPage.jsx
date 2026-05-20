@@ -29,7 +29,7 @@ import { RatingStars } from "@/components/shared/RatingStars";
 import { Calendar, Edit, Eye, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
-import { currentBuyer } from "@/data/mockData";
+// import { currentBuyer } from "@/data/mockData";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import {
   useCreateBuyerRatingMutation,
@@ -50,6 +50,11 @@ export const BuyerRatings = () => {
   const [createBuyerRating, { isLoading: isCreating }] = useCreateBuyerRatingMutation();
   const [updateBuyerRating, { isLoading: isUpdating }] = useUpdateBuyerRatingMutation();
   const approvedProducts = products.filter((product) => product.status === "approved");
+
+  const selectedProduct = approvedProducts.find((product) => product.id === newRating.productId);
+  const selectedProductLabel = selectedProduct
+    ? `${selectedProduct.name} - ${selectedProduct.supplierName}`
+    : "Choose a product";
 
   const handleSubmitRating = async () => {
     if (newRating.productId && newRating.review.trim()) {
@@ -163,22 +168,30 @@ export const BuyerRatings = () => {
       </div>
 
       <Dialog open={submitRatingDialog} onOpenChange={setSubmitRatingDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-lg min-w-0 overflow-hidden">
+          <DialogHeader className="min-w-0">
             <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Submit Rating</DialogTitle>
             <DialogDescription>Rate a product you have interacted with</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
+          <div className="min-w-0 space-y-4 py-4">
+            <div className="min-w-0">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Select Product *</Label>
               <Select value={newRating.productId} onValueChange={(value) => setNewRating({ ...newRating, productId: value })}>
-                <SelectTrigger className="bg-black/20 mt-1" data-testid="rating-product-select">
-                  <SelectValue placeholder="Choose a product" />
+                <SelectTrigger className="mt-1 w-full min-w-0 max-w-full overflow-hidden bg-black/20 [&>svg]:shrink-0" data-testid="rating-product-select">
+                  <span className="block min-w-0 flex-1 truncate text-left">
+                    {selectedProductLabel}
+                  </span>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  align="start"
+                  sideOffset={6}
+                  className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] overflow-x-hidden"
+                >
                   {approvedProducts.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - {product.supplierName}
+                    <SelectItem key={product.id} value={product.id} className="min-w-0 whitespace-normal break-words pr-8">
+                      <span className="min-w-0 break-words">
+                        {product.name} - {product.supplierName}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -210,12 +223,12 @@ export const BuyerRatings = () => {
                 value={newRating.review}
                 onChange={(event) => setNewRating({ ...newRating, review: event.target.value })}
                 placeholder="Write your review..."
-                className="bg-black/20 mt-1 min-h-[120px]"
+                className="mt-1 min-h-[120px] w-full max-w-full bg-black/20"
                 data-testid="rating-review-textarea"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="min-w-0 flex-wrap gap-2">
             <Button variant="outline" onClick={() => setSubmitRatingDialog(false)}>Cancel</Button>
             <Button onClick={handleSubmitRating} disabled={isCreating} data-testid="submit-rating-btn">
               {isCreating ? "Submitting..." : "Submit Rating"}
