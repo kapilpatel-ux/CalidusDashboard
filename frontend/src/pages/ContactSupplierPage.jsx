@@ -48,13 +48,7 @@ export default function ContactSupplierPage() {
   const selectedProduct = productOptions.find((product) => product.id === form.productId);
   const supplierCountry = String(form.supplierCountry || "").trim();
   const nonSuspendedSuppliers = suppliers.filter((supplier) => supplier.status !== "suspended");
-  const supplierCountryOptions = Array.from(
-    new Set(
-      nonSuspendedSuppliers
-        .map((s) => String(s?.country || "").trim())
-        .filter(Boolean),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
+  const supplierCountryOptions = COUNTRIES;
 
   const normalize = (value) => String(value || "").trim().toLowerCase();
   const availableSuppliers = nonSuspendedSuppliers.filter((supplier) => {

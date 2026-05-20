@@ -183,7 +183,6 @@ function App() {
 
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/signup" element={<Navigate to="/" replace />} />
-        <Route path="/contact-supplier" element={<ContactSupplierPage />} />
         <Route path="*" element={<Navigate to={isAdminRole ? adminLandingPath : currentRole === "buyer" ? "/buyer/overview" : "/supplier/overview"} replace />} />
       </Routes>
     </DashboardShell>
@@ -195,9 +194,17 @@ function App() {
         <RoleContext.Provider value={{ currentRole, setCurrentRole: handleRoleChange }}>
           <NavigationContext.Provider value={{ activeSection, setActiveSection }}>
             {isAuthenticated ? (
-              <div className="min-h-screen bg-background tactical-grid noise-overlay">
-                {dashboardRoutes}
-              </div>
+              <Routes>
+                <Route path="/contact-supplier" element={<ContactSupplierPage />} />
+                <Route
+                  path="/*"
+                  element={
+                    <div className="min-h-screen bg-background tactical-grid noise-overlay">
+                      {dashboardRoutes}
+                    </div>
+                  }
+                />
+              </Routes>
             ) : (
               <Routes>
                 <Route path="/login" element={<AuthPage />} />

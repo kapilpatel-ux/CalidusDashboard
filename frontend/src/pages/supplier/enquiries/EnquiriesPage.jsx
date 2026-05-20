@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, MessageSquare, Send, User, Eye, Package, Building2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, MessageSquare, Send, User, Eye, Package, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,12 @@ const DetailItem = ({ label, value }) => (
   </div>
 );
 
+const getEnquiryTime = (enquiry = {}) => {
+  const value = enquiry.date || enquiry.createdAt || enquiry.createdDate || "";
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+};
+
 export const SupplierEnquiries = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId || currentSupplier.id;
@@ -32,6 +38,7 @@ export const SupplierEnquiries = () => {
   const [viewSheet, setViewSheet] = useState({ open: false, item: null });
   const [replySheet, setReplySheet] = useState({ open: false, item: null });
   const [replyText, setReplyText] = useState("");
+  const [dateSortDirection, setDateSortDirection] = useState("desc");
 
   const {
     data: enquiries = [],
@@ -42,10 +49,14 @@ export const SupplierEnquiries = () => {
   const [replyToSupplierEnquiry, { isLoading: isReplying }] =
     useReplyToSupplierEnquiryMutation();
 
-  const filteredEnquiries =
-    statusFilter === "all"
-      ? enquiries
-      : enquiries.filter((enquiry) => enquiry.status === statusFilter);
+  const filteredEnquiries = (statusFilter === "all"
+    ? enquiries
+    : enquiries.filter((enquiry) => enquiry.status === statusFilter))
+    .slice()
+    .sort((a, b) => {
+      const sortValue = getEnquiryTime(a) - getEnquiryTime(b);
+      return dateSortDirection === "asc" ? sortValue : -sortValue;
+    });
 
   const handleSendReply = async () => {
     const reply = replyText.trim();
@@ -88,7 +99,20 @@ export const SupplierEnquiries = () => {
       label: "Message",
       render: (value) => <p className="max-w-xs truncate text-sm">{value}</p>,
     },
-    { key: "date", label: "Date" },
+    {
+      key: "date",
+      label: (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+          onClick={() => setDateSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
+          data-testid="enquiry-date-sort-btn"
+        >
+          Date
+          {dateSortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+        </button>
+      ),
+    },
     {
       key: "status",
       label: "Status",

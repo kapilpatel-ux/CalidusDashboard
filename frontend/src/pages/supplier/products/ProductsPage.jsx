@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Edit, Eye, ImagePlus, Package, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Edit, Eye, ImagePlus, Package, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +20,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { RatingStars } from "@/components/shared/RatingStars";
 import { useAuth } from "@/App";
+import { COUNTRIES } from "@/data/countries";
 import { currentSupplier } from "@/data/mockData";
 import { useGetCategoriesQuery } from "@/store/api/admin/categoryApi";
 import {
@@ -74,7 +75,8 @@ const emptyAddForm = {
   applicationUseCase: "",
 };
 
-const countryOptions = ["India", "United States", "United Kingdom", "Germany", "France", "Israel", "Singapore", "Japan"];
+const productCategories = ["Electronics", "Aerospace", "Defense", "PCB", "Mechanical", "Communication", "General"];
+const countryOptions = COUNTRIES;
 const applicationAreas = ["Aerospace", "Defense", "Industrial", "Naval", "Avionics", "Communication", "Automotive"];
 
 const FormSection = ({ title, children }) => (
@@ -221,6 +223,29 @@ const formatDetailLabel = (label) =>
 const objectEntriesToDetails = (details = {}) =>
   Object.entries(details).filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "");
 
+const getProductCreatedAt = (product = {}) =>
+  product.createdAt || product.createdDate || product.date || product.createdOn || "";
+
+const getProductCreatedTime = (product = {}) => {
+  const value = getProductCreatedAt(product);
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const formatProductDate = (product = {}) => {
+  const value = getProductCreatedAt(product);
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 export const SupplierProducts = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId || currentSupplier.id;
@@ -239,6 +264,7 @@ export const SupplierProducts = () => {
   const [editForm, setEditForm] = useState(emptyEditForm);
   const [categoryRequestDialog, setCategoryRequestDialog] = useState({ open: false, initialValue: "" });
   const [requestedCategoryName, setRequestedCategoryName] = useState("");
+  const [dateSortDirection, setDateSortDirection] = useState("desc");
 
   const categoryOptions = (Array.isArray(categories) ? categories : [])
     .map((category) => String(category?.name || "").trim())
@@ -410,7 +436,14 @@ export const SupplierProducts = () => {
     }
   };
 
-  const filteredProducts = statusFilter === "all" ? products : products.filter((product) => product.status === statusFilter);
+  const filteredProducts = (statusFilter === "all" ? products : products.filter((product) => product.status === statusFilter))
+    .slice()
+    .sort((a, b) => {
+      const firstTime = getProductCreatedTime(a);
+      const secondTime = getProductCreatedTime(b);
+      const sortValue = firstTime - secondTime;
+      return dateSortDirection === "asc" ? sortValue : -sortValue;
+    });
 
   const columns = [
     {
@@ -433,6 +466,26 @@ export const SupplierProducts = () => {
       ),
     },
     { key: "category", label: "Category" },
+    {
+      key: "createdDate",
+      label: (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+          onClick={() => setDateSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
+          data-testid="product-date-sort-btn"
+        >
+          Date
+          {dateSortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+        </button>
+      ),
+      render: (_, row) => (
+        <div className="flex items-center gap-2 text-sm">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <span>{formatProductDate(row)}</span>
+        </div>
+      ),
+    },
     { key: "rating", label: "Rating", render: (value) => value > 0 ? <RatingStars rating={value} size="sm" /> : <span className="text-xs text-muted-foreground">No ratings</span> },
     { key: "status", label: "Status", render: (value) => <StatusBadge status={value} /> },
     {

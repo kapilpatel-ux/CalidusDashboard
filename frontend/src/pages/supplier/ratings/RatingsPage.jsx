@@ -15,6 +15,15 @@ import {
   useReplyToSupplierRatingMutation,
 } from "@/store/api/supplier/supplierRatingApi";
 
+const getRatingDate = (rating = {}) =>
+  rating.submissionDate || rating.createdDate || rating.createdAt || rating.date || "";
+
+const getRatingTime = (rating = {}) => {
+  const value = getRatingDate(rating);
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+};
+
 export const SupplierRatings = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId;
@@ -27,8 +36,9 @@ export const SupplierRatings = () => {
     isError,
   } = useGetSupplierRatingsQuery(supplierId, { skip: !supplierId });
   const [replyToSupplierRating, { isLoading: isSubmittingReply }] = useReplyToSupplierRatingMutation();
+  const sortedRatings = ratings.slice().sort((a, b) => getRatingTime(b) - getRatingTime(a));
 
-  const approvedRatings = ratings.filter((rating) => rating.status === "approved");
+  const approvedRatings = sortedRatings.filter((rating) => rating.status === "approved");
   const averageRating = approvedRatings.length > 0
     ? approvedRatings.reduce((sum, rating) => sum + Number(rating.rating || 0), 0) / approvedRatings.length
     : 0;
@@ -78,8 +88,8 @@ export const SupplierRatings = () => {
               </div>
               <div className="flex-1 space-y-2">
                 {[5, 4, 3, 2, 1].map((star) => {
-                  const count = ratings.filter((rating) => Math.floor(rating.rating) === star).length;
-                  const percentage = ratings.length > 0 ? (count / ratings.length) * 100 : 0;
+                  const count = sortedRatings.filter((rating) => Math.floor(rating.rating) === star).length;
+                  const percentage = sortedRatings.length > 0 ? (count / sortedRatings.length) * 100 : 0;
                   return (
                     <div key={star} className="flex items-center gap-2">
                       <span className="text-sm w-3">{star}</span>
@@ -115,14 +125,14 @@ export const SupplierRatings = () => {
                 Unable to load ratings.
               </div>
             </div>
-          ) : ratings.length === 0 ? (
+          ) : sortedRatings.length === 0 ? (
             <div className="dashboard-card">
               <div className="dashboard-card-content py-8 text-center text-sm text-muted-foreground">
                 No ratings yet.
               </div>
             </div>
           ) : (
-            ratings.map((rating) => (
+            sortedRatings.map((rating) => (
               <div key={rating.id} className="dashboard-card" data-testid={`rating-card-${rating.id}`}>
                 <div className="dashboard-card-content">
                   <div className="flex items-start justify-between mb-3">
@@ -130,9 +140,12 @@ export const SupplierRatings = () => {
                       <p className="font-medium">{rating.buyerName}</p>
                       <p className="text-xs text-muted-foreground">{rating.productName}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <StatusBadge status={rating.status} />
-                      <RatingStars rating={rating.rating} size="sm" />
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-3">
+                        <StatusBadge status={rating.status} />
+                        <RatingStars rating={rating.rating} size="sm" />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{getRatingDate(rating) || "N/A"}</span>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">{rating.review}</p>

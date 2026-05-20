@@ -5,6 +5,28 @@ import { createReadableId } from "../../../utils/id.js";
 import { ProductModel } from "../../admin/products/product.model.js";
 import { SupplierModel } from "../../admin/suppliers/supplier.model.js";
 
+const nowIso = () => new Date().toISOString();
+const dateOnly = () => nowIso().split("T")[0];
+
+type ProductWithMongoId = Record<string, unknown> & {
+  _id?: { getTimestamp?: () => Date };
+  createdAt?: string;
+  createdDate?: string;
+};
+
+function normalizeProductDates(product: ProductWithMongoId) {
+  const mongoCreatedAt = product._id?.getTimestamp?.().toISOString();
+  const createdAt = product.createdAt || product.createdDate || mongoCreatedAt || "";
+  const createdDate = product.createdDate || (createdAt ? createdAt.split("T")[0] : "");
+  const { _id, ...productWithoutMongoId } = product;
+
+  return {
+    ...productWithoutMongoId,
+    createdAt,
+    createdDate,
+  };
+}
+
 async function syncSupplierProductCount(supplierId: string) {
   const productsCount = await ProductModel.countDocuments({ supplierId });
   await SupplierModel.updateOne({ id: supplierId }, { $set: { productsCount } });
@@ -22,11 +44,11 @@ async function getSupplierOrThrow(supplierId: string) {
 
 export const listSupplierProducts = asyncHandler(async (req: Request, res: Response) => {
   const supplierId = String(req.params.supplierId);
-  const products = await ProductModel.find({ supplierId }, { _id: 0 })
-    .sort({ name: 1 })
-    .lean();
+  const products = await ProductModel.find({ supplierId })
+    .sort({ createdAt: -1, createdDate: -1, id: -1 })
+    .lean<ProductWithMongoId[]>();
 
-  res.json(products);
+  res.json(products.map(normalizeProductDates));
 });
 
 export const createSupplierProduct = asyncHandler(async (req: Request, res: Response) => {
@@ -40,6 +62,8 @@ export const createSupplierProduct = asyncHandler(async (req: Request, res: Resp
     countryOfOrigin: req.body.countryOfOrigin || supplier.country || "",
     status: "pending",
     rating: 0,
+    createdAt: req.body.createdAt || nowIso(),
+    createdDate: req.body.createdDate || dateOnly(),
   };
 
   const created = await ProductModel.create(payload);

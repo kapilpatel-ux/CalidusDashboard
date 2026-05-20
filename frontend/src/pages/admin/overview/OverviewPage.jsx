@@ -84,7 +84,12 @@ export const AdminOverview = ({ onNavigate }) => {
         <StatCard title="Categories" value={stats.totalCategories} icon={FolderTree} testId="stat-total-categories" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      {/* <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        
+      </div> */}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
         <button onClick={() => handleNavigate("suppliers")} className="stat-card bg-red-500/5 border-red-500/20 text-left hover:border-red-500/40 transition-colors">
           <div className="flex items-center gap-3">
             <FileX className="h-5 w-5 text-red-400" />
@@ -96,9 +101,7 @@ export const AdminOverview = ({ onNavigate }) => {
             </div>
           </div>
         </button>
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button onClick={() => handleNavigate("suppliers")} className="stat-card bg-amber-500/5 border-amber-500/20 text-left hover:border-amber-500/40 transition-colors">
           <div className="flex items-center gap-3">
             <Clock className="h-5 w-5 text-amber-400" />

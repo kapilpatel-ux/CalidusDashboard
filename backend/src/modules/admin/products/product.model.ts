@@ -29,6 +29,8 @@ const productSchema = new Schema(
     technicalDocs: { type: [Schema.Types.Mixed], default: [] },
     videoUrl: { type: String, default: "" },
     image: { type: String, default: null },
+    createdAt: { type: String, default: () => new Date().toISOString() },
+    createdDate: { type: String, default: () => new Date().toISOString().split("T")[0] },
   },
   { collection: "products", strict: false, versionKey: false },
 );
