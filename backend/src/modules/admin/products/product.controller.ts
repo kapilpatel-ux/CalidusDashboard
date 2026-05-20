@@ -26,7 +26,7 @@ export const listApprovedProducts = asyncHandler(async (req: Request, res: Respo
   const limit = Math.min(parsePositiveInt(req.query.limit, WORDPRESS_DEFAULT_LIMIT), WORDPRESS_MAX_LIMIT);
   const skip = (page - 1) * limit;
 
-  const query: Record<string, unknown> = { status: "approved" };
+  const query: Record<string, unknown> = { status: { $regex: /^approved$/i } };
 
   if (q) {
     const regex = new RegExp(escapeRegex(q), "i");
@@ -57,7 +57,7 @@ export const listApprovedProducts = asyncHandler(async (req: Request, res: Respo
 });
 
 export const getApprovedProduct = asyncHandler(async (req: Request, res: Response) => {
-  const product = await ProductModel.findOne({ id: req.params.productId, status: "approved" }, { _id: 0 }).lean();
+  const product = await ProductModel.findOne({ id: req.params.productId, status: { $regex: /^approved$/i } }, { _id: 0 }).lean();
   if (!product) throw new HttpError(404, "Product not found");
   res.json(product);
 });
