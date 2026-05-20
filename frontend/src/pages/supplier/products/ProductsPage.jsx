@@ -21,12 +21,14 @@ import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButto
 import { RatingStars } from "@/components/shared/RatingStars";
 import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
+import { useGetCategoriesQuery } from "@/store/api/admin/categoryApi";
 import {
   useCreateSupplierProductMutation,
   useDeleteSupplierProductMutation,
   useGetSupplierProductsQuery,
   useUpdateSupplierProductMutation,
 } from "@/store/api/supplier/supplierProductApi";
+import { useRequestCategoryMutation } from "@/store/api/supplier/categoryRequestApi";
 
 const emptyEditForm = {
   name: "",
@@ -72,7 +74,6 @@ const emptyAddForm = {
   applicationUseCase: "",
 };
 
-const productCategories = ["Electronics", "Aerospace", "Defense", "PCB", "Mechanical", "Communication", "General"];
 const countryOptions = ["India", "United States", "United Kingdom", "Germany", "France", "Israel", "Singapore", "Japan"];
 const applicationAreas = ["Aerospace", "Defense", "Industrial", "Naval", "Avionics", "Communication", "Automotive"];
 
@@ -224,6 +225,8 @@ export const SupplierProducts = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId || currentSupplier.id;
   const { data: products = [], isLoading, isError } = useGetSupplierProductsQuery(supplierId);
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const [requestCategory, { isLoading: isRequestingCategory }] = useRequestCategoryMutation();
   const [createSupplierProduct, { isLoading: isCreating }] = useCreateSupplierProductMutation();
   const [updateSupplierProduct, { isLoading: isSaving }] = useUpdateSupplierProductMutation();
   const [deleteSupplierProduct, { isLoading: isDeleting }] = useDeleteSupplierProductMutation();
@@ -234,10 +237,39 @@ export const SupplierProducts = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null });
   const [addForm, setAddForm] = useState(emptyAddForm);
   const [editForm, setEditForm] = useState(emptyEditForm);
+  const [categoryRequestDialog, setCategoryRequestDialog] = useState({ open: false, initialValue: "" });
+  const [requestedCategoryName, setRequestedCategoryName] = useState("");
+
+  const categoryOptions = (Array.isArray(categories) ? categories : [])
+    .map((category) => String(category?.name || "").trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
 
   const getProductId = (product) => product?.id || product?._id;
   const setAddField = (field, value) => setAddForm((current) => ({ ...current, [field]: value }));
   const setEditField = (field, value) => setEditForm((current) => ({ ...current, [field]: value }));
+
+  const openCategoryRequestDialog = (prefill = "") => {
+    setRequestedCategoryName(String(prefill || "").trim());
+    setCategoryRequestDialog({ open: true, initialValue: String(prefill || "").trim() });
+  };
+
+  const submitCategoryRequest = async () => {
+    const name = String(requestedCategoryName || "").trim();
+    if (!name) {
+      toast.error("Category name is required");
+      return;
+    }
+
+    try {
+      await requestCategory({ supplierId, payload: { name } }).unwrap();
+      toast.success("Category request submitted for admin approval");
+      setCategoryRequestDialog({ open: false, initialValue: "" });
+      setRequestedCategoryName("");
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to submit category request");
+    }
+  };
 
   const resetAddDialog = (open) => {
     setAddDialogOpen(open);
@@ -489,7 +521,25 @@ export const SupplierProducts = () => {
             <FormSection title="Overview">
               <ProductTextField label="Product Name" value={addForm.name} onChange={(value) => setAddField("name", value)} placeholder="Enter product name" required />
               <ProductImageField label="Product Image" value={addForm.image} onChange={(value) => setAddField("image", value)} testId="add-product-image" />
-              <ProductSelectField label="Category" value={addForm.category} onChange={(value) => setAddField("category", value)} placeholder="Select category" options={productCategories} required />
+              <div className="space-y-2">
+                <ProductSelectField
+                  label="Category"
+                  value={addForm.category}
+                  onChange={(value) => setAddField("category", value)}
+                  placeholder={categoryOptions.length ? "Select category" : "No approved categories yet"}
+                  options={categoryOptions}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-[#3C83F6]"
+                  onClick={() => openCategoryRequestDialog(addForm.category)}
+                  data-testid="supplier-request-category-btn"
+                >
+                  Request a new category
+                </Button>
+              </div>
               <ProductSelectField label="Country" value={addForm.countryOfOrigin} onChange={(value) => setAddField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
               <ProductTextField label="Key Features" value={addForm.keyFeatures} onChange={(value) => setAddField("keyFeatures", value)} placeholder="Enter key features" />
             </FormSection>
@@ -646,7 +696,25 @@ export const SupplierProducts = () => {
             <FormSection title="Overview">
               <ProductTextField label="Product Name" value={editForm.name} onChange={(value) => setEditField("name", value)} placeholder="Enter product name" required />
               <ProductImageField label="Product Image" value={editForm.image} onChange={(value) => setEditField("image", value)} testId="edit-product-image" />
-              <ProductSelectField label="Category" value={editForm.category} onChange={(value) => setEditField("category", value)} placeholder="Select category" options={productCategories} required />
+              <div className="space-y-2">
+                <ProductSelectField
+                  label="Category"
+                  value={editForm.category}
+                  onChange={(value) => setEditField("category", value)}
+                  placeholder={categoryOptions.length ? "Select category" : "No approved categories yet"}
+                  options={categoryOptions}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-[#3C83F6]"
+                  onClick={() => openCategoryRequestDialog(editForm.category)}
+                  data-testid="supplier-request-category-btn-edit"
+                >
+                  Request a new category
+                </Button>
+              </div>
               <ProductSelectField label="Country" value={editForm.countryOfOrigin} onChange={(value) => setEditField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
               <ProductTextField label="Key Features" value={editForm.keyFeatures} onChange={(value) => setEditField("keyFeatures", value)} placeholder="Enter key features" />
             </FormSection>
@@ -676,6 +744,48 @@ export const SupplierProducts = () => {
             <Button variant="outline" className="border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={() => setEditDialog({ open: false, product: null })} disabled={isSaving}>Cancel</Button>
             <Button onClick={saveProduct} disabled={isSaving || !editForm.name.trim() || !editForm.category.trim()} className="bg-[#3C83F6] px-6 text-white hover:bg-[#2f72df]" data-testid="supplier-edit-product-save">
               {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={categoryRequestDialog.open}
+        onOpenChange={(open) => {
+          setCategoryRequestDialog({ open, initialValue: open ? categoryRequestDialog.initialValue : "" });
+          if (!open) setRequestedCategoryName("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Request New Category</DialogTitle>
+            <DialogDescription>
+              Submit a category request for admin approval. Once approved, it will be available for product assignment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Category Name</Label>
+            <Input
+              value={requestedCategoryName}
+              onChange={(e) => setRequestedCategoryName(e.target.value)}
+              placeholder="Enter category name"
+              data-testid="supplier-request-category-name"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCategoryRequestDialog({ open: false, initialValue: "" })}
+              disabled={isRequestingCategory}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitCategoryRequest}
+              disabled={isRequestingCategory || !String(requestedCategoryName || "").trim()}
+              data-testid="supplier-request-category-submit"
+            >
+              {isRequestingCategory ? "Submitting..." : "Submit Request"}
             </Button>
           </DialogFooter>
         </DialogContent>

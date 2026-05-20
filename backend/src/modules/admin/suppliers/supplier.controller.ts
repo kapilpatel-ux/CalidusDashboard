@@ -4,9 +4,55 @@ import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
 import { SupplierModel } from "./supplier.model.js";
 
+const WORDPRESS_DEFAULT_LIMIT = 20;
+const WORDPRESS_MAX_LIMIT = 100;
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parsePositiveInt = (value: unknown, fallback: number) => {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 export const listSuppliers = asyncHandler(async (_req: Request, res: Response) => {
   const suppliers = await SupplierModel.find({}, { _id: 0 }).lean();
   res.json(suppliers);
+});
+
+// WordPress / public listing: approved-only + search + pagination
+export const listApprovedSuppliers = asyncHandler(async (req: Request, res: Response) => {
+  const q = String(req.query.q ?? "").trim();
+  const page = parsePositiveInt(req.query.page, 1);
+  const limit = Math.min(parsePositiveInt(req.query.limit, WORDPRESS_DEFAULT_LIMIT), WORDPRESS_MAX_LIMIT);
+  const skip = (page - 1) * limit;
+
+  const query: Record<string, unknown> = { status: "approved" };
+
+  if (q) {
+    const regex = new RegExp(escapeRegex(q), "i");
+    query.$or = [{ name: regex }, { type: regex }, { country: regex }];
+  }
+
+  const [items, total] = await Promise.all([
+    SupplierModel.find(query, { _id: 0 }).skip(skip).limit(limit).lean(),
+    SupplierModel.countDocuments(query),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  res.json({
+    items,
+    page,
+    limit,
+    total,
+    totalPages,
+  });
+});
+
+export const getApprovedSupplier = asyncHandler(async (req: Request, res: Response) => {
+  const supplier = await SupplierModel.findOne({ id: req.params.supplierId, status: "approved" }, { _id: 0 }).lean();
+  if (!supplier) throw new HttpError(404, "Supplier not found");
+  res.json(supplier);
 });
 
 export const getSupplier = asyncHandler(async (req: Request, res: Response) => {

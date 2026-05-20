@@ -5,7 +5,14 @@ import { createReadableId } from "../../../utils/id.js";
 import { CategoryModel } from "./category.model.js";
 
 export const listCategories = asyncHandler(async (_req: Request, res: Response) => {
-  const categories = await CategoryModel.find({}, { _id: 0 }).lean();
+  const includePending = String(_req.query.includePending || "").toLowerCase() === "true";
+  const filter = includePending
+    ? {}
+    : {
+        $or: [{ status: { $exists: false } }, { status: "approved" }],
+      };
+
+  const categories = await CategoryModel.find(filter, { _id: 0 }).lean();
   res.json(categories);
 });
 
@@ -18,6 +25,7 @@ export const createCategory = asyncHandler(async (req: Request, res: Response) =
   const payload = {
     ...req.body,
     id: req.body.id || createReadableId("CAT"),
+    status: req.body.status || "approved",
     subcategories,
     productCount: req.body.productCount ?? 0,
   };
@@ -27,6 +35,17 @@ export const createCategory = asyncHandler(async (req: Request, res: Response) =
 
   const created = await CategoryModel.create(payload);
   res.status(201).json(created.toJSON());
+});
+
+export const approveCategory = asyncHandler(async (req: Request, res: Response) => {
+  const updated = await CategoryModel.findOneAndUpdate(
+    { id: req.params.categoryId },
+    { $set: { status: "approved", approvedAt: new Date().toISOString() } },
+    { new: true, projection: { _id: 0 } },
+  ).lean();
+
+  if (!updated) throw new HttpError(404, "Category not found");
+  res.json(updated);
 });
 
 export const updateCategory = asyncHandler(async (req: Request, res: Response) => {

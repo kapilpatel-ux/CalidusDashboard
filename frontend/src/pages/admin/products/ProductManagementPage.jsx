@@ -17,12 +17,15 @@ import {
   useDeleteProductMutation,
 } from "@/store/api/admin/productApi";
 import { useAdminActions } from "../AdminContext";
+import { useRole } from "@/App";
 
 export const ProductManagement = ({
   onView,
   onEdit,
   onConfirmAction
 } = {}) => {
+  const { currentRole } = useRole();
+  const isAdmin = currentRole === "admin";
   const { openViewSheet, openEditDialog, openConfirmDialog } = useAdminActions();
   const handleView = onView || ((item) => openViewSheet("product", item));
   const handleEdit = onEdit || ((item) => openEditDialog("product", item));
@@ -102,7 +105,7 @@ export const ProductManagement = ({
             onClick={() => handleView(row)}
           />
 
-          {row.status === "pending" && (
+          {isAdmin && row.status === "pending" && (
             <>
               <ActionButton
                 icon={Check}
@@ -149,7 +152,7 @@ export const ProductManagement = ({
             />
           )}
 
-          {row.status === "suspended" && (
+          {isAdmin && row.status === "suspended" && (
             <ActionButton
               icon={RotateCcw}
               label="Activate"
@@ -165,7 +168,7 @@ export const ProductManagement = ({
             />
           )}
 
-          {row.status === "rejected" && (
+          {isAdmin && row.status === "rejected" && (
             <ActionButton
               icon={RotateCcw}
               label="Activate"

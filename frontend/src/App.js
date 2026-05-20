@@ -33,6 +33,7 @@ import {
   SupplierEnquiries,
   SupplierRatings,
   SupplierNotificationManagement,
+  SupplierCategoryManagement,
 } from "@/pages/supplier";
 
 // Role Context
@@ -80,6 +81,7 @@ function App() {
   const [activeSection, setActiveSection] = useState("overview");
   const isAuthenticated = Boolean(authState.token && authState.user);
   const isAdminRole = ["admin", "sub_admin", "content_manager"].includes(currentRole);
+  const adminLandingPath = currentRole === "admin" ? "/admin/overview" : "/admin/suppliermanagement";
 
   const handleRoleChange = (role) => {
     setCurrentRole(role);
@@ -126,7 +128,7 @@ function App() {
           path="/"
           element={
             isAdminRole
-              ? <Navigate to="/admin/overview" replace />
+              ? <Navigate to={adminLandingPath} replace />
               : currentRole === "buyer"
                 ? <Navigate to="/buyer/overview" replace />
                 : <Navigate to="/supplier/overview" replace />
@@ -141,8 +143,11 @@ function App() {
               : <Navigate to="/" replace />
           }
         >
-          <Route index element={<Navigate to="overview" replace />} />
-          <Route path="overview" element={<AdminOverview />} />
+          <Route index element={<Navigate to={currentRole === "admin" ? "overview" : "suppliermanagement"} replace />} />
+          <Route
+            path="overview"
+            element={currentRole === "admin" ? <AdminOverview /> : <Navigate to="/admin/suppliermanagement" replace />}
+          />
           <Route path="suppliermanagement" element={<SupplierManagement />} />
           <Route path="productmanagement" element={<ProductManagement />} />
           <Route path="ratingsmoderation" element={<RatingsModeration />} />
@@ -151,9 +156,12 @@ function App() {
           <Route path="enquirymanagement" element={<EnquiryManagement />} />
           <Route path="notificationmanagement" element={<NotificationManagement />} />
           <Route path="usermanagement" element={<UserManagement />} />
-          <Route path="platforminsights" element={<PlatformInsights />} />
+          <Route
+            path="platforminsights"
+            element={currentRole === "admin" ? <PlatformInsights /> : <Navigate to="/admin/suppliermanagement" replace />}
+          />
           <Route path="profile" element={<AdminProfile />} />
-          <Route path="*" element={<Navigate to="overview" replace />} />
+          <Route path="*" element={<Navigate to={currentRole === "admin" ? "overview" : "suppliermanagement"} replace />} />
         </Route>
 
         <Route path="/buyer" element={currentRole === "buyer" ? <BuyerOverview /> : <Navigate to="/" replace />} />
@@ -170,12 +178,13 @@ function App() {
         <Route path="/supplier/enquiries" element={currentRole === "supplier" ? <SupplierEnquiries /> : <Navigate to="/" replace />} />
         <Route path="/supplier/ratings" element={currentRole === "supplier" ? <SupplierRatings /> : <Navigate to="/" replace />} />
         <Route path="/supplier/notificationmanagement" element={currentRole === "supplier" ? <SupplierNotificationManagement /> : <Navigate to="/" replace />} />
+        <Route path="/supplier/categorymanagement" element={currentRole === "supplier" ? <SupplierCategoryManagement /> : <Navigate to="/" replace />} />
         <Route path="/supplier/*" element={<Navigate to="/supplier/overview" replace />} />
 
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/signup" element={<Navigate to="/" replace />} />
         <Route path="/contact-supplier" element={<ContactSupplierPage />} />
-        <Route path="*" element={<Navigate to={isAdminRole ? "/admin/overview" : currentRole === "buyer" ? "/buyer/overview" : "/supplier/overview"} replace />} />
+        <Route path="*" element={<Navigate to={isAdminRole ? adminLandingPath : currentRole === "buyer" ? "/buyer/overview" : "/supplier/overview"} replace />} />
       </Routes>
     </DashboardShell>
   );

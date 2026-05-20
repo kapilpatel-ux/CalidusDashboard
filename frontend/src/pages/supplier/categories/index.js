@@ -1,0 +1,2 @@
+export { SupplierCategoryManagement } from "./CategoryManagementPage";
+

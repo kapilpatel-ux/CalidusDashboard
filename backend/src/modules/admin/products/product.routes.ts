@@ -3,7 +3,9 @@ import { validateBody } from "../../../middleware/validate.js";
 import {
   createProduct,
   deleteProduct,
+  getApprovedProduct,
   getProduct,
+  listApprovedProducts,
   listProducts,
   updateProduct,
   updateProductStatus,
@@ -13,6 +15,8 @@ import { createProductSchema, productStatusSchema, updateProductSchema } from ".
 export const productRoutes = Router();
 
 productRoutes.get("/", listProducts);
+productRoutes.get("/approved", listApprovedProducts);
+productRoutes.get("/approved/:productId", getApprovedProduct);
 productRoutes.get("/:productId", getProduct);
 productRoutes.post("/", validateBody(createProductSchema), createProduct);
 productRoutes.put("/:productId", validateBody(updateProductSchema), updateProduct);

@@ -64,7 +64,6 @@ const navigationConfig = {
     { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
   ],
   sub_admin: [
-    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/admin/overview" },
     { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
     { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
     { id: "ratingsmoderation", label: "Ratings Moderation", icon: Star, path: "/admin/ratingsmoderation" },
@@ -73,10 +72,8 @@ const navigationConfig = {
     { id: "enquirymanagement", label: "Enquiry Management", icon: Inbox, path: "/admin/enquirymanagement" },
     { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
     { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
-    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
   ],
   content_manager: [
-    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/admin/overview" },
     { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
     { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
     { id: "ratingsmoderation", label: "Ratings Moderation", icon: Star, path: "/admin/ratingsmoderation" },
@@ -85,7 +82,6 @@ const navigationConfig = {
     { id: "enquirymanagement", label: "Enquiry Management", icon: Inbox, path: "/admin/enquirymanagement" },
     { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
     { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
-    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
   ],
   supplier: [
     { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/supplier/overview" },
@@ -93,6 +89,7 @@ const navigationConfig = {
     { id: "products", label: "Product Management", icon: Package, path: "/supplier/productmanagement" },
     { id: "enquiries", label: "Enquiries", icon: Inbox, path: "/supplier/enquiries" },
     { id: "ratings", label: "Ratings & Reviews", icon: Star, path: "/supplier/ratings" },
+    { id: "categorymanagement", label: "Category Management", icon: FolderTree, path: "/supplier/categorymanagement" },
     { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/supplier/notificationmanagement" },
   ],
   buyer: [
@@ -146,6 +143,7 @@ const supplierRouteSectionMap = {
   productmanagement: "products",
   enquiries: "enquiries",
   ratings: "ratings",
+  categorymanagement: "categorymanagement",
   notificationmanagement: "notificationmanagement",
 };
 
@@ -192,6 +190,7 @@ export const DashboardShell = ({ children }) => {
   const { activeSection, setActiveSection } = useNavigation();
   const navigate = useNavigate();
   const location = useLocation();
+  const isAdminRole = ["admin", "sub_admin", "content_manager"].includes(currentRole);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -227,7 +226,7 @@ export const DashboardShell = ({ children }) => {
     ));
     if (notification.link) {
       const adminSection = adminLegacyLinkMap[notification.link];
-      if (currentRole === "admin" && adminSection) {
+      if (isAdminRole && adminSection) {
         setActiveSection(adminSection);
         navigate(adminPathBySection[adminSection]);
       } else if (currentRole === "buyer" && buyerPathBySection[notification.link]) {
@@ -245,7 +244,7 @@ export const DashboardShell = ({ children }) => {
 
   const handleMessageClick = (message) => {
     setActiveSection('enquiries');
-    if (currentRole === "admin") {
+    if (isAdminRole) {
       setActiveSection("enquirymanagement");
       navigate("/admin/enquirymanagement");
     } else if (currentRole === "buyer") {
@@ -258,7 +257,7 @@ export const DashboardShell = ({ children }) => {
 
   const handleViewAllNotifications = () => {
     setNotificationsOpen(false);
-    if (currentRole === "admin") {
+    if (isAdminRole) {
       setActiveSection("notificationmanagement");
       navigate("/admin/notificationmanagement");
       return;
@@ -273,7 +272,7 @@ export const DashboardShell = ({ children }) => {
 
   const handleViewAllEnquiries = () => {
     setMessagesOpen(false);
-    if (currentRole === "admin") {
+    if (isAdminRole) {
       setActiveSection("enquirymanagement");
       navigate("/admin/enquirymanagement");
       return;
@@ -292,7 +291,7 @@ export const DashboardShell = ({ children }) => {
 
   const handleNavigationClick = (item) => {
     setActiveSection(item.id);
-    if ((currentRole === "admin" || currentRole === "buyer" || currentRole === "supplier") && item.path) {
+    if ((isAdminRole || currentRole === "buyer" || currentRole === "supplier") && item.path) {
       navigate(item.path);
     }
   };

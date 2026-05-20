@@ -5,6 +5,7 @@ import {
   deleteCategory,
   deleteSubcategory,
   listCategories,
+  approveCategory,
   updateCategory,
   updateSubcategory,
 } from "./category.controller.js";
@@ -18,6 +19,8 @@ export const categoryRoutes = Router();
 
 categoryRoutes.get("/", listCategories);
 categoryRoutes.post("/", validateBody(createCategorySchema), createCategory);
+
+categoryRoutes.patch("/:categoryId/approve", approveCategory);
 
 categoryRoutes.put("/:categoryId", validateBody(updateCategorySchema), updateCategory);
 

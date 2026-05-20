@@ -3,7 +3,9 @@ import { validateBody } from "../../../middleware/validate.js";
 import {
   createSupplier,
   deleteSupplier,
+  getApprovedSupplier,
   getSupplier,
+  listApprovedSuppliers,
   listSuppliers,
   updateSupplier,
   updateSupplierStatus,
@@ -13,6 +15,8 @@ import { createSupplierSchema, supplierStatusSchema, updateSupplierSchema } from
 export const supplierRoutes = Router();
 
 supplierRoutes.get("/", listSuppliers);
+supplierRoutes.get("/approved", listApprovedSuppliers);
+supplierRoutes.get("/approved/:supplierId", getApprovedSupplier);
 supplierRoutes.get("/:supplierId", getSupplier);
 supplierRoutes.post("/", validateBody(createSupplierSchema), createSupplier);
 supplierRoutes.put("/:supplierId", validateBody(updateSupplierSchema), updateSupplier);

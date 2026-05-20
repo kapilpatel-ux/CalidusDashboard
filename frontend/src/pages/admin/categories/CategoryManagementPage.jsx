@@ -7,8 +7,10 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
-  useGetCategoriesQuery,
+  useGetCategoriesForAdminQuery,
+  useApproveCategoryMutation,
 } from "@/store/api/admin/categoryApi";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import { useAdminActions } from "../AdminContext";
@@ -28,8 +30,9 @@ export const CategoryManagement = ({
   const handleAddCategory = onAddCategory || openAddCategoryDialog;
   const handleAddProduct = onAddProduct || openAddProductDialog;
 
-  const { data: categories = [], isLoading } = useGetCategoriesQuery();
+  const { data: categories = [], isLoading } = useGetCategoriesForAdminQuery();
   const { data: products = [] } = useGetProductsQuery();
+  const [approveCategory, { isLoading: isApproving }] = useApproveCategoryMutation();
 
   const productCountByCategory = (Array.isArray(products) ? products : []).reduce(
     (acc, product) => {
@@ -42,6 +45,18 @@ export const CategoryManagement = ({
   );
  
   if (isLoading) return <p>Loading categories...</p>;
+
+  const pendingCategories = categories.filter((category) => category?.status === "pending");
+  const approvedCategories = categories.filter((category) => category?.status !== "pending");
+
+  const handleApprove = async (category) => {
+    try {
+      await approveCategory(category.id).unwrap();
+      toast.success(`Category "${category.name}" approved`);
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to approve category");
+    }
+  };
   
   return (
     <div className="space-y-6" data-testid="category-management">
@@ -61,8 +76,45 @@ export const CategoryManagement = ({
         </Button>
       </div>
 
+      {pendingCategories.length > 0 && (
+        <div className="border border-border rounded-sm overflow-hidden" data-testid="pending-category-requests">
+          <div className="flex items-center justify-between p-4 bg-muted/10">
+            <div>
+              <h2 className="font-semibold">Pending Category Requests</h2>
+              <p className="text-xs text-muted-foreground">
+                Approve supplier-submitted categories to make them available for products.
+              </p>
+            </div>
+            <Badge variant="secondary">{pendingCategories.length} pending</Badge>
+          </div>
+          <div className="divide-y divide-border">
+            {pendingCategories.map((category) => (
+              <div key={category.id} className="flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{category.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Requested by: {category.requestedBy || "Supplier"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-500/20 text-amber-400">Pending</Badge>
+                  <Button
+                    size="sm"
+                    disabled={isApproving}
+                    onClick={() => handleApprove(category)}
+                    data-testid={`approve-category-${category.id}`}
+                  >
+                    Approve
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {categories.map((category) => {
+        {approvedCategories.map((category) => {
           const productCount =
             productCountByCategory[String(category?.name || "").trim()] || 0;
           return (

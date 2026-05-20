@@ -16,8 +16,11 @@ import {
   useDeleteSupplierMutation,
 } from "@/store/api/admin/supplierApi";
 import { useAdminActions } from "../AdminContext";
+import { useRole } from "@/App";
 
 export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
+  const { currentRole } = useRole();
+  const isAdmin = currentRole === "admin";
   const { openViewSheet, openConfirmDialog } = useAdminActions();
   const handleView = onView || ((item) => openViewSheet("supplier", item));
   const handleConfirmAction = onConfirmAction || openConfirmDialog;
@@ -92,7 +95,7 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
             onClick={() => handleView(row)}
           />
 
-          {row.status === "pending" && (
+          {isAdmin && row.status === "pending" && (
             <>
               <ActionButton
                 icon={Check}
@@ -135,7 +138,7 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
             />
           )}
 
-          {row.status === "suspended" && (
+          {isAdmin && row.status === "suspended" && (
             <ActionButton
               icon={RotateCcw}
               label="Activate"
@@ -151,7 +154,7 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
             />
           )}
 
-          {row.status === "rejected" && (
+          {isAdmin && row.status === "rejected" && (
             <ActionButton
               icon={RotateCcw}
               label="Activate"

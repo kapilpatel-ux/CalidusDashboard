@@ -106,5 +106,12 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw new HttpError(403, "This account is suspended");
   }
 
+  if (user.role === "supplier") {
+    const supplier = await SupplierModel.findOne({ id: user.profileId }, { _id: 0, status: 1 }).lean();
+    if (!supplier || supplier.status !== "approved") {
+      throw new HttpError(403, "Your supplier account is not approved yet");
+    }
+  }
+
   res.json(buildAuthResponse(user));
 });

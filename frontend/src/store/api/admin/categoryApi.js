@@ -12,6 +12,11 @@ export const categoryApi = createApi({
       providesTags: ["Category"],
     }),
 
+    getCategoriesForAdmin: builder.query({
+      query: () => "/api/categories?includePending=true",
+      providesTags: ["Category"],
+    }),
+
     createCategory: builder.mutation({
       query: (payload) => ({
         url: "/api/categories",
@@ -54,14 +59,24 @@ export const categoryApi = createApi({
       }),
       invalidatesTags: ["Category"],
     }),
+
+    approveCategory: builder.mutation({
+      query: (id) => ({
+        url: `/api/categories/${id}/approve`,
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Category"],
+    }),
   }),
 });
 
 export const {
   useGetCategoriesQuery,
+  useGetCategoriesForAdminQuery,
   useCreateCategoryMutation,
   useDeleteCategoryMutation,
   useDeleteSubcategoryMutation,
+  useApproveCategoryMutation,
   useUpdateCategoryMutation,
   useUpdateSubcategoryMutation, 
 } = categoryApi;
