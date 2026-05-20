@@ -19,14 +19,14 @@ export const listSuppliers = asyncHandler(async (_req: Request, res: Response) =
   res.json(suppliers);
 });
 
-// WordPress / public listing: approved-only + search + pagination
+// WordPress / public listing: active-only + search + pagination
 export const listApprovedSuppliers = asyncHandler(async (req: Request, res: Response) => {
   const q = String(req.query.q ?? "").trim();
   const page = parsePositiveInt(req.query.page, 1);
   const limit = Math.min(parsePositiveInt(req.query.limit, WORDPRESS_DEFAULT_LIMIT), WORDPRESS_MAX_LIMIT);
   const skip = (page - 1) * limit;
 
-  const query: Record<string, unknown> = { status: { $regex: /^approved$/i } };
+  const query: Record<string, unknown> = { status: { $regex: /^active$/i } };
 
   if (q) {
     const regex = new RegExp(escapeRegex(q), "i");
@@ -50,7 +50,7 @@ export const listApprovedSuppliers = asyncHandler(async (req: Request, res: Resp
 });
 
 export const getApprovedSupplier = asyncHandler(async (req: Request, res: Response) => {
-  const supplier = await SupplierModel.findOne({ id: req.params.supplierId, status: { $regex: /^approved$/i } }, { _id: 0 }).lean();
+  const supplier = await SupplierModel.findOne({ id: req.params.supplierId, status: { $regex: /^active$/i } }, { _id: 0 }).lean();
   if (!supplier) throw new HttpError(404, "Supplier not found");
   res.json(supplier);
 });

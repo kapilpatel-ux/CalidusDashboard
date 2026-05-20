@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import logo from "@/assets/images/calidusheader.png";
+import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import { useGetSuppliersQuery } from "@/store/api/admin/supplierApi";
 import { useCreateContactSupplierMutation } from "@/store/api/contactSupplierApi";
 import {
@@ -17,13 +18,6 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { COUNTRIES } from "@/data/countries";
-
-const productOptions = [
-  { id: "prd003", name: "Tactical Communication Module TCM-200" },
-  { id: "prd002", name: "Ballistic Armor Plates Level IV" },
-  { id: "prd008", name: "Composite Armor Panel CAP-III" },
-  { id: "prd004", name: "Radar Signal Processing Unit RSP-500" },
-];
 
 const initialForm = {
   fullName: "",
@@ -44,8 +38,12 @@ export default function ContactSupplierPage() {
     isLoading: isSuppliersLoading,
     isError: isSuppliersError,
   } = useGetSuppliersQuery();
+  const {
+    data: products = [],
+    isLoading: isProductsLoading,
+    isError: isProductsError,
+  } = useGetProductsQuery();
 
-  const selectedProduct = productOptions.find((product) => product.id === form.productId);
   const supplierCountry = String(form.supplierCountry || "").trim();
   const nonSuspendedSuppliers = suppliers.filter((supplier) => supplier.status !== "suspended");
   const supplierCountryOptions = COUNTRIES;
@@ -56,6 +54,10 @@ export default function ContactSupplierPage() {
     return normalize(supplier.country) === normalize(supplierCountry);
   });
   const selectedSupplier = availableSuppliers.find((supplier) => supplier.id === form.supplierId);
+  const supplierProducts = selectedSupplier
+    ? products.filter((product) => product.supplierId === selectedSupplier.id && product.status === "approved")
+    : [];
+  const selectedProduct = supplierProducts.find((product) => product.id === form.productId);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -188,10 +190,11 @@ export default function ContactSupplierPage() {
               <Field label="Supplier country">
                 <Select
                   value={form.supplierCountry}
-                  onValueChange={(value) => {
-                    updateField("supplierCountry", value);
-                    updateField("supplierId", "");
-                  }}
+	                  onValueChange={(value) => {
+	                    updateField("supplierCountry", value);
+	                    updateField("supplierId", "");
+	                    updateField("productId", "");
+	                  }}
                 >
                   <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
                     <SelectValue placeholder="Select supplier country" />
@@ -210,10 +213,13 @@ export default function ContactSupplierPage() {
               </Field>
 
               <Field label="Supplier company">
-                <Select
-                  value={form.supplierId}
-                  onValueChange={(value) => updateField("supplierId", value)}
-                  disabled={isSuppliersLoading || isSuppliersError}
+	                <Select
+	                  value={form.supplierId}
+	                  onValueChange={(value) => {
+	                    updateField("supplierId", value);
+	                    updateField("productId", "");
+	                  }}
+	                  disabled={isSuppliersLoading || isSuppliersError}
                   required
                 >
                   <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
@@ -242,16 +248,33 @@ export default function ContactSupplierPage() {
               </Field>
             </div>
 
-            <Field label="Product">
-              <Select value={form.productId} onValueChange={(value) => updateField("productId", value)} required>
-                <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <ScrollArea className="h-72">
-                    {productOptions.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
+	            <Field label="Product">
+	              <Select
+	                value={form.productId}
+	                onValueChange={(value) => updateField("productId", value)}
+	                disabled={!selectedSupplier || isProductsLoading || isProductsError || supplierProducts.length === 0}
+	                required
+	              >
+	                <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+	                  <SelectValue
+	                    placeholder={
+	                      !selectedSupplier
+	                        ? "Select supplier first"
+	                        : isProductsLoading
+	                          ? "Loading products..."
+	                          : isProductsError
+	                            ? "Unable to load products"
+	                            : supplierProducts.length === 0
+	                              ? "No approved products found"
+	                              : "Select product"
+	                    }
+	                  />
+	                </SelectTrigger>
+	                <SelectContent>
+	                  <ScrollArea className="h-72">
+	                    {supplierProducts.map((product) => (
+	                      <SelectItem key={product.id} value={product.id}>
+	                        {product.name}
                       </SelectItem>
                     ))}
                   </ScrollArea>

@@ -50,3 +50,18 @@ export const replyToSupplierEnquiry = asyncHandler(async (req: Request, res: Res
   if (!updated) throw new HttpError(404, "Enquiry not found");
   res.json(updated);
 });
+
+export const updateSupplierEnquiryStatus = asyncHandler(async (req: Request, res: Response) => {
+  const supplierId = String(req.params.supplierId);
+  const enquiryId = String(req.params.enquiryId);
+  const supplierQuery = await getSupplierQuery(supplierId);
+
+  const updated = await EnquiryModel.findOneAndUpdate(
+    { id: enquiryId, ...supplierQuery },
+    { $set: { status: req.body.status } },
+    { new: true, projection: { _id: 0 } },
+  ).lean();
+
+  if (!updated) throw new HttpError(404, "Enquiry not found");
+  res.json(updated);
+});

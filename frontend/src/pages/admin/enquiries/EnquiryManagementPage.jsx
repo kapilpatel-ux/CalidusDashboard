@@ -5,28 +5,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
-import { Eye, CheckCircle, Clock, Calendar, User, Building2, Package, Hash } from "lucide-react";
-import { toast } from "sonner";
-import { useGetEnquiriesQuery, useUpdateEnquiryStatusMutation } from "@/store/api/admin/enquiryApi";
+import { Eye, Calendar, User, Building2, Package, Hash } from "lucide-react";
+import { useGetEnquiriesQuery } from "@/store/api/admin/enquiryApi";
 
 export const EnquiryManagement = () => {
   const { data: enquiries = [], isLoading } = useGetEnquiriesQuery();
-  const [updateStatus] = useUpdateEnquiryStatusMutation();
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewSheet, setViewSheet] = useState({ open: false, item: null });
 
   const filteredEnquiries = statusFilter === "all"
     ? enquiries
     : enquiries.filter((enquiry) => enquiry.status === statusFilter);
-
-  const handleStatus = async (row, status) => {
-    try {
-      await updateStatus({ id: row.id, status }).unwrap();
-      toast.success(`Enquiry marked ${status}`);
-    } catch (error) {
-      toast.error(error?.data?.message || "Failed to update enquiry");
-    }
-  };
 
   const columns = [
     { key: "buyerName", label: "Buyer", render: (value, row) => <div><p className="font-medium">{value}</p><p className="text-xs text-muted-foreground">{row.buyerCompany}</p></div> },
@@ -41,8 +30,6 @@ export const EnquiryManagement = () => {
       render: (_, row) => (
         <ActionButtonGroup>
           <ActionButton icon={Eye} label="View" testId={`view-admin-enquiry-${row.id}`} onClick={() => setViewSheet({ open: true, item: row })} />
-          <ActionButton icon={Clock} label="Pending" testId={`pending-admin-enquiry-${row.id}`} onClick={() => handleStatus(row, "pending")} />
-          <ActionButton icon={CheckCircle} label="Resolved" className="text-emerald-400 hover:text-emerald-300" testId={`resolve-admin-enquiry-${row.id}`} onClick={() => handleStatus(row, "resolved")} />
         </ActionButtonGroup>
       ),
     },

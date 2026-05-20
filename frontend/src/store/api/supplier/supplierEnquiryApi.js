@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { enquiryApi } from "@/store/api/admin/enquiryApi";
 
 export const supplierEnquiryApi = createApi({
   reducerPath: "supplierEnquiryApi",
@@ -22,10 +23,28 @@ export const supplierEnquiryApi = createApi({
       }),
       invalidatesTags: ["SupplierEnquiry"],
     }),
+
+    updateSupplierEnquiryStatus: builder.mutation({
+      query: ({ supplierId, enquiryId, status }) => ({
+        url: `/api/suppliers/${supplierId}/enquiries/${enquiryId}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["SupplierEnquiry"],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(enquiryApi.util.invalidateTags(["Enquiry"]));
+        } catch (_) {
+          // Page-level toast handles mutation failures.
+        }
+      },
+    }),
   }),
 });
 
 export const {
   useGetSupplierEnquiriesQuery,
   useReplyToSupplierEnquiryMutation,
+  useUpdateSupplierEnquiryStatusMutation,
 } = supplierEnquiryApi;

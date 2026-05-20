@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Calendar, MessageSquare, Send, User, Eye, Package, Building2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, CheckCircle, Clock, MessageSquare, Send, User, Eye, Package, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -15,6 +16,7 @@ import { currentSupplier } from "@/data/mockData";
 import {
   useGetSupplierEnquiriesQuery,
   useReplyToSupplierEnquiryMutation,
+  useUpdateSupplierEnquiryStatusMutation,
 } from "@/store/api/supplier/supplierEnquiryApi";
 
 const DetailItem = ({ label, value }) => (
@@ -39,6 +41,7 @@ export const SupplierEnquiries = () => {
   const [replySheet, setReplySheet] = useState({ open: false, item: null });
   const [replyText, setReplyText] = useState("");
   const [dateSortDirection, setDateSortDirection] = useState("desc");
+  const [statusConfirm, setStatusConfirm] = useState({ open: false, item: null, status: "" });
 
   const {
     data: enquiries = [],
@@ -48,6 +51,8 @@ export const SupplierEnquiries = () => {
 
   const [replyToSupplierEnquiry, { isLoading: isReplying }] =
     useReplyToSupplierEnquiryMutation();
+  const [updateSupplierEnquiryStatus, { isLoading: isUpdatingStatus }] =
+    useUpdateSupplierEnquiryStatusMutation();
 
   const filteredEnquiries = (statusFilter === "all"
     ? enquiries
@@ -79,6 +84,30 @@ export const SupplierEnquiries = () => {
       } catch (error) {
         toast.error(error?.data?.message || "Unable to send reply");
       }
+    }
+  };
+
+  const openStatusConfirm = (item, status) => {
+    setStatusConfirm({ open: true, item, status });
+  };
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!statusConfirm.item || !statusConfirm.status) return;
+
+    try {
+      const updated = await updateSupplierEnquiryStatus({
+        supplierId,
+        enquiryId: statusConfirm.item.id,
+        status: statusConfirm.status,
+      }).unwrap();
+
+      toast.success(`Enquiry marked ${statusConfirm.status}`);
+      setStatusConfirm({ open: false, item: null, status: "" });
+      setViewSheet((current) =>
+        current.item?.id === updated.id ? { ...current, item: updated } : current
+      );
+    } catch (error) {
+      toast.error(error?.data?.message || "Unable to update enquiry status");
     }
   };
 
@@ -139,6 +168,21 @@ export const SupplierEnquiries = () => {
               setReplySheet({ open: true, item: row });
             }}
           />
+          <ActionButton
+            icon={Clock}
+            label="Mark Pending"
+            testId={`pending-enquiry-${row.id}`}
+            disabled={row.status === "pending"}
+            onClick={() => openStatusConfirm(row, "pending")}
+          />
+          <ActionButton
+            icon={CheckCircle}
+            label="Mark Resolved"
+            className="text-emerald-400 hover:text-emerald-300"
+            testId={`resolve-enquiry-${row.id}`}
+            disabled={row.status === "resolved"}
+            onClick={() => openStatusConfirm(row, "resolved")}
+          />
         </ActionButtonGroup>
       ),
     },
@@ -177,6 +221,7 @@ export const SupplierEnquiries = () => {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="replied">Replied</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
                 </SelectContent>
               </Select>
             }
@@ -327,6 +372,25 @@ export const SupplierEnquiries = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={statusConfirm.open} onOpenChange={(open) => setStatusConfirm({ ...statusConfirm, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Update Enquiry Status</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to mark this enquiry as {statusConfirm.status || "selected"}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusConfirm({ open: false, item: null, status: "" })} disabled={isUpdatingStatus}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmStatusUpdate} disabled={isUpdatingStatus} data-testid="confirm-enquiry-status-btn">
+              {isUpdatingStatus ? "Updating..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
