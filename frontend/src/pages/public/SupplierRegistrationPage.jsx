@@ -28,12 +28,12 @@ const steps = [
 
 const countryOptions = COUNTRIES;
 
-const currencyOptions = [
-  { value: "USD", label: "USD ($)" },
-  { value: "EUR", label: "EUR (€)" },
-  { value: "GBP", label: "GBP (£)" },
-  { value: "INR", label: "INR (₹)" },
-  { value: "AED", label: "AED (د.إ)" },
+const fallbackCurrencyOptions = [
+  { value: "USD", label: "USD" },
+  { value: "EUR", label: "EUR" },
+  { value: "GBP", label: "GBP" },
+  { value: "INR", label: "INR" },
+  { value: "AED", label: "AED" },
 ];
 
 const certificationOptions = [
@@ -45,10 +45,52 @@ const certificationOptions = [
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneDigits = (value) => String(value || "").replace(/\D/g, "");
+const phoneNationalDigits = (value) => String(value || "").replace(/[^\d]/g, "");
+const PHONE_MIN_DIGITS = 8;
+const PHONE_MAX_DIGITS = 15;
+const LICENSE_NUMBER_MAX_LEN = 30;
+const VAT_NUMBER_MAX_LEN = 20;
+
+const callingCodeOptions = [
+  { label: "UAE (+971)", value: "+971" },
+  { label: "Saudi Arabia (+966)", value: "+966" },
+  { label: "Qatar (+974)", value: "+974" },
+  { label: "Kuwait (+965)", value: "+965" },
+  { label: "Bahrain (+973)", value: "+973" },
+  { label: "Oman (+968)", value: "+968" },
+  { label: "India (+91)", value: "+91" },
+  { label: "Pakistan (+92)", value: "+92" },
+  { label: "United States (+1)", value: "+1" },
+  { label: "United Kingdom (+44)", value: "+44" },
+  { label: "Canada (+1)", value: "+1" },
+  { label: "Germany (+49)", value: "+49" },
+  { label: "France (+33)", value: "+33" },
+];
 
 export const SupplierRegistrationPage = () => {
   const navigate = useNavigate();
   const [createSupplier, { isLoading: isSubmitting }] = useCreateSupplierMutation();
+
+  const currencyOptions = useMemo(() => {
+    try {
+      const supported = Intl?.supportedValuesOf?.("currency");
+      if (!Array.isArray(supported) || supported.length === 0) return fallbackCurrencyOptions;
+
+      const displayNames = typeof Intl?.DisplayNames === "function"
+        ? new Intl.DisplayNames(["en"], { type: "currency" })
+        : null;
+
+      return supported
+        .slice()
+        .sort((a, b) => a.localeCompare(b))
+        .map((code) => ({
+          value: code,
+          label: displayNames ? `${code} — ${displayNames.of(code)}` : code,
+        }));
+    } catch (_) {
+      return fallbackCurrencyOptions;
+    }
+  }, []);
 
   const [stepIndex, setStepIndex] = useState(0);
   const currentStep = steps[stepIndex];
@@ -61,7 +103,8 @@ export const SupplierRegistrationPage = () => {
     name: "",
     contactPerson: "",
     email: "",
-    phone: "",
+    phoneCountryCode: "+971",
+    phoneNumber: "",
     currency: "",
     country: "",
     addressLine1: "",
@@ -185,13 +228,21 @@ export const SupplierRegistrationPage = () => {
       if (String(form.email || "").trim() && !emailRegex.test(String(form.email).trim())) {
         nextErrors.email = "Enter a valid email address";
       }
-      requireField("phone", "Phone is required");
-      const digits = phoneDigits(form.phone);
-      if (String(form.phone || "").trim() && (digits.length < 10 || digits.length > 15)) {
-        nextErrors.phone = "Enter a valid phone number (10–15 digits)";
-      }
       requireField("licenseNumber", "License number is required");
       requireField("currency", "Supplier currency is required");
+      requireField("phoneNumber", "Phone is required");
+      const countryDigits = phoneDigits(form.phoneCountryCode);
+      const nationalDigits = phoneDigits(form.phoneNumber);
+      const totalDigits = countryDigits.length + nationalDigits.length;
+      if (String(form.phoneNumber || "").trim() && (totalDigits < PHONE_MIN_DIGITS || totalDigits > PHONE_MAX_DIGITS)) {
+        nextErrors.phoneNumber = `Enter a valid phone number (${PHONE_MIN_DIGITS}–${PHONE_MAX_DIGITS} digits including country code)`;
+      }
+      if (String(form.licenseNumber || "").trim().length > LICENSE_NUMBER_MAX_LEN) {
+        nextErrors.licenseNumber = `License number must be at most ${LICENSE_NUMBER_MAX_LEN} characters`;
+      }
+      if (String(form.vatNumber || "").trim().length > VAT_NUMBER_MAX_LEN) {
+        nextErrors.vatNumber = `VAT number must be at most ${VAT_NUMBER_MAX_LEN} characters`;
+      }
     }
 
     if (!stepId || stepId === "address") {
@@ -293,7 +344,7 @@ export const SupplierRegistrationPage = () => {
       type: "OEM",
       country: form.country.trim(),
       email: form.email.trim(),
-      phone: form.phone.trim(),
+      phone: `${String(form.phoneCountryCode || "").trim()}${phoneDigits(form.phoneNumber)}`,
       joinDate,
       status: "pending",
       documentStatus: "active",
@@ -462,15 +513,31 @@ export const SupplierRegistrationPage = () => {
                         <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                           Phone *
                         </Label>
-                        <Input
-                          type="tel"
-                          value={form.phone}
-                          onChange={(e) => setField("phone", e.target.value)}
-                          className={`bg-black/20 mt-1 ${errors.phone ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                          placeholder="+1 000 000 0000"
-                          data-testid="supplier-reg-phone"
-                        />
-                        {errors.phone && <p className="text-xs text-red-400 mt-1">{errors.phone}</p>}
+                        <div className="mt-1 grid grid-cols-[140px_1fr] gap-2">
+                          <Select value={form.phoneCountryCode} onValueChange={(v) => setField("phoneCountryCode", v)}>
+                            <SelectTrigger className="bg-black/20" data-testid="supplier-reg-phone-country-code">
+                              <SelectValue placeholder="Code" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {callingCodeOptions.map((opt) => (
+                                <SelectItem key={opt.label} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="tel"
+                            inputMode="numeric"
+                            value={form.phoneNumber}
+                            onChange={(e) => setField("phoneNumber", phoneNationalDigits(e.target.value))}
+                            className={`bg-black/20 ${errors.phoneNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+                            placeholder="Mobile number"
+                            maxLength={20}
+                            data-testid="supplier-reg-phone"
+                          />
+                        </div>
+                        {errors.phoneNumber && <p className="text-xs text-red-400 mt-1">{errors.phoneNumber}</p>}
                       </div>
                     </div>
 
@@ -481,9 +548,10 @@ export const SupplierRegistrationPage = () => {
                       </Label>
                       <Input
                         value={form.licenseNumber}
-                        onChange={(e) => setField("licenseNumber", e.target.value)}
+                        onChange={(e) => setField("licenseNumber", e.target.value.slice(0, LICENSE_NUMBER_MAX_LEN))}
                         className={`bg-black/20 mt-1 ${errors.licenseNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
                         placeholder="Enter license number"
+                        maxLength={LICENSE_NUMBER_MAX_LEN}
                         data-testid="supplier-reg-license"
                       />
                       {errors.licenseNumber && (
@@ -496,11 +564,13 @@ export const SupplierRegistrationPage = () => {
                       </Label>
                       <Input
                         value={form.vatNumber}
-                        onChange={(e) => setField("vatNumber", e.target.value)}
-                        className="bg-black/20 mt-1"
+                        onChange={(e) => setField("vatNumber", e.target.value.slice(0, VAT_NUMBER_MAX_LEN))}
+                        className={`bg-black/20 mt-1 ${errors.vatNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
                         placeholder="Enter VAT number"
+                        maxLength={VAT_NUMBER_MAX_LEN}
                         data-testid="supplier-reg-vat"
                       />
+                      {errors.vatNumber && <p className="text-xs text-red-400 mt-1">{errors.vatNumber}</p>}
                     </div>
                   </div>
 
@@ -751,7 +821,9 @@ export const SupplierRegistrationPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Phone</p>
-                          <p className="font-medium mt-1">{form.phone || "-"}</p>
+                          <p className="font-medium mt-1">
+                            {form.phoneNumber ? `${form.phoneCountryCode} ${form.phoneNumber}` : "-"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Currency</p>
