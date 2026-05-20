@@ -11,6 +11,7 @@ import { notificationApi } from "./api/admin/notificationApi";
 import { userApi } from "./api/admin/userApi";
 import { authApi } from "./api/auth/authApi";
 import { supplierEnquiryApi } from "./api/supplier/supplierEnquiryApi";
+import { supplierNotificationApi } from "./api/supplier/notificationApi";
 import { supplierOverviewApi } from "./api/supplier/supplierOverviewApi";
 import { supplierProductApi } from "./api/supplier/supplierProductApi";
 import { supplierProfileApi } from "./api/supplier/supplierProfileApi";
@@ -33,6 +34,7 @@ export const store = configureStore({
     [userApi.reducerPath]: userApi.reducer,
     [authApi.reducerPath]: authApi.reducer,
     [supplierEnquiryApi.reducerPath]: supplierEnquiryApi.reducer,
+    [supplierNotificationApi.reducerPath]: supplierNotificationApi.reducer,
     [supplierOverviewApi.reducerPath]: supplierOverviewApi.reducer,
     [supplierProductApi.reducerPath]: supplierProductApi.reducer,
     [supplierProfileApi.reducerPath]: supplierProfileApi.reducer,
@@ -42,5 +44,5 @@ export const store = configureStore({
     [contactSupplierApi.reducerPath]: contactSupplierApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(supplierApi.middleware, productApi.middleware, ratingApi.middleware, categoryApi.middleware, buyerApi.middleware, analyticsApi.middleware, dashboardApi.middleware, enquiryApi.middleware, notificationApi.middleware, userApi.middleware, authApi.middleware, supplierEnquiryApi.middleware, supplierOverviewApi.middleware, supplierProductApi.middleware, supplierProfileApi.middleware, buyerEnquiryApi.middleware, buyerProfileApi.middleware, buyerRatingApi.middleware, contactSupplierApi.middleware),
+    getDefaultMiddleware().concat(supplierApi.middleware, productApi.middleware, ratingApi.middleware, categoryApi.middleware, buyerApi.middleware, analyticsApi.middleware, dashboardApi.middleware, enquiryApi.middleware, notificationApi.middleware, userApi.middleware, authApi.middleware, supplierEnquiryApi.middleware, supplierNotificationApi.middleware, supplierOverviewApi.middleware, supplierProductApi.middleware, supplierProfileApi.middleware, buyerEnquiryApi.middleware, buyerProfileApi.middleware, buyerRatingApi.middleware, contactSupplierApi.middleware),
 });

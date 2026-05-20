@@ -1,0 +1,2 @@
+export { SupplierNotificationManagement } from "./NotificationManagementPage";
+

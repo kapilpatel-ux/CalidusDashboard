@@ -21,6 +21,7 @@ import { buyerProfileRoutes } from "./modules/buyer/profile/buyerProfile.routes.
 import { buyerRatingRoutes } from "./modules/buyer/ratings/buyerRating.routes.js";
 import { contactSupplierRoutes } from "./modules/contactsupplier/contactSupplier.routes.js";
 import { supplierEnquiryRoutes } from "./modules/supplier/enquiries/supplierEnquiry.routes.js";
+import { supplierNotificationRoutes } from "./modules/supplier/notifications/supplierNotification.routes.js";
 import { supplierOverviewRoutes } from "./modules/supplier/overview/supplierOverview.routes.js";
 import { supplierProductRoutes } from "./modules/supplier/products/supplierProduct.routes.js";
 import { supplierProfileRoutes } from "./modules/supplier/profile/supplierProfile.routes.js";
@@ -41,6 +42,7 @@ app.use("/api/suppliers", supplierOverviewRoutes);
 app.use("/api/suppliers", supplierEnquiryRoutes);
 app.use("/api/suppliers", supplierProductRoutes);
 app.use("/api/suppliers", supplierProfileRoutes);
+app.use("/api/suppliers", supplierNotificationRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/ratings", ratingRoutes);

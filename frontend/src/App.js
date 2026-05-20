@@ -32,6 +32,7 @@ import {
   SupplierProducts,
   SupplierEnquiries,
   SupplierRatings,
+  SupplierNotificationManagement,
 } from "@/pages/supplier";
 
 // Role Context
@@ -168,6 +169,7 @@ function App() {
         <Route path="/supplier/productmanagement" element={currentRole === "supplier" ? <SupplierProducts /> : <Navigate to="/" replace />} />
         <Route path="/supplier/enquiries" element={currentRole === "supplier" ? <SupplierEnquiries /> : <Navigate to="/" replace />} />
         <Route path="/supplier/ratings" element={currentRole === "supplier" ? <SupplierRatings /> : <Navigate to="/" replace />} />
+        <Route path="/supplier/notificationmanagement" element={currentRole === "supplier" ? <SupplierNotificationManagement /> : <Navigate to="/" replace />} />
         <Route path="/supplier/*" element={<Navigate to="/supplier/overview" replace />} />
 
         <Route path="/login" element={<Navigate to="/" replace />} />

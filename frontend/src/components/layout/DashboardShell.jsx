@@ -93,6 +93,7 @@ const navigationConfig = {
     { id: "products", label: "Product Management", icon: Package, path: "/supplier/productmanagement" },
     { id: "enquiries", label: "Enquiries", icon: Inbox, path: "/supplier/enquiries" },
     { id: "ratings", label: "Ratings & Reviews", icon: Star, path: "/supplier/ratings" },
+    { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/supplier/notificationmanagement" },
   ],
   buyer: [
     { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/buyer/overview" },
@@ -145,6 +146,7 @@ const supplierRouteSectionMap = {
   productmanagement: "products",
   enquiries: "enquiries",
   ratings: "ratings",
+  notificationmanagement: "notificationmanagement",
 };
 
 const roleLabels = {
@@ -261,7 +263,12 @@ export const DashboardShell = ({ children }) => {
       navigate("/admin/notificationmanagement");
       return;
     }
-    toast.info("Notifications page is available for admin only.");
+    if (currentRole === "supplier") {
+      setActiveSection("notificationmanagement");
+      navigate("/supplier/notificationmanagement");
+      return;
+    }
+    toast.info("Notifications page is available for admin and supplier only.");
   };
 
   const handleViewAllEnquiries = () => {
