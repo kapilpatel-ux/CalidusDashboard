@@ -283,7 +283,7 @@ export const SupplierProfile = () => {
                         backgroundColor: state.isFocused ? "#2563eb" : "#121212",
                         color: "white",
                       }),
-                      input: (base) => ({
+                      input: (base) => ({ 
                         ...base,
                         color: "white",
                       }),
