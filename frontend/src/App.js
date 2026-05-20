@@ -18,6 +18,7 @@ import {
   NotificationManagement,
   UserManagement,
   PlatformInsights,
+  AdminProfile,
 } from "@/pages/admin";
 import {
   BuyerOverview,
@@ -100,11 +101,20 @@ function App() {
     setActiveSection("overview");
   };
 
+  const updateCurrentUser = (updates) => {
+    setAuthState((current) => {
+      const user = { ...current.user, ...updates };
+      localStorage.setItem("calidus_user", JSON.stringify(user));
+      return { ...current, user };
+    });
+  };
+
   const authValue = {
     ...authState,
     isAuthenticated,
     currentUser: authState.user,
     completeAuth,
+    updateCurrentUser,
     logout,
   };
 
@@ -141,6 +151,7 @@ function App() {
           <Route path="notificationmanagement" element={<NotificationManagement />} />
           <Route path="usermanagement" element={<UserManagement />} />
           <Route path="platforminsights" element={<PlatformInsights />} />
+          <Route path="profile" element={<AdminProfile />} />
           <Route path="*" element={<Navigate to="overview" replace />} />
         </Route>
 

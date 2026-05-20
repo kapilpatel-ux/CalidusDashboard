@@ -1,4 +1,6 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import ReactSelect from "react-select";
+import countryList from "react-select-country-list";
 import { toast } from "sonner";
 import { Award, Building2, Calendar, Edit, FileCheck, FileWarning, FileX, Mail, MapPin, Phone, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,9 +23,6 @@ export const SupplierProfile = () => {
   const [profileForm, setProfileForm] = useState({});
   const [selectedDocumentFile, setSelectedDocumentFile] = useState(null);
   const documentInputRef = useRef(null);
-
-  if (isLoading) return <p>Loading company profile...</p>;
-  if (error) return <p>Failed to load company profile.</p>;
 
   const openEdit = () => {
     setProfileForm({ ...supplier });
@@ -49,6 +48,10 @@ export const SupplierProfile = () => {
       toast.error(err?.data?.message || "Failed to update company profile");
     }
   };
+
+  const countryOptions = useMemo(() => countryList().getData(), []);
+  if (isLoading) return <p>Loading company profile...</p>;
+  if (error) return <p>Failed to load company profile.</p>;
 
   const handleUploadDocument = async () => {
     if (!selectedDocumentFile) {
@@ -190,7 +193,46 @@ export const SupplierProfile = () => {
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country</Label>
-                <Input value={profileForm.country || ""} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} className="bg-black/20 mt-1" />
+                <div className="mt-1">
+                  <ReactSelect
+                    options={countryOptions}
+                    value={countryOptions.find(
+                      (option) => option.label === profileForm.country
+                    )}
+                    onChange={(selectedOption) =>
+                      setProfileForm({
+                        ...profileForm,
+                        country: selectedOption?.label || "",
+                      })
+                    }
+                    placeholder="Select Country"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        backgroundColor: "#121212",
+                        borderColor: "#2a2a2a",
+                        color: "white",
+                      }),
+                      menu: (base) => ({
+                        ...base,
+                        backgroundColor: "#121212",
+                      }),
+                      singleValue: (base) => ({
+                        ...base,
+                        color: "white",
+                      }),
+                      option: (base, state) => ({
+                        ...base,
+                        backgroundColor: state.isFocused ? "#2563eb" : "#121212",
+                        color: "white",
+                      }),
+                      input: (base) => ({
+                        ...base,
+                        color: "white",
+                      }),
+                    }}
+                  />
+                </div>
               </div>
             </div>
             <div>

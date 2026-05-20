@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Select from "react-select";
+import countryList from "react-select-country-list";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +15,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Building2, Edit, Mail, MapPin, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
+
 import { currentBuyer } from "@/data/mockData";
 import {
   useGetBuyerProfileQuery,
@@ -27,6 +30,8 @@ export const BuyerProfile = () => {
   const [editProfileDialog, setEditProfileDialog] = useState(false);
   const [profileForm, setProfileForm] = useState({});
 
+  const countryOptions = useMemo(() => countryList().getData(), []);
+
   if (isLoading) return <p>Loading buyer profile...</p>;
   if (error) return <p>Failed to load buyer profile.</p>;
 
@@ -37,7 +42,7 @@ export const BuyerProfile = () => {
 
   const handleSaveProfile = async () => {
     try {
-      await updateBuyerProfile({
+      await updateBuyerProfile({ 
         buyerId,
         payload: {
           name: profileForm.name,
@@ -172,12 +177,46 @@ export const BuyerProfile = () => {
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country</Label>
-              <Input
-                value={profileForm.country || ""}
-                onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })}
-                className="bg-black/20 mt-1"
-                data-testid="edit-buyer-country"
-              />
+              <div className="mt-1">
+                <Select
+                  options={countryOptions}
+                  value={countryOptions.find(
+                    (option) => option.label === profileForm.country
+                  )}
+                  onChange={(selectedOption) =>
+                    setProfileForm({
+                      ...profileForm,
+                      country: selectedOption?.label || "",
+                    })
+                  }
+                  placeholder="Select Country"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      backgroundColor: "#121212",
+                      borderColor: "#2a2a2a",
+                      color: "white",
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      backgroundColor: "#121212",
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      color: "white",
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isFocused ? "#2563eb" : "#121212",
+                      color: "white",
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      color: "white",
+                    }),
+                  }}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

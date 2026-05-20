@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Edit, Eye, Package, Plus, Trash2 } from "lucide-react";
+import { Edit, Eye, ImagePlus, Package, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,6 +30,7 @@ import {
 
 const emptyEditForm = {
   name: "",
+  image: "",
   category: "",
   countryOfOrigin: "",
   keyFeatures: "",
@@ -51,6 +52,7 @@ const emptyEditForm = {
 
 const emptyAddForm = {
   name: "",
+  image: "",
   category: "",
   countryOfOrigin: "",
   keyFeatures: "",
@@ -128,6 +130,82 @@ const ProductSelectField = ({ label, value, onChange, placeholder, options, requ
   );
 };
 
+const ProductImageField = ({ label, value, onChange, testId }) => {
+  const fieldId = `${testId}-url`;
+  const hasImage = Boolean(value);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => onChange(String(reader.result || ""));
+    reader.onerror = () => toast.error("Unable to read selected image");
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-3 md:col-span-2">
+      <Label htmlFor={fieldId} className="text-[13px] font-medium uppercase tracking-normal text-[#A1A1AA] sm:text-[18px]">
+        {label}
+      </Label>
+      <div className="grid gap-4 md:grid-cols-[180px_1fr]">
+        <div className="h-32 rounded-[5px] border border-[#29292E] bg-[#0E1012]">
+          {hasImage ? (
+            <img src={value} alt="Product preview" className="h-full w-full rounded-[5px] object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ImagePlus className="h-8 w-8 text-[#3C83F6]" />
+            </div>
+          )}
+        </div>
+        <div className="space-y-3">
+          <Input
+            id={fieldId}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="Paste image URL or upload a file"
+            className="h-[51px] rounded-[5px] border-[#29292E] bg-[#0E1012] px-[15px] text-base text-white placeholder:text-[#9D9DA5]"
+            data-testid={`${testId}-url`}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="h-[42px] max-w-xs rounded-[5px] border-[#29292E] bg-[#0E1012] text-sm text-[#A1A1AA] file:mr-3 file:h-full file:border-0 file:bg-[#3C83F6] file:px-3 file:text-sm file:font-semibold file:text-white"
+              data-testid={`${testId}-file`}
+            />
+            {hasImage && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-[42px] border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white"
+                onClick={() => onChange("")}
+                data-testid={`${testId}-clear`}
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const getProductImage = (product) =>
+  product?.image ||
+  product?.images?.[product?.primaryImageIndex || 0]?.url ||
+  product?.images?.[0]?.url ||
+  "";
+
 const technicalSpecsToList = (technicalSpecs) =>
   technicalSpecs
     .split("\n")
@@ -172,6 +250,7 @@ export const SupplierProducts = () => {
 
     setEditForm({
       name: product.name || "",
+      image: getProductImage(product),
       category: product.category || "",
       countryOfOrigin: product.countryOfOrigin || "",
       keyFeatures: product.shortDescription || product.description || "",
@@ -194,6 +273,7 @@ export const SupplierProducts = () => {
   };
 
   const buildProductPayload = (form) => {
+    const image = form.image.trim();
     const specifications = [
       form.layerCount && `Layer Count: ${form.layerCount}`,
       form.material && `Material: ${form.material}`,
@@ -209,6 +289,8 @@ export const SupplierProducts = () => {
 
     return {
       name: form.name.trim(),
+      image: image || null,
+      images: image ? [{ url: image }] : [],
       category: form.category,
       countryOfOrigin: form.countryOfOrigin,
       shortDescription: form.keyFeatures,
@@ -304,8 +386,8 @@ export const SupplierProducts = () => {
       label: "Product Name",
       render: (value, row) => (
         <div className="flex items-center gap-3">
-          {row.image ? (
-            <img src={row.image} alt={value} className="h-10 w-14 rounded-sm object-cover bg-muted" />
+          {getProductImage(row) ? (
+            <img src={getProductImage(row)} alt={value} className="h-10 w-14 rounded-sm object-cover bg-muted" />
           ) : (
             <div className="h-10 w-14 rounded-sm bg-primary/10 flex items-center justify-center">
               <Package className="h-4 w-4 text-primary" />
@@ -406,6 +488,7 @@ export const SupplierProducts = () => {
           <div className="space-y-7 px-6 pb-6 sm:px-8 sm:pb-8">
             <FormSection title="Overview">
               <ProductTextField label="Product Name" value={addForm.name} onChange={(value) => setAddField("name", value)} placeholder="Enter product name" required />
+              <ProductImageField label="Product Image" value={addForm.image} onChange={(value) => setAddField("image", value)} testId="add-product-image" />
               <ProductSelectField label="Category" value={addForm.category} onChange={(value) => setAddField("category", value)} placeholder="Select category" options={productCategories} required />
               <ProductSelectField label="Country" value={addForm.countryOfOrigin} onChange={(value) => setAddField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
               <ProductTextField label="Key Features" value={addForm.keyFeatures} onChange={(value) => setAddField("keyFeatures", value)} placeholder="Enter key features" />
@@ -450,8 +533,8 @@ export const SupplierProducts = () => {
 
           {detailProduct && (
             <div className="mt-6 space-y-6">
-              {detailProduct.image ? (
-                <img src={detailProduct.image} alt={detailProduct.name} className="h-48 w-full rounded-md object-cover bg-muted" />
+              {getProductImage(detailProduct) ? (
+                <img src={getProductImage(detailProduct)} alt={detailProduct.name} className="h-48 w-full rounded-md object-cover bg-muted" />
               ) : (
                 <div className="h-48 w-full rounded-md bg-primary/10 flex items-center justify-center">
                   <Package className="h-10 w-10 text-primary" />
@@ -562,6 +645,7 @@ export const SupplierProducts = () => {
           <div className="flex-1 space-y-7 overflow-y-auto px-6 py-6 sm:px-8">
             <FormSection title="Overview">
               <ProductTextField label="Product Name" value={editForm.name} onChange={(value) => setEditField("name", value)} placeholder="Enter product name" required />
+              <ProductImageField label="Product Image" value={editForm.image} onChange={(value) => setEditField("image", value)} testId="edit-product-image" />
               <ProductSelectField label="Category" value={editForm.category} onChange={(value) => setEditField("category", value)} placeholder="Select category" options={productCategories} required />
               <ProductSelectField label="Country" value={editForm.countryOfOrigin} onChange={(value) => setEditField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
               <ProductTextField label="Key Features" value={editForm.keyFeatures} onChange={(value) => setEditField("keyFeatures", value)} placeholder="Enter key features" />

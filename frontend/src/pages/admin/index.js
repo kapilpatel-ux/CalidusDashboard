@@ -9,3 +9,4 @@ export { EnquiryManagement } from "./enquiries";
 export { NotificationManagement } from "./notifications";
 export { UserManagement } from "./users";
 export { PlatformInsights } from "./insights";
+export { AdminProfile } from "./profile";

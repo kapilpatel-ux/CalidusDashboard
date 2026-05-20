@@ -96,7 +96,7 @@ const navigationConfig = {
   ],
   buyer: [
     { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/buyer/overview" },
-    { id: "enquiries", label: "My Enquiries", icon: Inbox, path: "/buyer/enquiries" },
+    // { id: "enquiries", label: "My Enquiries", icon: Inbox, path: "/buyer/enquiries" },
     { id: "ratings", label: "Ratings", icon: Star, path: "/buyer/ratings" },
     { id: "profile", label: "Profile Management", icon: UserCircle, path: "/buyer/profile" },
   ],
@@ -217,6 +217,7 @@ export const DashboardShell = ({ children }) => {
 
   const unreadNotifications = notificationsList.filter(n => !n.read).length;
   const unreadMessages = messagesList.reduce((acc, m) => acc + m.unread, 0);
+  const showHeaderCommunicationActions = currentRole !== "buyer";
 
   const handleNotificationClick = (notification) => {
     setNotificationsList(prev => prev.map(n => 
@@ -465,159 +466,163 @@ export const DashboardShell = ({ children }) => {
               />
             </div>
 
-            {/* Notifications */}
-            <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-              <PopoverTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative h-9 w-9"
-                  data-testid="notifications-btn"
-                >
-                  <Bell className="h-4 w-4" />
-                  {unreadNotifications > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-destructive">
-                      {unreadNotifications}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="end">
-                <div className="p-3 border-b border-border flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">Notifications</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={handleViewAllNotifications}
-                    data-testid="view-all-notifications-btn"
-                  >
-                    View all
-                  </Button>
-                </div>
-                <ScrollArea className="h-[300px]">
-                  {notificationsList.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No notifications
+            {showHeaderCommunicationActions && (
+              <>
+                {/* Notifications */}
+                <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="relative h-9 w-9"
+                      data-testid="notifications-btn"
+                    >
+                      <Bell className="h-4 w-4" />
+                      {unreadNotifications > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-destructive">
+                          {unreadNotifications}
+                        </Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="p-3 border-b border-border flex items-center justify-between">
+                      <h4 className="font-semibold text-sm">Notifications</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={handleViewAllNotifications}
+                        data-testid="view-all-notifications-btn"
+                      >
+                        View all
+                      </Button>
                     </div>
-                  ) : (
-                    <div className="divide-y divide-border">
-                      {notificationsList.map((notification) => {
-                        const Icon = getNotificationIcon(notification.type);
-                        const iconColor = getNotificationColor(notification.type, notification.urgent);
-                        return (
-                          <button
-                            key={notification.id}
-                            onClick={() => handleNotificationClick(notification)}
-                            className={`w-full p-3 text-left hover:bg-muted/50 transition-colors ${
-                              !notification.read ? 'bg-primary/5' : ''
-                            }`}
-                            data-testid={`notification-${notification.id}`}
-                          >
-                            <div className="flex gap-3">
-                              <div className={`h-8 w-8 rounded-sm flex items-center justify-center flex-shrink-0 ${
-                                notification.urgent ? 'bg-red-500/20' : 'bg-muted'
-                              }`}>
-                                <Icon className={`h-4 w-4 ${iconColor}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                  {notification.title}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {notification.message}
-                                </p>
-                                <p className="text-xs text-muted-foreground/70 mt-1">
-                                  {notification.date}
-                                </p>
-                              </div>
-                              {!notification.read && (
-                                <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </ScrollArea>
-              </PopoverContent>
-            </Popover>
+                    <ScrollArea className="h-[300px]">
+                      {notificationsList.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No notifications
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border">
+                          {notificationsList.map((notification) => {
+                            const Icon = getNotificationIcon(notification.type);
+                            const iconColor = getNotificationColor(notification.type, notification.urgent);
+                            return (
+                              <button
+                                key={notification.id}
+                                onClick={() => handleNotificationClick(notification)}
+                                className={`w-full p-3 text-left hover:bg-muted/50 transition-colors ${
+                                  !notification.read ? 'bg-primary/5' : ''
+                                }`}
+                                data-testid={`notification-${notification.id}`}
+                              >
+                                <div className="flex gap-3">
+                                  <div className={`h-8 w-8 rounded-sm flex items-center justify-center flex-shrink-0 ${
+                                    notification.urgent ? 'bg-red-500/20' : 'bg-muted'
+                                  }`}>
+                                    <Icon className={`h-4 w-4 ${iconColor}`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-sm font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                      {notification.title}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground/70 mt-1">
+                                      {notification.date}
+                                    </p>
+                                  </div>
+                                  {!notification.read && (
+                                    <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
 
-            {/* Messages */}
-            <Popover open={messagesOpen} onOpenChange={setMessagesOpen}>
-              <PopoverTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative h-9 w-9"
-                  data-testid="messages-btn"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  {unreadMessages > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-primary">
-                      {unreadMessages}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="end">
-                <div className="p-3 border-b border-border flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">Enquiries</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={handleViewAllEnquiries}
-                    data-testid="view-all-enquiries-btn"
-                  >
-                    View all
-                  </Button>
-                </div>
-                <ScrollArea className="h-[300px]">
-                  {messagesList.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No messages
+                {/* Messages */}
+                <Popover open={messagesOpen} onOpenChange={setMessagesOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="relative h-9 w-9"
+                      data-testid="messages-btn"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      {unreadMessages > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-primary">
+                          {unreadMessages}
+                        </Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="p-3 border-b border-border flex items-center justify-between">
+                      <h4 className="font-semibold text-sm">Enquiries</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={handleViewAllEnquiries}
+                        data-testid="view-all-enquiries-btn"
+                      >
+                        View all
+                      </Button>
                     </div>
-                  ) : (
-                    <div className="divide-y divide-border">
-                      {messagesList.map((message) => (
-                        <button
-                          key={message.id}
-                          onClick={() => handleMessageClick(message)}
-                          className={`w-full p-3 text-left hover:bg-muted/50 transition-colors ${
-                            message.unread > 0 ? 'bg-primary/5' : ''
-                          }`}
-                          data-testid={`message-${message.id}`}
-                        >
-                          <div className="flex gap-3">
-                            <div className="h-8 w-8 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
-                              <Package className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium ${message.unread > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                {message.productName}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {message.participants.join(' ↔ ')}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate mt-1">
-                                {message.lastMessage}
-                              </p>
-                            </div>
-                            {message.unread > 0 && (
-                              <Badge className="h-5 px-1.5 text-[10px]">
-                                {message.unread}
-                              </Badge>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </PopoverContent>
-            </Popover>
+                    <ScrollArea className="h-[300px]">
+                      {messagesList.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No messages
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border">
+                          {messagesList.map((message) => (
+                            <button
+                              key={message.id}
+                              onClick={() => handleMessageClick(message)}
+                              className={`w-full p-3 text-left hover:bg-muted/50 transition-colors ${
+                                message.unread > 0 ? 'bg-primary/5' : ''
+                              }`}
+                              data-testid={`message-${message.id}`}
+                            >
+                              <div className="flex gap-3">
+                                <div className="h-8 w-8 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
+                                  <Package className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium ${message.unread > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                    {message.productName}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {message.participants.join(' ↔ ')}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate mt-1">
+                                    {message.lastMessage}
+                                  </p>
+                                </div>
+                                {message.unread > 0 && (
+                                  <Badge className="h-5 px-1.5 text-[10px]">
+                                    {message.unread}
+                                  </Badge>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
 
             {/* User Menu */}
             <DropdownMenu>
@@ -642,7 +647,9 @@ export const DashboardShell = ({ children }) => {
                   data-testid="user-menu-profile"
                   onClick={() => {
                     setActiveSection("profile");
-                    if (currentRole === "buyer") {
+                    if (currentRole === "admin" || currentRole === "sub_admin" || currentRole === "content_manager") {
+                      navigate("/admin/profile");
+                    } else if (currentRole === "buyer") {
                       navigate("/buyer/profile");
                     } else if (currentRole === "supplier") {
                       navigate("/supplier/companyprofile");
@@ -652,13 +659,13 @@ export const DashboardShell = ({ children }) => {
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                {/* <DropdownMenuItem 
                   data-testid="user-menu-settings"
                   onClick={() => toast.info("Settings panel would open here")}
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   className="text-destructive" 
