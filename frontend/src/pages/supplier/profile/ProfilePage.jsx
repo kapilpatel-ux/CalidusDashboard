@@ -13,6 +13,27 @@ import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import { useGetSupplierProfileQuery, useUpdateSupplierProfileMutation } from "@/store/api/supplier/supplierProfileApi";
 
+const defaultProfileDocuments = [
+  { name: "Trade License", type: "trade_license", status: "pending", expiryDate: "" },
+  { name: "VAT Certificate", type: "vat_certificate", status: "pending", expiryDate: "" },
+];
+
+const formatDocumentName = (document = {}) =>
+  document.name ||
+  String(document.type || "Document")
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+const normalizeDocuments = (documents = []) => {
+  const source = documents.length > 0 ? documents : defaultProfileDocuments;
+  return source.map((document) => ({
+    ...document,
+    name: formatDocumentName(document),
+    status: document.status || "active",
+  }));
+};
+
 export const SupplierProfile = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId || currentSupplier.id;
@@ -27,7 +48,7 @@ export const SupplierProfile = () => {
   const openEdit = () => {
     setProfileForm({
       ...supplier,
-      documents: (supplier.documents || []).map((document) => ({ ...document })),
+      documents: normalizeDocuments(supplier.documents || []),
     });
     setEditProfileDialog(true);
   };
@@ -60,6 +81,7 @@ export const SupplierProfile = () => {
 
   const applyUploadedFileToDocument = (document, file) => ({
     ...document,
+    name: formatDocumentName(document),
     status: "active",
     expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     fileName: file.name,
@@ -295,7 +317,7 @@ export const SupplierProfile = () => {
                             {doc.status === "expired" ? <FileX className="h-4 w-4 shrink-0 text-red-400" /> :
                              doc.status === "expiring" ? <FileWarning className="h-4 w-4 shrink-0 text-amber-400" /> :
                              <FileCheck className="h-4 w-4 shrink-0 text-emerald-400" />}
-                            <p className="text-sm font-medium truncate">{doc.name}</p>
+                            <p className="text-sm font-medium truncate">{formatDocumentName(doc)}</p>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">Expires: {doc.expiryDate || "N/A"}</p>
                           <p className="text-xs text-muted-foreground truncate">
@@ -310,16 +332,27 @@ export const SupplierProfile = () => {
                           {doc.status || "active"}
                         </span>
                       </div>
-                      <Input
-                        type="file"
-                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        className="mt-3 bg-black/20"
-                        onChange={(event) => {
-                          handleEditDocumentFile(idx, event.target.files?.[0] || null);
-                          event.target.value = "";
-                        }}
-                        data-testid={`edit-profile-doc-input-${idx}`}
-                      />
+                      <div className="mt-3">
+                        <input
+                          id={`edit-profile-doc-input-${idx}`}
+                          type="file"
+                          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          className="hidden"
+                          onChange={(event) => {
+                            handleEditDocumentFile(idx, event.target.files?.[0] || null);
+                            event.target.value = "";
+                          }}
+                          data-testid={`edit-profile-doc-input-${idx}`}
+                        />
+                        <label
+                          htmlFor={`edit-profile-doc-input-${idx}`}
+                          className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                          data-testid={`edit-profile-doc-upload-${idx}`}
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload / Replace
+                        </label>
+                      </div>
                     </div>
                   ))
                 )}
