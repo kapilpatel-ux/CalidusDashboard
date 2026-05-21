@@ -1,8 +1,12 @@
 import type { Request, Response } from "express";
+import crypto from "crypto";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
+import { env } from "../../../config/env.js";
+import { sendSmtpEmail } from "../../../utils/smtpEmail.js";
 import { AuthUserModel } from "../../auth/auth.model.js";
+import { hashPassword } from "../../auth/auth.service.js";
 import { SupplierModel } from "./supplier.model.js";
 
 const WORDPRESS_DEFAULT_LIMIT = 20;
@@ -104,6 +108,65 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
     },
     { $set: { status: authStatus } },
   );
+
+  const shouldProvisionLogin = authStatus === "active";
+  if (shouldProvisionLogin) {
+    const supplierEmail = String((updated as { email?: string }).email || "").toLowerCase().trim();
+    if (supplierEmail) {
+      const existingSupplierUser = await AuthUserModel.findOne(
+        { role: "supplier", $or: [{ profileId: updated.id }, { email: supplierEmail }] },
+        { _id: 0, id: 1 },
+      ).lean();
+
+      if (!existingSupplierUser) {
+        const tempPassword = crypto.randomBytes(10).toString("base64url");
+        const userId = createReadableId("USR");
+
+        await AuthUserModel.create({
+          id: userId,
+          name: (updated as { name?: string }).name || "Supplier",
+          email: supplierEmail,
+          phone: (updated as { phone?: string }).phone || "",
+          passwordHash: hashPassword(tempPassword),
+          role: "supplier",
+          profileId: updated.id,
+          company: (updated as { name?: string }).name || "",
+          status: "active",
+        });
+
+        const appUrl = env.appUrl || env.corsOrigins[0] || "http://localhost:3000";
+        const subject = "Your supplier account has been approved";
+        const text = [
+          `Hello ${(updated as { name?: string }).name || "Supplier"},`,
+          "",
+          "Your supplier account has been approved.",
+          "",
+          `Login URL: ${appUrl}`,
+          `Email: ${supplierEmail}`,
+          `Password: ${tempPassword}`,
+          "",
+          "For security, please change your password after logging in.",
+        ].join("\n");
+
+        const html = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <p>Hello ${(updated as { name?: string }).name || "Supplier"},</p>
+            <p>Your supplier account has been approved.</p>
+            <p><strong>Login URL:</strong> <a href="${appUrl}">${appUrl}</a><br/>
+            <strong>Email:</strong> ${supplierEmail}<br/>
+            <strong>Password:</strong> ${tempPassword}</p>
+            <p>For security, please change your password after logging in.</p>
+          </div>
+        `;
+
+        try {
+          await sendSmtpEmail(supplierEmail, { subject, text, html });
+        } catch (err) {
+          console.error("Failed to send supplier approval credentials email", err);
+        }
+      }
+    }
+  }
 
   res.json(updated);
 });
