@@ -464,14 +464,14 @@ export const DashboardShell = ({ children }) => {
           {/* Search & Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
             {/* Global Search */}
-            <div className="hidden md:flex items-center relative">
+            {/* <div className="hidden md:flex items-center relative">
               <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search..." 
                 className="pl-9 w-48 lg:w-64 h-9 bg-black/20 border-border rounded-sm"
                 data-testid="global-search-input"
               />
-            </div>
+            </div> */}
 
             {showHeaderNotifications && (
               <>
