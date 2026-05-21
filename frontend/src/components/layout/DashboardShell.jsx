@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth, useRole, useNavigation } from "@/App";
 import { toast } from "sonner";
@@ -47,7 +47,8 @@ import {
   Clock,
   FileText
 } from "lucide-react";
-import { notifications, messages, supplierNotifications } from "@/data/mockData";
+import { messages, supplierNotifications } from "@/data/mockData";
+import { useGetNotificationsQuery, useUpdateNotificationReadMutation } from "@/store/api/admin/notificationApi";
 
 // Navigation items for each role
 const navigationConfig = {
@@ -191,16 +192,21 @@ export const DashboardShell = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminRole = ["admin", "sub_admin", "content_manager"].includes(currentRole);
+  const { data: adminNotifications = [] } = useGetNotificationsQuery(undefined, { skip: !isAdminRole });
+  const [updateNotificationRead] = useUpdateNotificationReadMutation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
-  const [notificationsList, setNotificationsList] = useState(
-    currentRole === 'supplier' ? supplierNotifications : notifications
-  );
   const [messagesList] = useState(messages);
   const displayName = currentUser?.name || roleLabels[currentRole];
   const displayCompany = currentUser?.company || roleLabels[currentRole];
+  const notificationsList = useMemo(() => {
+    if (currentRole === "supplier") return supplierNotifications;
+    if (isAdminRole) return adminNotifications;
+    return [];
+  }, [adminNotifications, currentRole, isAdminRole]);
+  const recentNotifications = useMemo(() => notificationsList.slice(0, 4), [notificationsList]);
 
   const navItems = navigationConfig[currentRole] || [];
   const RoleIcon = roleIcons[currentRole];
@@ -221,10 +227,14 @@ export const DashboardShell = ({ children }) => {
   const showHeaderNotifications = currentRole !== "buyer";
   const showHeaderMessages = currentRole !== "buyer" && currentRole !== "supplier";
 
-  const handleNotificationClick = (notification) => {
-    setNotificationsList(prev => prev.map(n => 
-      n.id === notification.id ? { ...n, read: true } : n
-    ));
+  const handleNotificationClick = async (notification) => {
+    if (isAdminRole && notification?.id) {
+      try {
+        await updateNotificationRead({ id: notification.id, read: true }).unwrap();
+      } catch (err) {
+        // non-blocking
+      }
+    }
     if (notification.link) {
       const adminSection = adminLegacyLinkMap[notification.link];
       if (isAdminRole && adminSection) {
@@ -506,13 +516,13 @@ export const DashboardShell = ({ children }) => {
                       </Button>
                     </div>
                     <ScrollArea className="h-[300px]">
-                      {notificationsList.length === 0 ? (
+                      {recentNotifications.length === 0 ? (
                         <div className="p-4 text-center text-sm text-muted-foreground">
                           No notifications
                         </div>
                       ) : (
                         <div className="divide-y divide-border">
-                          {notificationsList.map((notification) => {
+                          {recentNotifications.map((notification) => {
                             const Icon = getNotificationIcon(notification.type);
                             const iconColor = getNotificationColor(notification.type, notification.urgent);
                             return (

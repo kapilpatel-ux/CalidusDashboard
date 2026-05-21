@@ -3,6 +3,7 @@ import { Schema, model } from "mongoose";
 const notificationSchema = new Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
+    audience: { type: String, default: "admin" },
     type: { type: String, default: "info" },
     title: { type: String, default: "" },
     message: { type: String, default: "" },

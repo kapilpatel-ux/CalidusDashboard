@@ -3,6 +3,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
 import { ProductModel } from "./product.model.js";
+import { createAdminNotification } from "../notifications/notification.service.js";
 
 const WORDPRESS_DEFAULT_LIMIT = 20;
 const WORDPRESS_MAX_LIMIT = 100;
@@ -71,6 +72,17 @@ export const getProduct = asyncHandler(async (req: Request, res: Response) => {
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   const payload = { ...req.body, id: req.body.id || createReadableId("PRD") };
   const created = await ProductModel.create(payload);
+  try {
+    const productName = String((payload as { name?: string; productName?: string }).name || (payload as { productName?: string }).productName || created.toJSON().name || "Product");
+    await createAdminNotification({
+      type: "product",
+      title: "New Product Created",
+      message: `${productName} was created.`,
+      link: "productmanagement",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for product creation", err);
+  }
   res.status(201).json(created.toJSON());
 });
 

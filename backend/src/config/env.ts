@@ -19,4 +19,10 @@ export const env = {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
+  emailFrom: process.env.EMAIL_FROM || "",
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: Number(process.env.SMTP_PORT || 0),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+  appUrl: process.env.APP_URL || process.env.FRONTEND_URL || "",
 };

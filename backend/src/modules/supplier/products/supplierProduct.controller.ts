@@ -4,6 +4,7 @@ import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
 import { ProductModel } from "../../admin/products/product.model.js";
 import { SupplierModel } from "../../admin/suppliers/supplier.model.js";
+import { createAdminNotification } from "../../admin/notifications/notification.service.js";
 
 const nowIso = () => new Date().toISOString();
 const dateOnly = () => nowIso().split("T")[0];
@@ -68,6 +69,17 @@ export const createSupplierProduct = asyncHandler(async (req: Request, res: Resp
 
   const created = await ProductModel.create(payload);
   await syncSupplierProductCount(supplierId);
+  try {
+    const productName = String(req.body.name || req.body.productName || payload.name || "Product");
+    await createAdminNotification({
+      type: "product",
+      title: "New Product Pending Approval",
+      message: `${supplier.name} submitted ${productName} for approval.`,
+      link: "productmanagement",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for supplier product", err);
+  }
   res.status(201).json(created.toJSON());
 });
 

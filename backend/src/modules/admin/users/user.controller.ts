@@ -2,6 +2,9 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
+import { env } from "../../../config/env.js";
+import { sendSmtpEmail } from "../../../utils/smtpEmail.js";
+import { createAdminNotification } from "../notifications/notification.service.js";
 import { AuthUserModel } from "../../auth/auth.model.js";
 import { hashPassword } from "../../auth/auth.service.js";
 
@@ -20,8 +23,9 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
   const existing = await AuthUserModel.findOne({ email }).lean();
   if (existing) throw new HttpError(409, "Email is already registered");
 
+  const userId = createReadableId("USR");
   const created = await AuthUserModel.create({
-    id: createReadableId("USR"),
+    id: userId,
     name: req.body.name,
     email,
     phone: req.body.phone,
@@ -32,7 +36,68 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
     status: "active",
   });
 
-  res.status(201).json(created.toJSON());
+  const appUrl = env.appUrl || env.corsOrigins[0] || "http://localhost:3000";
+  const subject = "Your Calidus Dashboard login details";
+  const text = [
+    `Hello ${req.body.name},`,
+    "",
+    "Your account has been created.",
+    "",
+    `Login URL: ${appUrl}`,
+    `Email: ${email}`,
+    `Password: ${req.body.password}`,
+    "",
+    "For security, please change your password after logging in.",
+  ].join("\n");
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <p>Hello ${req.body.name},</p>
+      <p>Your account has been created.</p>
+      <p><strong>Login URL:</strong> <a href="${appUrl}">${appUrl}</a><br/>
+      <strong>Email:</strong> ${email}<br/>
+      <strong>Password:</strong> ${req.body.password}</p>
+      <p>For security, please change your password after logging in.</p>
+    </div>
+  `;
+
+  let emailSent = false;
+
+  try {
+    await sendSmtpEmail(email, { subject, text, html });
+    emailSent = true;
+  } catch (err) {
+    console.error("Failed to send user credentials email", err);
+  }
+
+  const safeCreated = await AuthUserModel.findOne(
+    { id: userId },
+    { _id: 0, passwordHash: 0 },
+  ).lean();
+
+  try {
+    await createAdminNotification({
+      type: "user",
+      title: "New User Created",
+      message: `${req.body.name} (${email}) was created with role ${req.body.role}.`,
+      link: "usermanagement",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for user creation", err);
+  }
+
+  res.status(201).json({
+    ...(safeCreated || {
+      id: userId,
+      name: req.body.name,
+      email,
+      phone: req.body.phone,
+      role: req.body.role,
+      profileId: "",
+      company: "",
+      status: "active",
+    }),
+    emailSent,
+  });
 });
 
 export const updateUserStatus = asyncHandler(async (req: Request, res: Response) => {

@@ -7,7 +7,10 @@ export const listSupplierNotifications = asyncHandler(async (req: Request, res: 
   const supplierId = req.params.supplierId;
   const notifications = await SupplierNotificationModel.find(
     {
-      $or: [{ supplierId }, { supplierId: { $exists: false } }, { supplierId: "" }],
+      $and: [
+        { $or: [{ supplierId }, { supplierId: { $exists: false } }, { supplierId: "" }] },
+        { $or: [{ audience: { $in: ["supplier", "all"] } }, { audience: { $exists: false } }] },
+      ],
     },
     { _id: 0 },
   ).sort({ date: -1 }).lean();
@@ -19,7 +22,10 @@ export const updateSupplierNotificationRead = asyncHandler(async (req: Request, 
   const updated = await SupplierNotificationModel.findOneAndUpdate(
     {
       id: req.params.notificationId,
-      $or: [{ supplierId }, { supplierId: { $exists: false } }, { supplierId: "" }],
+      $and: [
+        { $or: [{ supplierId }, { supplierId: { $exists: false } }, { supplierId: "" }] },
+        { $or: [{ audience: { $in: ["supplier", "all"] } }, { audience: { $exists: false } }] },
+      ],
     },
     { $set: { read: req.body.read } },
     { new: true, projection: { _id: 0 } },
@@ -28,4 +34,3 @@ export const updateSupplierNotificationRead = asyncHandler(async (req: Request, 
   if (!updated) throw new HttpError(404, "Notification not found");
   res.json(updated);
 });
-

@@ -4,6 +4,7 @@ import { HttpError } from "../../utils/httpError.js";
 import { createReadableId } from "../../utils/id.js";
 import { BuyerModel } from "../admin/buyers/buyer.model.js";
 import { SupplierModel } from "../admin/suppliers/supplier.model.js";
+import { createAdminNotification } from "../admin/notifications/notification.service.js";
 import { AuthUserModel } from "./auth.model.js";
 import { hashPassword, signJwt, verifyPassword } from "./auth.service.js";
 
@@ -80,6 +81,16 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
       documentStatus: "pending",
     });
     company = supplier.name;
+    try {
+      await createAdminNotification({
+        type: "approval",
+        title: "New Supplier Pending Approval",
+        message: `${company} has registered and is pending approval.`,
+        link: "suppliermanagement",
+      });
+    } catch (err) {
+      console.error("Failed to create admin notification for supplier signup", err);
+    }
   }
 
   const created = await AuthUserModel.create({

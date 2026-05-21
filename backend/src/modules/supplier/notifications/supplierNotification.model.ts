@@ -4,6 +4,7 @@ const supplierNotificationSchema = new Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
     supplierId: { type: String, default: "" },
+    audience: { type: String, default: "supplier" },
     type: { type: String, default: "info" },
     title: { type: String, default: "" },
     message: { type: String, default: "" },
@@ -22,4 +23,3 @@ supplierNotificationSchema.set("toJSON", {
 });
 
 export const SupplierNotificationModel = model("SupplierNotification", supplierNotificationSchema);
-
