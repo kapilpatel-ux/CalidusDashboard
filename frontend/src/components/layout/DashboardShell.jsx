@@ -218,7 +218,8 @@ export const DashboardShell = ({ children }) => {
 
   const unreadNotifications = notificationsList.filter(n => !n.read).length;
   const unreadMessages = messagesList.reduce((acc, m) => acc + m.unread, 0);
-  const showHeaderCommunicationActions = currentRole !== "buyer";
+  const showHeaderNotifications = currentRole !== "buyer";
+  const showHeaderMessages = currentRole !== "buyer" && currentRole !== "supplier";
 
   const handleNotificationClick = (notification) => {
     setNotificationsList(prev => prev.map(n => 
@@ -472,7 +473,7 @@ export const DashboardShell = ({ children }) => {
               />
             </div>
 
-            {showHeaderCommunicationActions && (
+            {showHeaderNotifications && (
               <>
                 {/* Notifications */}
                 <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
@@ -552,7 +553,11 @@ export const DashboardShell = ({ children }) => {
                     </ScrollArea>
                   </PopoverContent>
                 </Popover>
+              </>
+            )}
 
+            {showHeaderMessages && (
+              <>
                 {/* Messages */}
                 <Popover open={messagesOpen} onOpenChange={setMessagesOpen}>
                   <PopoverTrigger asChild>
