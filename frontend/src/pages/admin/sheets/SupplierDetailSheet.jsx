@@ -20,6 +20,18 @@ import {
 
 export const SupplierDetailSheet = ({ viewSheet, setViewSheet }) => {
   const supplier = viewSheet.data || viewSheet.item || viewSheet.supplier;
+  const address = supplier?.address || {};
+  const addressText = [
+    address.addressLine1,
+    address.addressLine2,
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <Sheet
@@ -54,7 +66,9 @@ export const SupplierDetailSheet = ({ viewSheet, setViewSheet }) => {
 
               <div>
                 <h2 className="text-xl font-semibold">{supplier.name}</h2>
-                <p className="text-sm text-muted-foreground">{supplier.type}</p>
+                <p className="text-sm text-muted-foreground">
+                  {supplier.businessType || supplier.type}
+                </p>
                 <div className="mt-2">
                   <StatusBadge status={supplier.status} />
                 </div>
@@ -64,11 +78,28 @@ export const SupplierDetailSheet = ({ viewSheet, setViewSheet }) => {
             <Section title="Basic Information">
               <DetailRow label="Supplier ID" value={supplier.id} />
               <DetailRow label="Name" value={supplier.name} icon={Building2} />
-              <DetailRow label="Type" value={supplier.type} />
+              <DetailRow label="Business Type" value={supplier.businessType || supplier.type} />
+              <DetailRow label="Calidus Cluster" value={supplier.calidusCluster} />
+              <DetailRow label="Product and Services" value={supplier.productAndServices} />
+              <DetailRow label="Contact Person" value={supplier.contactPerson} />
               <DetailRow label="Country" value={supplier.country} icon={MapPin} />
               <DetailRow label="Email" value={supplier.email} icon={Mail} />
               <DetailRow label="Phone" value={supplier.phone} icon={Phone} />
+              <DetailRow label="Supplier Currency" value={supplier.supplierCurrency} />
+              <DetailRow label="License Number" value={supplier.licenseNumber} />
+              <DetailRow label="VAT Number" value={supplier.vatNumber} />
+              <DetailRow label="LinkedIn" value={supplier.linkedIn} />
               <DetailRow label="Join Date" value={supplier.joinDate} icon={Calendar} />
+            </Section>
+
+            <Section title="Business Profile">
+              <DetailRow label="Address" value={addressText || supplier.country} icon={MapPin} />
+              <div className="border-b border-white/10 pb-2 text-sm">
+                <p className="text-muted-foreground">Business Description</p>
+                <p className="font-medium mt-1 whitespace-pre-wrap">
+                  {supplier.businessDescription || "N/A"}
+                </p>
+              </div>
             </Section>
 
             <Section title="Performance">
@@ -89,8 +120,13 @@ export const SupplierDetailSheet = ({ viewSheet, setViewSheet }) => {
                       className="rounded-md border border-white/10 p-3 text-sm"
                     >
                       <p className="font-medium">
-                        {doc.name || doc.title || `Document ${index + 1}`}
+                        {doc.name || doc.title || doc.fileName || `Document ${index + 1}`}
                       </p>
+                      {doc.type && (
+                        <p className="text-muted-foreground">
+                          Type: {String(doc.type).replace(/_/g, " ")}
+                        </p>
+                      )}
                       <p className="text-muted-foreground">
                         Status: {doc.status || "N/A"}
                       </p>

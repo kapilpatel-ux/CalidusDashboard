@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -43,6 +44,54 @@ const certificationOptions = [
   "ITAR Compliant",
 ];
 
+const businessTypeOptions = ["Manufacturer", "Distributor", "Service Provider"];
+
+const calidusClusterOptions = [
+  "Aerospace Cluster",
+  "Land Systems",
+  "Missiles & Defense Systems",
+];
+
+const productAndServicesOptions = [
+  "ADAPTORS AND CONNECTORS",
+  "AIR DATA MANAGEMENT SYSTEM",
+  "AIRFRAME AND STRUCTURE PARTS",
+  "ARMAMENT SYSTEM",
+  "AVIONICS SYSTEM",
+  "CANOPY AND ESCAPE SYSTEM",
+  "CATERING / PASTRIES",
+  "COCKPIT DISPLAY SYSTEM",
+  "COMMUNICATION NAVIGATION IDENTITIFICATION (CNI)",
+  "COMPUTER SOFTWARE LICENSES",
+  "CONSUMABLES",
+  "ELECTRICAL HARDWARES",
+  "ELECTRICAL SYSTEM",
+  "ENGINEERING SERVICES",
+  "ENVIRONMENTAL CONTROL SYSTEM & BLEED SYSTEM",
+  "FACILITIES SERVICES",
+  "FASTENERS",
+  "FLIGHT CONTROL SYSTEM",
+  "FUEL SYSTEM",
+  "GROUND SUPPORT EQUIPMENT",
+  "HARNESSES",
+  "HYDRAULIC SYSTEM",
+  "LANDING GEAR SYSTEM",
+  "LOGISTICS SERVICES",
+  "LIGHT SYSTEM",
+  "MECANICAL HARDWARES",
+  "METALLIC PARTS",
+  "MISSION SYSTEM",
+  "OFFICE SUPPLIES",
+  "OTHERS",
+  "PANEL SYSTEM",
+  "POWERPLANT SYSTEM",
+  "QUALITY SERVICES",
+  "RAW MATERIAL",
+  "STORAGE",
+  "TECHNICAL SERVICES",
+  "TOOLS",
+];
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneDigits = (value) => String(value || "").replace(/\D/g, "");
 const phoneNationalDigits = (value) => String(value || "").replace(/[^\d]/g, "");
@@ -50,6 +99,7 @@ const PHONE_MIN_DIGITS = 8;
 const PHONE_MAX_DIGITS = 15;
 const LICENSE_NUMBER_MAX_LEN = 30;
 const VAT_NUMBER_MAX_LEN = 20;
+const BUSINESS_DESCRIPTION_MAX_LEN = 700;
 
 const callingCodeOptions = [
   { label: "UAE (+971)", value: "+971" },
@@ -102,6 +152,10 @@ export const SupplierRegistrationPage = () => {
   const [form, setForm] = useState({
     name: "",
     contactPerson: "",
+    businessType: "",
+    calidusCluster: "",
+    productAndServices: "",
+    businessDescription: "",
     email: "",
     phoneCountryCode: "+971",
     phoneNumber: "",
@@ -119,20 +173,21 @@ export const SupplierRegistrationPage = () => {
     tradeLicenseExpiry: "",
     vatCertificateFile: null,
     vatCertificateExpiry: "",
+    productCatalogueFile: null,
   });
   const [errors, setErrors] = useState({});
   const [dragOverTarget, setDragOverTarget] = useState(null);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const setFileField = (key, file) => {
+  const setFileField = (key, file, maxSizeMb = 10) => {
     if (!file) {
       setField(key, null);
       return;
     }
-    const maxSizeBytes = 10 * 1024 * 1024;
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      setErrors((prev) => ({ ...prev, [key]: "Max file size is 10MB" }));
+      setErrors((prev) => ({ ...prev, [key]: `Max file size is ${maxSizeMb}MB` }));
       return;
     }
     setErrors((prev) => {
@@ -143,7 +198,15 @@ export const SupplierRegistrationPage = () => {
     setField(key, file);
   };
 
-  const Dropzone = ({ id, label, fileKey, testId }) => {
+  const Dropzone = ({
+    id,
+    label,
+    fileKey,
+    testId,
+    accept = ".pdf,.png,.jpg,.jpeg",
+    helper = "PDF, PNG, JPG up to 10MB",
+    maxSizeMb = 10,
+  }) => {
     const file = form[fileKey];
     const isDragOver = dragOverTarget === fileKey;
 
@@ -178,15 +241,15 @@ export const SupplierRegistrationPage = () => {
             e.stopPropagation();
             setDragOverTarget(null);
             const dropped = e.dataTransfer?.files?.[0];
-            if (dropped) setFileField(fileKey, dropped);
+            if (dropped) setFileField(fileKey, dropped, maxSizeMb);
           }}
         >
           <input
             id={id}
             type="file"
-            accept=".pdf,.png,.jpg,.jpeg"
+            accept={accept}
             className="hidden"
-            onChange={(e) => setFileField(fileKey, e.target.files?.[0] || null)}
+            onChange={(e) => setFileField(fileKey, e.target.files?.[0] || null, maxSizeMb)}
             data-testid={testId}
           />
           <label htmlFor={id} className="cursor-pointer block">
@@ -199,7 +262,7 @@ export const SupplierRegistrationPage = () => {
                   Click to upload or drag and drop
                 </p>
                 <p className="text-[10px] text-muted-foreground/70">
-                  PDF, PNG, JPG up to 10MB
+                  {helper}
                 </p>
               </div>
             </div>
@@ -224,6 +287,13 @@ export const SupplierRegistrationPage = () => {
     if (!stepId || stepId === "company") {
       requireField("name", "Company name is required");
       requireField("contactPerson", "Contact person is required");
+      requireField("businessType", "Business type is required");
+      requireField("calidusCluster", "Calidus cluster is required");
+      requireField("productAndServices", "Product and Services is required");
+      requireField("businessDescription", "Business description is required");
+      if (String(form.businessDescription || "").trim().length > BUSINESS_DESCRIPTION_MAX_LEN) {
+        nextErrors.businessDescription = `Business description must be at most ${BUSINESS_DESCRIPTION_MAX_LEN} characters`;
+      }
       requireField("email", "Email is required");
       if (String(form.email || "").trim() && !emailRegex.test(String(form.email).trim())) {
         nextErrors.email = "Enter a valid email address";
@@ -258,6 +328,7 @@ export const SupplierRegistrationPage = () => {
       requireField("tradeLicenseExpiry", "Trade license expiry date is required");
       if (!form.vatCertificateFile) nextErrors.vatCertificateFile = "VAT certificate is required";
       requireField("vatCertificateExpiry", "VAT certificate expiry date is required");
+      if (!form.productCatalogueFile) nextErrors.productCatalogueFile = "Product catalogue is required";
     }
 
     return nextErrors;
@@ -337,11 +408,19 @@ export const SupplierRegistrationPage = () => {
             expiryDate: form.vatCertificateExpiry,
           }
         : null,
+      form.productCatalogueFile
+        ? {
+            type: "product_catalogue",
+            fileName: form.productCatalogueFile.name,
+            mimeType: form.productCatalogueFile.type,
+            size: form.productCatalogueFile.size,
+          }
+        : null,
     ].filter(Boolean);
 
     const payload = {
       name: form.name.trim(),
-      type: "OEM",
+      type: form.businessType,
       country: form.country.trim(),
       email: form.email.trim(),
       phone: `${String(form.phoneCountryCode || "").trim()}${phoneDigits(form.phoneNumber)}`,
@@ -352,6 +431,10 @@ export const SupplierRegistrationPage = () => {
       documents,
       // extra fields (passthrough)
       contactPerson: form.contactPerson,
+      businessType: form.businessType,
+      calidusCluster: form.calidusCluster,
+      productAndServices: form.productAndServices,
+      businessDescription: form.businessDescription.trim(),
       supplierCurrency: form.currency,
       address: {
         addressLine1: form.addressLine1,
@@ -492,6 +575,98 @@ export const SupplierRegistrationPage = () => {
                         <p className="text-xs text-red-400 mt-1">{errors.contactPerson}</p>
                       )}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        Business Type *
+                      </Label>
+                      <Select value={form.businessType} onValueChange={(v) => setField("businessType", v)}>
+                        <SelectTrigger
+                          className={`bg-black/20 mt-1 ${errors.businessType ? "border-red-500/50" : ""}`}
+                          data-testid="supplier-reg-business-type"
+                        >
+                          <SelectValue placeholder="Select business type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {businessTypeOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.businessType && <p className="text-xs text-red-400 mt-1">{errors.businessType}</p>}
+                    </div>
+
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        Calidus Cluster *
+                      </Label>
+                      <Select value={form.calidusCluster} onValueChange={(v) => setField("calidusCluster", v)}>
+                        <SelectTrigger
+                          className={`bg-black/20 mt-1 ${errors.calidusCluster ? "border-red-500/50" : ""}`}
+                          data-testid="supplier-reg-calidus-cluster"
+                        >
+                          <SelectValue placeholder="Select calidus cluster" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {calidusClusterOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.calidusCluster && <p className="text-xs text-red-400 mt-1">{errors.calidusCluster}</p>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Product and Services *
+                    </Label>
+                    <Select value={form.productAndServices} onValueChange={(v) => setField("productAndServices", v)}>
+                      <SelectTrigger
+                        className={`bg-black/20 mt-1 ${errors.productAndServices ? "border-red-500/50" : ""}`}
+                        data-testid="supplier-reg-product-services"
+                      >
+                        <SelectValue placeholder="Select Product and Services" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <ScrollArea className="h-72">
+                          {productAndServicesOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </ScrollArea>
+                      </SelectContent>
+                    </Select>
+                    {errors.productAndServices && <p className="text-xs text-red-400 mt-1">{errors.productAndServices}</p>}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        Business Description *
+                      </Label>
+                      <span className="text-xs text-muted-foreground">
+                        {form.businessDescription.length}/{BUSINESS_DESCRIPTION_MAX_LEN}
+                      </span>
+                    </div>
+                    <Textarea
+                      value={form.businessDescription}
+                      onChange={(e) => setField("businessDescription", e.target.value.slice(0, BUSINESS_DESCRIPTION_MAX_LEN))}
+                      className={`bg-black/20 mt-1 min-h-32 ${errors.businessDescription ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+                      placeholder="Describe your business in under 700 letters"
+                      maxLength={BUSINESS_DESCRIPTION_MAX_LEN}
+                      data-testid="supplier-reg-business-description"
+                    />
+                    {errors.businessDescription && (
+                      <p className="text-xs text-red-400 mt-1">{errors.businessDescription}</p>
+                    )}
                   </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -759,6 +934,16 @@ export const SupplierRegistrationPage = () => {
                     )}
                   </div>
 
+                  <Dropzone
+                    id="product-catalogue-file"
+                    label="Product Catalogue *"
+                    fileKey="productCatalogueFile"
+                    testId="supplier-reg-product-catalogue"
+                    accept="image/*,video/*"
+                    helper="Image or video up to 50MB"
+                    maxSizeMb={50}
+                  />
+
                   <div>
                     <Label className="text-sm font-medium">Select Your Certifications</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -829,6 +1014,22 @@ export const SupplierRegistrationPage = () => {
                           <p className="text-xs text-muted-foreground">Currency</p>
                           <p className="font-medium mt-1">{form.currency || "-"}</p>
                         </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Business Type</p>
+                          <p className="font-medium mt-1">{form.businessType || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Calidus Cluster</p>
+                          <p className="font-medium mt-1">{form.calidusCluster || "-"}</p>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <p className="text-xs text-muted-foreground">Product and Services</p>
+                          <p className="font-medium mt-1">{form.productAndServices || "-"}</p>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <p className="text-xs text-muted-foreground">Business Description</p>
+                          <p className="font-medium mt-1 whitespace-pre-wrap">{form.businessDescription || "-"}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -864,7 +1065,7 @@ export const SupplierRegistrationPage = () => {
                   <div className="rounded-sm bg-muted/15 border border-border p-5">
                     <p className="text-base font-semibold">Certifications</p>
                     <div className="mt-4 flex flex-wrap gap-3">
-                      {[form.tradeLicenseFile, form.vatCertificateFile]
+                      {[form.tradeLicenseFile, form.vatCertificateFile, form.productCatalogueFile]
                         .filter(Boolean)
                         .map((file) => (
                           <div

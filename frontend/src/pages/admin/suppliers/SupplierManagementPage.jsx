@@ -70,7 +70,8 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
         </div>
       ),
     },
-    { key: "type", label: "Type" },
+    { key: "type", label: "Business Type", render: (value, row) => row.businessType || value || "N/A" },
+    { key: "calidusCluster", label: "Cluster", render: (value) => value || "N/A" },
     { key: "country", label: "Country" },
     { key: "productsCount", label: "Products" },
     {

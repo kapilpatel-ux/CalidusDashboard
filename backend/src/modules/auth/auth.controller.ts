@@ -31,6 +31,8 @@ function buildAuthResponse(user: { id: string; name: string; email: string; role
   };
 }
 
+const approvedSupplierStatuses = new Set(["active", "approved"]);
+
 export const signup = asyncHandler(async (req: Request, res: Response) => {
   const email = String(req.body.email).toLowerCase().trim();
   const existing = await AuthUserModel.findOne({ email }).lean();
@@ -108,8 +110,13 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   if (user.role === "supplier") {
     const supplier = await SupplierModel.findOne({ id: user.profileId }, { _id: 0, status: 1 }).lean();
-    if (!supplier || supplier.status !== "approved") {
+    const supplierStatus = String(supplier?.status || "").toLowerCase();
+    if (!supplier || !approvedSupplierStatuses.has(supplierStatus)) {
       throw new HttpError(403, "Your supplier account is not approved yet");
+    }
+    if (user.status !== "active") {
+      await AuthUserModel.updateOne({ id: user.id }, { $set: { status: "active" } });
+      user.status = "active";
     }
   }
 
