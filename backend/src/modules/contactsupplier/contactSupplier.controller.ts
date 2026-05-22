@@ -24,6 +24,7 @@ type AuthUserRecord = {
 export const createContactSupplier = asyncHandler(async (req: Request, res: Response) => {
   const productName = req.body.productName || req.body.product;
   const email = String(req.body.email).toLowerCase().trim();
+  const phone = String(req.body.phone || "").trim();
   const existingUser = await AuthUserModel.findOne(
     { email },
     { _id: 0, id: 1, profileId: 1, role: 1, company: 1 },
@@ -51,7 +52,7 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
       company: buyerCompany,
       country: req.body.country,
       email,
-      phone: "",
+      phone,
       joinDate: dateOnly(),
       status: "pending",
       enquiriesSent: 0,
@@ -64,6 +65,7 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
       id: createReadableId("USR"),
       name: req.body.fullName,
       email,
+      phone,
       passwordHash: hashPassword(crypto.randomBytes(24).toString("hex")),
       role: "buyer",
       profileId: buyerId,
@@ -90,7 +92,7 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
     buyerName: req.body.fullName,
     buyerCompany,
 
-    message: `Contact email: ${email}\nCompany: ${buyerCompany}\nCountry: ${req.body.country}`,
+    message: `Contact email: ${email}\nPhone: ${phone}\nCompany: ${buyerCompany}\nCountry: ${req.body.country}`,
 
     date: dateOnly(),
 

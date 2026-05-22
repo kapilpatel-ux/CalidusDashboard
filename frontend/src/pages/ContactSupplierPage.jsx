@@ -76,7 +76,7 @@ export default function ContactSupplierPage() {
 
     const phone = String(form.phone || "").trim();
 
-    if (!/^\d{10,15}$/.test(phone)) {
+    if (!/^\d{4,16}$/.test(phone)) {
       toast.error("Enter a valid mobile number");
       return;
     }
@@ -113,6 +113,7 @@ export default function ContactSupplierPage() {
   };
 
   return (
+
     <div className="min-h-screen bg-background tactical-grid noise-overlay p-4">
       <header className="fixed left-0 top-0 z-40 flex w-full items-center border-b border-[#26262B] bg-[#111417]/95 px-4 py-3 shadow-sm shadow-black/20 backdrop-blur sm:px-8">
         <img src={logo} alt="Calidus" className="h-10 w-36 object-contain" />
@@ -175,9 +176,10 @@ export default function ContactSupplierPage() {
                   value={form.phone}
                   onChange={(value) => updateField("phone", value)}
                   inputClass="!w-full !h-[51px] !bg-[#070709] !text-white !border-[#29292E]"
-                  buttonClass="!bg-[#070709] !border-[#29292E]"
-                  dropdownClass="!bg-[#070709] !text-white"
-                  containerClass="phone-input-dark"
+                  // buttonClass="!bg-[#070709] !border-[#29292E]"
+                  buttonClass="!bg-[#070709] !border-[#29292E] hover:!bg-[#070709] focus:!bg-[#070709]"
+                  dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"
+                  containerClass="phone-input-container"
                 />
               </Field>
 

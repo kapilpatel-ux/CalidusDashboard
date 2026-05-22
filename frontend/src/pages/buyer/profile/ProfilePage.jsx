@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Select from "react-select";
 import countryList from "react-select-country-list";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Building2, Edit, Mail, MapPin, User } from "lucide-react";
+import { Building2, Edit, Mail, MapPin, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
 
@@ -41,6 +43,34 @@ export const BuyerProfile = () => {
   };
 
   const handleSaveProfile = async () => {
+
+    const phone = String(profileForm.phone || "").trim();
+
+    if (!/^\d{4,16}$/.test(phone)) {
+      toast.error("Enter a valid phone number");
+      return;
+    }
+
+    if (!String(profileForm.name || "").trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+
+    if (!String(profileForm.company || "").trim()) {
+      toast.error("Company is required");
+      return;
+    }
+   
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(profileForm.email || "").trim())) {
+      toast.error("Enter a valid email address");
+      return;
+    }
+
+    if (!String(profileForm.country || "").trim()) {
+      toast.error("Country is required");
+      return;
+    }
+
     try {
       await updateBuyerProfile({ 
         buyerId,
@@ -100,6 +130,13 @@ export const BuyerProfile = () => {
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{buyer.email}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Phone</p>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{buyer.phone || "N/A"}</span>
                     </div>
                   </div>
                   <div>
@@ -173,6 +210,19 @@ export const BuyerProfile = () => {
                 onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })}
                 className="bg-black/20 mt-1"
                 data-testid="edit-buyer-email"
+              />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
+              <PhoneInput
+                country={"us"}
+                value={profileForm.phone || ""}
+                onChange={(value) =>
+                  setProfileForm({ ...profileForm, phone: value })
+                }
+                inputClass="!w-full !h-[40px] !bg-black/20 !text-white !border-[#2a2a2a]"
+                buttonClass="!bg-black/20 !border-[#2a2a2a]"
+                dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"
               />
             </div>
             <div>
