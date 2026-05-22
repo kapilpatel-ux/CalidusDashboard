@@ -1,0 +1,2 @@
+export { PermissionManagement } from "./PermissionManagementPage";
+

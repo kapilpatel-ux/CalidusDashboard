@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Eye, EyeOff } from "lucide-react";
+import { useGetAdminRolesQuery } from "@/store/api/admin/roleApi";
 
 export const AddUserDialog = ({
   open,
@@ -27,6 +28,7 @@ export const AddUserDialog = ({
   isAdding = false,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const { data: roles = [], isLoading: isRolesLoading } = useGetAdminRolesQuery();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -109,13 +111,17 @@ export const AddUserDialog = ({
             <Select
               value={newUser.role || ""}
               onValueChange={(role) => setNewUser((prev) => ({ ...prev, role }))}
+              disabled={isAdding || isRolesLoading}
             >
               <SelectTrigger className="bg-black/20 mt-1" data-testid="add-user-role">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sub_admin">Sub Admin</SelectItem>
-                <SelectItem value="content_manager">Content Manager</SelectItem>
+                {(Array.isArray(roles) ? roles : []).map((role) => (
+                  <SelectItem key={role.key} value={role.key}>
+                    {role.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

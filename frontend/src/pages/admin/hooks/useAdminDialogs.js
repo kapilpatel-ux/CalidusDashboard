@@ -16,6 +16,8 @@ export const useAdminDialogs = () => {
 
   const [addCategoryDialog, setAddCategoryDialog] = useState(false);
   const [addUserDialog, setAddUserDialog] = useState(false);
+  const [addRoleDialog, setAddRoleDialog] = useState(false);
+  const [addPermissionDialog, setAddPermissionDialog] = useState(false);
 
   const [newCategory, setNewCategory] = useState({
     name: "",
@@ -27,6 +29,15 @@ export const useAdminDialogs = () => {
     phone: "",
     password: "",
     role: "",
+  });
+
+  const [newRole, setNewRole] = useState({
+    label: "",
+  });
+
+  const [newPermission, setNewPermission] = useState({
+    label: "",
+    group: "",
   });
 
   const [addProductDialog, setAddProductDialog] = useState({
@@ -54,11 +65,23 @@ export const useAdminDialogs = () => {
     addUserDialog,
     setAddUserDialog,
 
+    addRoleDialog,
+    setAddRoleDialog,
+
+    addPermissionDialog,
+    setAddPermissionDialog,
+
     newCategory,
     setNewCategory,
 
     newUser,
     setNewUser,
+
+    newRole,
+    setNewRole,
+
+    newPermission,
+    setNewPermission,
 
     addProductDialog,
     setAddProductDialog,

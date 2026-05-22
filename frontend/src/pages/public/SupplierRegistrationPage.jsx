@@ -41,7 +41,7 @@ const certificationOptions = [
   "ISO 9001:2015",
   "ISO 14001",
   "AS9100D",
-  "ITAR Compliant",
+  "others"
 ];
 
 const businessTypeOptions = ["Manufacturer", "Distributor", "Service Provider"];
@@ -92,14 +92,23 @@ const productAndServicesOptions = [
   "TOOLS",
 ];
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneDigits = (value) => String(value || "").replace(/\D/g, "");
-const phoneNationalDigits = (value) => String(value || "").replace(/[^\d]/g, "");
-const PHONE_MIN_DIGITS = 8;
-const PHONE_MAX_DIGITS = 15;
-const LICENSE_NUMBER_MAX_LEN = 30;
-const VAT_NUMBER_MAX_LEN = 20;
-const BUSINESS_DESCRIPTION_MAX_LEN = 700;
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	const phoneDigits = (value) => String(value || "").replace(/\D/g, "");
+	const phoneNationalDigits = (value) => String(value || "").replace(/[^\d]/g, "");
+	const normalizeRefId = (value, maxLen) =>
+	  String(value || "")
+	    .toUpperCase()
+	    .replace(/[^A-Z0-9/_-]/g, "")
+	    .slice(0, maxLen);
+	const PHONE_MIN_DIGITS = 8;
+	const PHONE_MAX_DIGITS = 15;
+	const PHONE_NATIONAL_MIN_DIGITS = 7;
+	const PHONE_NATIONAL_MAX_DIGITS = 12;
+	const LICENSE_NUMBER_MIN_LEN = 5;
+	const VAT_NUMBER_MIN_LEN = 5;
+	const LICENSE_NUMBER_MAX_LEN = 30;
+	const VAT_NUMBER_MAX_LEN = 20;
+	const BUSINESS_DESCRIPTION_MAX_LEN = 700;
 
 const callingCodeOptions = [
   { label: "UAE (+971)", value: "+971" },
@@ -117,9 +126,17 @@ const callingCodeOptions = [
   { label: "France (+33)", value: "+33" },
 ];
 
+const pad2 = (n) => String(n).padStart(2, "0");
+const localIsoDate = (date) =>
+  `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+
 export const SupplierRegistrationPage = () => {
   const navigate = useNavigate();
   const [createSupplier, { isLoading: isSubmitting }] = useCreateSupplierMutation();
+  const todayIso = localIsoDate(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowIso = localIsoDate(tomorrowDate);
 
   const currencyOptions = useMemo(() => {
     try {
@@ -169,6 +186,7 @@ export const SupplierRegistrationPage = () => {
     vatNumber: "",
     linkedIn: "",
     certifications: [],
+    otherCertifications: "",
     tradeLicenseFile: null,
     tradeLicenseExpiry: "",
     vatCertificateFile: null,
@@ -284,8 +302,17 @@ export const SupplierRegistrationPage = () => {
     const requireField = (key, message) => {
       if (!String(form[key] || "").trim()) nextErrors[key] = message;
     };
+    const requireFutureDate = (key, message) => {
+      const value = String(form[key] || "").trim();
+      if (!value) return;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        nextErrors[key] = "Enter a valid date";
+        return;
+      }
+      if (value <= todayIso) nextErrors[key] = message;
+    };
 
-    if (!stepId || stepId === "company") {
+	    if (!stepId || stepId === "company") {
       requireField("name", "Company name is required");
       requireField("contactPerson", "Contact person is required");
       requireField("businessType", "Business type is required");
@@ -299,22 +326,32 @@ export const SupplierRegistrationPage = () => {
       if (String(form.email || "").trim() && !emailRegex.test(String(form.email).trim())) {
         nextErrors.email = "Enter a valid email address";
       }
-      requireField("licenseNumber", "License number is required");
-      requireField("currency", "Supplier currency is required");
-      requireField("phoneNumber", "Phone is required");
-      const countryDigits = phoneDigits(form.phoneCountryCode);
-      const nationalDigits = phoneDigits(form.phoneNumber);
-      const totalDigits = countryDigits.length + nationalDigits.length;
-      if (String(form.phoneNumber || "").trim() && (totalDigits < PHONE_MIN_DIGITS || totalDigits > PHONE_MAX_DIGITS)) {
-        nextErrors.phoneNumber = `Enter a valid phone number (${PHONE_MIN_DIGITS}–${PHONE_MAX_DIGITS} digits including country code)`;
-      }
-      if (String(form.licenseNumber || "").trim().length > LICENSE_NUMBER_MAX_LEN) {
-        nextErrors.licenseNumber = `License number must be at most ${LICENSE_NUMBER_MAX_LEN} characters`;
-      }
-      if (String(form.vatNumber || "").trim().length > VAT_NUMBER_MAX_LEN) {
-        nextErrors.vatNumber = `VAT number must be at most ${VAT_NUMBER_MAX_LEN} characters`;
-      }
-    }
+	      requireField("licenseNumber", "License number is required");
+	      requireField("currency", "Supplier currency is required");
+	      requireField("phoneNumber", "Phone is required");
+	      const countryDigits = phoneDigits(form.phoneCountryCode);
+	      const nationalDigits = phoneDigits(form.phoneNumber);
+	      const totalDigits = countryDigits.length + nationalDigits.length;
+	      if (String(form.phoneNumber || "").trim() && (nationalDigits.length < PHONE_NATIONAL_MIN_DIGITS || nationalDigits.length > PHONE_NATIONAL_MAX_DIGITS)) {
+	        nextErrors.phoneNumber = `Enter a valid phone number (${PHONE_NATIONAL_MIN_DIGITS}–${PHONE_NATIONAL_MAX_DIGITS} digits)`;
+	      } else if (String(form.phoneNumber || "").trim() && (totalDigits < PHONE_MIN_DIGITS || totalDigits > PHONE_MAX_DIGITS)) {
+	        nextErrors.phoneNumber = `Enter a valid phone number (${PHONE_MIN_DIGITS}–${PHONE_MAX_DIGITS} digits including country code)`;
+	      }
+
+	      const license = String(form.licenseNumber || "").trim();
+	      if (license) {
+	        if (license.length < LICENSE_NUMBER_MIN_LEN) nextErrors.licenseNumber = `License number must be at least ${LICENSE_NUMBER_MIN_LEN} characters`;
+	        else if (license.length > LICENSE_NUMBER_MAX_LEN) nextErrors.licenseNumber = `License number must be at most ${LICENSE_NUMBER_MAX_LEN} characters`;
+	        else if (!/^[A-Z0-9/_-]+$/i.test(license)) nextErrors.licenseNumber = "License number can contain only letters, numbers, /, _ and -";
+	      }
+
+	      const vat = String(form.vatNumber || "").trim();
+	      if (vat) {
+	        if (vat.length < VAT_NUMBER_MIN_LEN) nextErrors.vatNumber = `VAT number must be at least ${VAT_NUMBER_MIN_LEN} characters`;
+	        else if (vat.length > VAT_NUMBER_MAX_LEN) nextErrors.vatNumber = `VAT number must be at most ${VAT_NUMBER_MAX_LEN} characters`;
+	        else if (!/^[A-Z0-9/_-]+$/i.test(vat)) nextErrors.vatNumber = "VAT number can contain only letters, numbers, /, _ and -";
+	      }
+	    }
 
     if (!stepId || stepId === "address") {
       requireField("country", "Country is required");
@@ -324,14 +361,20 @@ export const SupplierRegistrationPage = () => {
       requireField("postalCode", "Postal code is required");
     }
 
-    if (!stepId || stepId === "docs") {
-      if (!form.tradeLicenseFile) nextErrors.tradeLicenseFile = "Trade license is required";
-      requireField("tradeLicenseExpiry", "Trade license expiry date is required");
-      if (!form.vatCertificateFile) nextErrors.vatCertificateFile = "VAT certificate is required";
-      requireField("vatCertificateExpiry", "VAT certificate expiry date is required");
-      if (!form.datasheetFile) nextErrors.datasheetFile = "Datasheet is required";
-      if (!form.productCatalogueFile) nextErrors.productCatalogueFile = "Product catalogue is required";
-    }
+	    if (!stepId || stepId === "docs") {
+	      if (!form.tradeLicenseFile) nextErrors.tradeLicenseFile = "Trade license is required";
+	      requireField("tradeLicenseExpiry", "Trade license expiry date is required");
+	      requireFutureDate("tradeLicenseExpiry", "Trade license expiry date must be a future date");
+	      if (!form.vatCertificateFile) nextErrors.vatCertificateFile = "VAT certificate is required";
+	      requireField("vatCertificateExpiry", "VAT certificate expiry date is required");
+	      requireFutureDate("vatCertificateExpiry", "VAT certificate expiry date must be a future date");
+	      if (!form.productCatalogueFile) nextErrors.productCatalogueFile = "Product catalogue is required";
+
+	      const selectedCerts = Array.isArray(form.certifications) ? form.certifications : [];
+	      if (selectedCerts.includes("Other") && !String(form.otherCertifications || "").trim()) {
+	        nextErrors.otherCertifications = "Please specify your other certification(s)";
+	      }
+	    }
 
     return nextErrors;
   };
@@ -428,7 +471,16 @@ export const SupplierRegistrationPage = () => {
         : null,
     ].filter(Boolean);
 
-    const payload = {
+	    const selectedCerts = Array.isArray(form.certifications) ? form.certifications : [];
+	    const otherCerts = String(form.otherCertifications || "")
+	      .split(",")
+	      .map((s) => s.trim())
+	      .filter(Boolean);
+	    const certificationsForPayload = selectedCerts
+	      .filter((c) => c !== "Other")
+	      .concat(otherCerts);
+
+	    const payload = {
       name: form.name.trim(),
       type: form.businessType,
       country: form.country.trim(),
@@ -437,8 +489,8 @@ export const SupplierRegistrationPage = () => {
       joinDate,
       status: "pending",
       documentStatus: "active",
-      certifications: Array.isArray(form.certifications) ? form.certifications : [],
-      documents,
+	      certifications: certificationsForPayload,
+	      documents,
       // extra fields (passthrough)
       contactPerson: form.contactPerson,
       businessType: form.businessType,
@@ -469,8 +521,8 @@ export const SupplierRegistrationPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background tactical-grid noise-overlay">
-      <header className="fixed left-0 top-0 z-40 h-16 w-full border-b border-border bg-background/90 backdrop-blur-md">
+    <div className="min-h-screen bg-background tactical-grid noise-overlay dashboard-bg-background">
+      <header className="fixed left-0 top-0 z-40 h-16 w-full border-b border-border bg-background/90 backdrop-blur-md dashboard-bg-background">
         <div className="h-full max-w-6xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logo} alt="Calidus" className="h-8 w-28" />
@@ -532,8 +584,52 @@ export const SupplierRegistrationPage = () => {
                   </div>
                 </button>
               );
-            })}
-          </div>
+	                      })}
+	                      {(() => {
+	                        const prev = Array.isArray(form.certifications) ? form.certifications : [];
+	                        const selected = prev.includes("Other");
+	                        return (
+	                          <button
+	                            key="Other"
+	                            type="button"
+	                            className={`h-8 px-3 rounded-sm text-xs border transition-colors ${
+	                              selected
+	                                ? "bg-foreground text-background border-foreground"
+	                                : "bg-muted/20 text-muted-foreground border-border hover:bg-muted/30"
+	                            }`}
+	                            onClick={() => {
+	                              const next = selected
+	                                ? prev.filter((x) => x !== "Other")
+	                                : [...prev, "Other"];
+	                              setField("certifications", next);
+	                              if (selected) setField("otherCertifications", "");
+	                            }}
+	                            data-testid="supplier-reg-cert-other"
+	                            disabled={isSubmitting}
+	                          >
+	                            Other
+	                          </button>
+	                        );
+	                      })()}
+	                    </div>
+	                    {Array.isArray(form.certifications) && form.certifications.includes("Other") && (
+	                      <div className="mt-3">
+	                        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+	                          Other Certifications (comma-separated)
+	                        </Label>
+	                        <Input
+	                          value={form.otherCertifications}
+	                          onChange={(e) => setField("otherCertifications", e.target.value)}
+	                          placeholder="e.g. ISO 27001, NADCAP"
+	                          className={`bg-muted/20 mt-1 ${errors.otherCertifications ? "border-red-500/50" : ""}`}
+	                          disabled={isSubmitting}
+	                          data-testid="supplier-reg-cert-other-input"
+	                        />
+	                        {errors.otherCertifications && (
+	                          <p className="text-xs text-red-400 mt-1">{errors.otherCertifications}</p>
+	                        )}
+	                      </div>
+	                    )}
           <div className="mt-4">
             <Progress value={progress} />
           </div>
@@ -711,16 +807,17 @@ export const SupplierRegistrationPage = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                          <Input
-                            type="tel"
-                            inputMode="numeric"
-                            value={form.phoneNumber}
-                            onChange={(e) => setField("phoneNumber", phoneNationalDigits(e.target.value))}
-                            className={`bg-black/20 ${errors.phoneNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                            placeholder="Mobile number"
-                            maxLength={20}
-                            data-testid="supplier-reg-phone"
-                          />
+	                          <Input
+	                            type="tel"
+	                            inputMode="numeric"
+	                            value={form.phoneNumber}
+	                            onChange={(e) => setField("phoneNumber", phoneNationalDigits(e.target.value))}
+	                            className={`bg-black/20 ${errors.phoneNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+	                            placeholder="Mobile number"
+	                            minLength={PHONE_NATIONAL_MIN_DIGITS}
+	                            maxLength={PHONE_NATIONAL_MAX_DIGITS}
+	                            data-testid="supplier-reg-phone"
+	                          />
                         </div>
                         {errors.phoneNumber && <p className="text-xs text-red-400 mt-1">{errors.phoneNumber}</p>}
                       </div>
@@ -731,14 +828,16 @@ export const SupplierRegistrationPage = () => {
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                         License Number *
                       </Label>
-                      <Input
-                        value={form.licenseNumber}
-                        onChange={(e) => setField("licenseNumber", e.target.value.slice(0, LICENSE_NUMBER_MAX_LEN))}
-                        className={`bg-black/20 mt-1 ${errors.licenseNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                        placeholder="Enter license number"
-                        maxLength={LICENSE_NUMBER_MAX_LEN}
-                        data-testid="supplier-reg-license"
-                      />
+	                      <Input
+	                        value={form.licenseNumber}
+	                        onChange={(e) => setField("licenseNumber", normalizeRefId(e.target.value, LICENSE_NUMBER_MAX_LEN))}
+	                        className={`bg-black/20 mt-1 ${errors.licenseNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+	                        placeholder="Enter license number"
+	                        minLength={LICENSE_NUMBER_MIN_LEN}
+	                        maxLength={LICENSE_NUMBER_MAX_LEN}
+	                        pattern="[A-Za-z0-9/_-]+"
+	                        data-testid="supplier-reg-license"
+	                      />
                       {errors.licenseNumber && (
                         <p className="text-xs text-red-400 mt-1">{errors.licenseNumber}</p>
                       )}
@@ -747,14 +846,16 @@ export const SupplierRegistrationPage = () => {
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                         VAT Number
                       </Label>
-                      <Input
-                        value={form.vatNumber}
-                        onChange={(e) => setField("vatNumber", e.target.value.slice(0, VAT_NUMBER_MAX_LEN))}
-                        className={`bg-black/20 mt-1 ${errors.vatNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                        placeholder="Enter VAT number"
-                        maxLength={VAT_NUMBER_MAX_LEN}
-                        data-testid="supplier-reg-vat"
-                      />
+	                      <Input
+	                        value={form.vatNumber}
+	                        onChange={(e) => setField("vatNumber", normalizeRefId(e.target.value, VAT_NUMBER_MAX_LEN))}
+	                        className={`bg-black/20 mt-1 ${errors.vatNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+	                        placeholder="Enter VAT number"
+	                        minLength={VAT_NUMBER_MIN_LEN}
+	                        maxLength={VAT_NUMBER_MAX_LEN}
+	                        pattern="[A-Za-z0-9/_-]+"
+	                        data-testid="supplier-reg-vat"
+	                      />
                       {errors.vatNumber && <p className="text-xs text-red-400 mt-1">{errors.vatNumber}</p>}
                     </div>
                   </div>
@@ -912,13 +1013,14 @@ export const SupplierRegistrationPage = () => {
                   />
                   <div>
                     <Label className="text-sm font-medium">Expiry Date</Label>
-                    <Input
-                      type="date"
-                      value={form.tradeLicenseExpiry}
-                      onChange={(e) => setField("tradeLicenseExpiry", e.target.value)}
-                      className={`bg-muted/20 mt-1 ${errors.tradeLicenseExpiry ? "border-red-500/50" : ""}`}
-                      data-testid="supplier-reg-trade-expiry"
-                    />
+	                    <Input
+	                      type="date"
+	                      value={form.tradeLicenseExpiry}
+	                      onChange={(e) => setField("tradeLicenseExpiry", e.target.value)}
+	                      min={tomorrowIso}
+	                      className={`date-icon-white bg-muted/20 mt-1 ${errors.tradeLicenseExpiry ? "border-red-500/50" : ""}`}
+	                      data-testid="supplier-reg-trade-expiry"
+	                    />
                     {errors.tradeLicenseExpiry && (
                       <p className="text-xs text-red-400 mt-1">{errors.tradeLicenseExpiry}</p>
                     )}
@@ -932,13 +1034,14 @@ export const SupplierRegistrationPage = () => {
                   />
                   <div>
                     <Label className="text-sm font-medium">Expiry Date</Label>
-                    <Input
-                      type="date"
-                      value={form.vatCertificateExpiry}
-                      onChange={(e) => setField("vatCertificateExpiry", e.target.value)}
-                      className={`bg-muted/20 mt-1 ${errors.vatCertificateExpiry ? "border-red-500/50" : ""}`}
-                      data-testid="supplier-reg-vat-expiry"
-                    />
+	                    <Input
+	                      type="date"
+	                      value={form.vatCertificateExpiry}
+	                      onChange={(e) => setField("vatCertificateExpiry", e.target.value)}
+	                      min={tomorrowIso}
+	                      className={`date-icon-white bg-muted/20 mt-1 ${errors.vatCertificateExpiry ? "border-red-500/50" : ""}`}
+	                      data-testid="supplier-reg-vat-expiry"
+	                    />
                     {errors.vatCertificateExpiry && (
                       <p className="text-xs text-red-400 mt-1">{errors.vatCertificateExpiry}</p>
                     )}

@@ -1,10 +1,7 @@
 import { useState } from "react";
-import { Calendar, MessageSquare, Star } from "lucide-react";
+import { Calendar, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -12,7 +9,6 @@ import { RatingStars } from "@/components/shared/RatingStars";
 import { useAuth } from "@/App";
 import {
   useGetSupplierRatingsQuery,
-  useReplyToSupplierRatingMutation,
 } from "@/store/api/supplier/supplierRatingApi";
 
 const getRatingDate = (rating = {}) =>
@@ -28,14 +24,11 @@ export const SupplierRatings = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId;
   const [viewSheet, setViewSheet] = useState({ open: false, item: null });
-  const [replyDialog, setReplyDialog] = useState({ open: false, rating: null });
-  const [replyText, setReplyText] = useState("");
   const {
     data: ratings = [],
     isLoading,
     isError,
   } = useGetSupplierRatingsQuery(supplierId, { skip: !supplierId });
-  const [replyToSupplierRating, { isLoading: isSubmittingReply }] = useReplyToSupplierRatingMutation();
   const sortedRatings = ratings.slice().sort((a, b) => getRatingTime(b) - getRatingTime(a));
 
   const approvedRatings = sortedRatings.filter((rating) => rating.status === "approved");
@@ -43,39 +36,12 @@ export const SupplierRatings = () => {
     ? approvedRatings.reduce((sum, rating) => sum + Number(rating.rating || 0), 0) / approvedRatings.length
     : 0;
 
-  const openReplyDialog = (rating) => {
-    setReplyText(rating.supplierReply || "");
-    setReplyDialog({ open: true, rating });
-  };
-
-  const submitReply = async () => {
-    if (!replyText.trim()) {
-      toast.error("Reply is required");
-      return;
-    }
-
-    if (supplierId && replyDialog.rating) {
-      try {
-        await replyToSupplierRating({
-          supplierId,
-          ratingId: replyDialog.rating.id,
-          reply: replyText,
-        }).unwrap();
-        toast.success("Reply submitted for admin approval");
-        setReplyText("");
-        setReplyDialog({ open: false, rating: null });
-      } catch (error) {
-        toast.error(error?.data?.message || "Unable to submit reply");
-      }
-    }
-  };
-
   return (
     <>
       <div className="space-y-6" data-testid="supplier-ratings">
         <div>
           <h1 className="text-2xl font-bold font-['Barlow_Condensed'] uppercase tracking-wide mb-1">Ratings & Reviews</h1>
-          <p className="text-sm text-muted-foreground">View and respond to customer reviews</p>
+          <p className="text-sm text-muted-foreground">View customer reviews</p>
         </div>
 
         <div className="dashboard-card">
@@ -149,15 +115,6 @@ export const SupplierRatings = () => {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">{rating.review}</p>
-                  {rating.supplierReply && (
-                    <div className="p-3 bg-primary/10 rounded-sm mb-3">
-                      <div className="flex justify-between mb-1">
-                        <p className="text-xs uppercase text-muted-foreground">Your Reply</p>
-                        <StatusBadge status={rating.supplierReplyStatus || "pending"} />
-                      </div>
-                      <p className="text-sm">{rating.supplierReply}</p>
-                    </div>
-                  )}
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setViewSheet({ open: true, item: rating })}>View Details</Button>
                     {/* <Button variant="outline" size="sm" className="gap-2" onClick={() => openReplyDialog(rating)}>
@@ -189,25 +146,6 @@ export const SupplierRatings = () => {
           )}
         </SheetContent>
       </Sheet>
-
-      <Dialog open={replyDialog.open} onOpenChange={(open) => setReplyDialog({ ...replyDialog, open })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Reply to Review</DialogTitle>
-            {replyDialog.rating && <DialogDescription>Responding to {replyDialog.rating.buyerName}'s review</DialogDescription>}
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Your Reply</Label>
-            <Textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} placeholder="Write your response..." className="bg-black/20 min-h-[120px]" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReplyDialog({ open: false, rating: null })}>Cancel</Button>
-            <Button onClick={submitReply} disabled={isSubmittingReply}>
-              {isSubmittingReply ? "Submitting..." : "Submit Reply"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

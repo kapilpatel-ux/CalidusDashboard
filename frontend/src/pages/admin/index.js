@@ -8,5 +8,7 @@ export { BuyerManagement } from "./buyers";
 export { EnquiryManagement } from "./enquiries";
 export { NotificationManagement } from "./notifications";
 export { UserManagement } from "./users";
+export { RoleManagement } from "./roles";
+export { PermissionManagement } from "./permissions";
 export { PlatformInsights } from "./insights";
 export { AdminProfile } from "./profile";

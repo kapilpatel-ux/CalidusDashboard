@@ -15,6 +15,8 @@ import { ratingRoutes } from "./modules/admin/ratings/rating.routes.js";
 import { statusRoutes } from "./modules/admin/status/status.routes.js";
 import { supplierRoutes } from "./modules/admin/suppliers/supplier.routes.js";
 import { userRoutes } from "./modules/admin/users/user.routes.js";
+import { roleRoutes } from "./modules/admin/roles/role.routes.js";
+import { permissionRoutes } from "./modules/admin/permissions/permission.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { buyerEnquiryRoutes } from "./modules/buyer/enquiries/buyerEnquiry.routes.js";
 import { buyerProfileRoutes } from "./modules/buyer/profile/buyerProfile.routes.js";
@@ -60,6 +62,8 @@ app.use("/api/admin/dashboard", dashboardRoutes);
 app.use("/api/admin/enquiries", enquiryRoutes);
 app.use("/api/admin/notifications", notificationRoutes);
 app.use("/api/admin/users", userRoutes);
+app.use("/api/admin/roles", roleRoutes);
+app.use("/api/admin/permissions", permissionRoutes);
 app.use("/api/contact-supplier", contactSupplierRoutes);
 
 app.use(notFoundHandler);

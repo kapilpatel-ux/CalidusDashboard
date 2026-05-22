@@ -8,24 +8,24 @@ import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButto
 import { Ban, Pencil, Plus, RotateCcw } from "lucide-react";
 import { useAdminActions } from "../AdminContext";
 import { useGetUsersQuery } from "@/store/api/admin/userApi";
+import { useGetAdminRolesQuery } from "@/store/api/admin/roleApi";
 
 export const UserManagement = () => {
   const { openConfirmDialog, openEditDialog, openAddUserDialog } = useAdminActions();
   const { data: users = [], isLoading } = useGetUsersQuery();
+  const { data: roles = [] } = useGetAdminRolesQuery();
   const [roleFilter, setRoleFilter] = useState("all");
 
   const filteredUsers = roleFilter === "all" ? users : users.filter((user) => user.role === roleFilter);
+  const roleLabelByKey = new Map((Array.isArray(roles) ? roles : []).map((r) => [r.key, r.label]));
   const getRoleLabel = (role) => {
-    switch (role) {
-      case "sub_admin":
-        return "Sub Admin";
-      case "content_manager":
-        return "Content Manager";
-      case "admin":
-        return "Admin";
-      default:
-        return role || "Unknown";
-    }
+    if (!role) return "Unknown";
+    const known = roleLabelByKey.get(role);
+    if (known) return known;
+    if (role === "admin") return "Admin";
+    return String(role)
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   const columns = [
@@ -86,8 +86,11 @@ export const UserManagement = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="sub_admin">Sub Admin</SelectItem>
-              <SelectItem value="content_manager">Content Manager</SelectItem>
+              {(Array.isArray(roles) ? roles : []).map((role) => (
+                <SelectItem key={role.key} value={role.key}>
+                  {role.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { RatingStars } from "@/components/shared/RatingStars";
-import { Package, User, MessageSquare, Reply, Hash } from "lucide-react";
+import { Package, User, Hash } from "lucide-react";
 
 export const RatingDetailSheet = ({ viewSheet, setViewSheet }) => {
   const rating = viewSheet.data || viewSheet.item || viewSheet.rating;
@@ -42,31 +42,6 @@ export const RatingDetailSheet = ({ viewSheet, setViewSheet }) => {
               <p className="text-sm text-muted-foreground">
                 {rating.review || rating.message || "No review available."}
               </p>
-            </Section>
-
-            <Section title="Supplier Reply">
-              {rating.supplierReply ? (
-                <>
-                  <DetailRow
-                    label="Reply Status"
-                    value={
-                      <StatusBadge
-                        status={
-                          rating.supplierReplyStatus ||
-                          rating.replyStatus ||
-                          "pending"
-                        }
-                      />
-                    }
-                    icon={Reply}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {rating.supplierReply}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No supplier reply.</p>
-              )}
             </Section>
 
             <Section title="Extra Details">

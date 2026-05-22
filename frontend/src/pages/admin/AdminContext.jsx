@@ -6,9 +6,13 @@ import { ConfirmDialog } from "./dialogs/ConfirmDialog";
 import { EditProductDialog } from "./dialogs/EditProductDialog";
 import { EditCategoryDialog } from "./dialogs/EditCategoryDialog";
 import { EditUserDialog } from "./dialogs/EditUserDialog";
+import { EditRoleDialog } from "./dialogs/EditRoleDialog";
+import { EditPermissionDialog } from "./dialogs/EditPermissionDialog";
 import { AddCategoryDialog } from "./dialogs/AddCategoryDialog";
 import { AddProductDialog } from "./dialogs/AddProductDialog";
 import { AddUserDialog } from "./dialogs/AddUserDialog";
+import { AddRoleDialog } from "./dialogs/AddRoleDialog";
+import { AddPermissionDialog } from "./dialogs/AddPermissionDialog";
 import { useAdminDialogs } from "./hooks/useAdminDialogs";
 import { useViewSheet } from "./hooks/useViewSheet";
 import { SupplierDetailSheet } from "./sheets/SupplierDetailSheet";
@@ -22,6 +26,8 @@ import { categoryApi, useCreateCategoryMutation } from "@/store/api/admin/catego
 import { supplierApi as supplierRtkApi } from "@/store/api/admin/supplierApi";
 import { buyerApi } from "@/store/api/admin/buyerApi";
 import { userApi } from "@/store/api/admin/userApi";
+import { roleApi } from "@/store/api/admin/roleApi";
+import { permissionApi } from "@/store/api/admin/permissionApi";
 
 const AdminActionsContext = createContext({
   openConfirmDialog: () => {},
@@ -30,6 +36,8 @@ const AdminActionsContext = createContext({
   openBuyerSheet: () => {},
   openAddCategoryDialog: () => {},
   openAddUserDialog: () => {},
+  openAddRoleDialog: () => {},
+  openAddPermissionDialog: () => {},
   openAddProductDialog: () => {},
 });
 
@@ -44,6 +52,10 @@ export const AdminProvider = () => {
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
   const [isAssigningProducts, setIsAssigningProducts] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [isCreatingRole, setIsCreatingRole] = useState(false);
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+  const [isCreatingPermission, setIsCreatingPermission] = useState(false);
+  const [isUpdatingPermission, setIsUpdatingPermission] = useState(false);
 
   const {
     confirmDialog,
@@ -54,10 +66,18 @@ export const AdminProvider = () => {
     setAddCategoryDialog,
     addUserDialog,
     setAddUserDialog,
+    addRoleDialog,
+    setAddRoleDialog,
+    addPermissionDialog,
+    setAddPermissionDialog,
     newCategory,
     setNewCategory,
     newUser,
     setNewUser,
+    newRole,
+    setNewRole,
+    newPermission,
+    setNewPermission,
     addProductDialog,
     setAddProductDialog,
     newProduct,
@@ -303,6 +323,14 @@ export const AdminProvider = () => {
           ).unwrap();
           toast.success(`User "${item.name || item.email}" activated`);
           break;
+        case "delete-role":
+          await store.dispatch(roleApi.endpoints.deleteAdminRole.initiate(item.key)).unwrap();
+          toast.success(`Role "${item.label}" deleted`);
+          break;
+        case "delete-permission":
+          await store.dispatch(permissionApi.endpoints.deleteAdminPermission.initiate(item.key)).unwrap();
+          toast.success(`Permission "${item.label}" deleted`);
+          break;
         case "delete-category":
           await store.dispatch(
             categoryApi.endpoints.deleteCategory.initiate(item.id)
@@ -370,6 +398,44 @@ export const AdminProvider = () => {
         } catch (error) {
           toast.error(error?.data?.message || error?.message || "Failed to update user");
           return;
+        }
+        break;
+      case "role":
+        try {
+          setIsUpdatingRole(true);
+          await store
+            .dispatch(
+              roleApi.endpoints.updateAdminRole.initiate({
+                key: editForm.key,
+                payload: { label: editForm.label },
+              })
+            )
+            .unwrap();
+          toast.success(`Role "${editForm.label}" updated`);
+        } catch (error) {
+          toast.error(error?.data?.message || error?.message || "Failed to update role");
+          return;
+        } finally {
+          setIsUpdatingRole(false);
+        }
+        break;
+      case "permission":
+        try {
+          setIsUpdatingPermission(true);
+          await store
+            .dispatch(
+              permissionApi.endpoints.updateAdminPermission.initiate({
+                key: editForm.key,
+                payload: { label: editForm.label, group: editForm.group },
+              })
+            )
+            .unwrap();
+          toast.success(`Permission "${editForm.label}" updated`);
+        } catch (error) {
+          toast.error(error?.data?.message || error?.message || "Failed to update permission");
+          return;
+        } finally {
+          setIsUpdatingPermission(false);
         }
         break;
       case "category":
@@ -442,6 +508,48 @@ export const AdminProvider = () => {
     }
   };
 
+  const handleAddRole = async () => {
+    const label = String(newRole.label || "").trim();
+    if (!label) return;
+
+    try {
+      setIsCreatingRole(true);
+      await store.dispatch(roleApi.endpoints.createAdminRole.initiate({ label })).unwrap();
+      toast.success(`Role "${label}" created`);
+      setAddRoleDialog(false);
+      setNewRole({ label: "" });
+    } catch (error) {
+      toast.error(error?.data?.message || error?.message || "Failed to create role");
+    } finally {
+      setIsCreatingRole(false);
+    }
+  };
+
+  const handleAddPermission = async () => {
+    const label = String(newPermission.label || "").trim();
+    const group = String(newPermission.group || "").trim();
+    if (!label) return;
+
+    try {
+      setIsCreatingPermission(true);
+      await store
+        .dispatch(
+          permissionApi.endpoints.createAdminPermission.initiate({
+            label,
+            ...(group ? { group } : {}),
+          })
+        )
+        .unwrap();
+      toast.success(`Permission "${label}" created`);
+      setAddPermissionDialog(false);
+      setNewPermission({ label: "", group: "" });
+    } catch (error) {
+      toast.error(error?.data?.message || error?.message || "Failed to create permission");
+    } finally {
+      setIsCreatingPermission(false);
+    }
+  };
+
   const handleAddProduct = async () => {
     const categoryName = newProduct.category?.trim();
     const productIds = Array.isArray(newProduct.productIds) ? newProduct.productIds : [];
@@ -494,6 +602,8 @@ export const AdminProvider = () => {
     openBuyerSheet: (item) => openViewSheet("buyer", item),
     openAddCategoryDialog: () => setAddCategoryDialog(true),
     openAddUserDialog: () => setAddUserDialog(true),
+    openAddRoleDialog: () => setAddRoleDialog(true),
+    openAddPermissionDialog: () => setAddPermissionDialog(true),
     openAddProductDialog: (category) => {
       setAddProductDialog({ open: true, category });
       setNewProduct({
@@ -537,6 +647,24 @@ export const AdminProvider = () => {
         onSave={handleEditSave}
       />
 
+      <EditRoleDialog
+        editDialog={editDialog}
+        setEditDialog={setEditDialog}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        onSave={handleEditSave}
+        isSaving={isUpdatingRole}
+      />
+
+      <EditPermissionDialog
+        editDialog={editDialog}
+        setEditDialog={setEditDialog}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        onSave={handleEditSave}
+        isSaving={isUpdatingPermission}
+      />
+
       <AddCategoryDialog
         open={addCategoryDialog}
         setOpen={setAddCategoryDialog}
@@ -553,6 +681,24 @@ export const AdminProvider = () => {
         setNewUser={setNewUser}
         onAddUser={handleAddUser}
         isAdding={isCreatingUser}
+      />
+
+      <AddRoleDialog
+        open={addRoleDialog}
+        setOpen={setAddRoleDialog}
+        newRole={newRole}
+        setNewRole={setNewRole}
+        onAddRole={handleAddRole}
+        isAdding={isCreatingRole}
+      />
+
+      <AddPermissionDialog
+        open={addPermissionDialog}
+        setOpen={setAddPermissionDialog}
+        newPermission={newPermission}
+        setNewPermission={setNewPermission}
+        onAddPermission={handleAddPermission}
+        isAdding={isCreatingPermission}
       />
 
       <AddProductDialog

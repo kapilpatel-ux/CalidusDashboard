@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useGetAdminRolesQuery } from "@/store/api/admin/roleApi";
 
 export const EditUserDialog = ({
   editDialog,
@@ -23,6 +24,8 @@ export const EditUserDialog = ({
   setEditForm,
   onSave,
 }) => {
+  const { data: roles = [], isLoading: isRolesLoading } = useGetAdminRolesQuery();
+
   return (
     <Dialog
       open={editDialog.open && editDialog.type === "user"}
@@ -69,13 +72,17 @@ export const EditUserDialog = ({
             <Select
               value={editForm.role || ""}
               onValueChange={(role) => setEditForm({ ...editForm, role })}
+              disabled={isRolesLoading}
             >
               <SelectTrigger className="bg-black/20 mt-1" data-testid="edit-user-role">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sub_admin">Sub Admin</SelectItem>
-                <SelectItem value="content_manager">Content Manager</SelectItem>
+                {(Array.isArray(roles) ? roles : []).map((role) => (
+                  <SelectItem key={role.key} value={role.key}>
+                    {role.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -96,4 +103,3 @@ export const EditUserDialog = ({
     </Dialog>
   );
 };
-

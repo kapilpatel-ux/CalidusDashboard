@@ -18,6 +18,52 @@ import {
   useUpdateSupplierEnquiryStatusMutation,
 } from "@/store/api/supplier/supplierEnquiryApi";
 
+const extractEnquiryMessage = (enquiry) => {
+  const candidates = [
+    enquiry?.message,
+    enquiry?.enquiryMessage,
+    enquiry?.buyerMessage,
+    enquiry?.details,
+    enquiry?.description,
+  ];
+
+  const pick = (value) => {
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return value.filter(Boolean).join("\n");
+    if (value && typeof value === "object") {
+      if (typeof value.message === "string") return value.message;
+      if (typeof value.text === "string") return value.text;
+      if (typeof value.body === "string") return value.body;
+    }
+    return "";
+  };
+
+  let raw = "";
+  for (const candidate of candidates) {
+    raw = pick(candidate);
+    if (raw) break;
+  }
+
+  const text = String(raw || "").trim();
+  if (!text) return "";
+
+  // Hide system-generated contact payloads (these aren't meaningful enquiry messages).
+  // Example: "Contact email: ... Phone: ..."
+  if (/^contact email\s*:/i.test(text)) return "";
+
+  if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) {
+    try {
+      const parsed = JSON.parse(text);
+      const fromJson = pick(parsed);
+      return String(fromJson || text).trim();
+    } catch (_) {
+      // ignore parse failures
+    }
+  }
+
+  return text;
+};
+
 const DetailItem = ({ label, value }) => (
   <div className="rounded-sm border border-border bg-black/20 px-3 py-3">
     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
@@ -125,7 +171,10 @@ export const SupplierEnquiries = () => {
     {
       key: "message",
       label: "Message",
-      render: (value) => <p className="max-w-xs truncate text-sm">{value}</p>,
+      render: (_value, row) => {
+        const message = extractEnquiryMessage(row);
+        return <p className="max-w-xs truncate text-sm">{message || "—"}</p>;
+      },
     },
     {
       key: "date",
@@ -301,6 +350,17 @@ export const SupplierEnquiries = () => {
                 </div>
               </div>
 
+              <Separator />
+
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">
+                  Buyer Message
+                </h4>
+                <p className="min-h-[120px] whitespace-pre-wrap rounded-sm border border-border bg-muted/20 p-4 text-sm leading-6">
+                  {extractEnquiryMessage(viewSheet.item) || "No message available."}
+                </p>
+              </div>
+
               {viewSheet.item.reply ? (
                 <div>
                   <h4 className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">
@@ -340,7 +400,7 @@ export const SupplierEnquiries = () => {
             <div className="mt-6 space-y-6">
               <div className="rounded-sm bg-muted/30 p-4">
                 <p className="mb-2 text-xs uppercase text-muted-foreground">Original Message</p>
-                <p className="text-sm leading-6">{replySheet.item.message}</p>
+                <p className="text-sm leading-6 whitespace-pre-wrap">{extractEnquiryMessage(replySheet.item) || "No message available."}</p>
               </div>
 
               <div>

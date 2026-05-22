@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth, useRole, useNavigation } from "@/App";
+import { useAuth, useRole, useNavigation, usePermissions } from "@/App";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
   Settings, 
   LogOut, 
   Shield,
+  KeyRound,
   LayoutDashboard,
   Users,
   Package,
@@ -45,25 +46,27 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  FileText
-} from "lucide-react";
+	  FileText
+	} from "lucide-react";
 import { messages, supplierNotifications } from "@/data/mockData";
 import { useGetNotificationsQuery, useUpdateNotificationReadMutation } from "@/store/api/admin/notificationApi";
 
 // Navigation items for each role
 const navigationConfig = {
-  admin: [
-    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/admin/overview" },
-    { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
-    { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
-    { id: "ratingsmoderation", label: "Ratings Moderation", icon: Star, path: "/admin/ratingsmoderation" },
-    { id: "categorymanagement", label: "Category Management", icon: FolderTree, path: "/admin/categorymanagement" },
-    { id: "buyermanagement", label: "Buyer Management", icon: Users, path: "/admin/buyermanagement" },
-    { id: "enquirymanagement", label: "Enquiry Management", icon: Inbox, path: "/admin/enquirymanagement" },
-    { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
-    { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
-    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
-  ],
+	  admin: [
+	    { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/admin/overview" },
+	    { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
+	    { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
+	    { id: "ratingsmoderation", label: "Ratings Moderation", icon: Star, path: "/admin/ratingsmoderation" },
+	    { id: "categorymanagement", label: "Category Management", icon: FolderTree, path: "/admin/categorymanagement" },
+	    { id: "buyermanagement", label: "Buyer Management", icon: Users, path: "/admin/buyermanagement" },
+	    { id: "enquirymanagement", label: "Enquiry Management", icon: Inbox, path: "/admin/enquirymanagement" },
+	    { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
+	    { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
+	    { id: "rolemanagement", label: "Role Management", icon: KeyRound, path: "/admin/rolemanagement" },
+	    // { id: "permissionmanagement", label: "Permission Management", icon: FileText, path: "/admin/permissionmanagement" },
+	    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
+	  ],
   sub_admin: [
     { id: "suppliermanagement", label: "Supplier Management", icon: Building2, path: "/admin/suppliermanagement" },
     { id: "productmanagement", label: "Product Management", icon: Package, path: "/admin/productmanagement" },
@@ -101,27 +104,31 @@ const navigationConfig = {
   ],
 };
 
-const adminLegacyLinkMap = {
-  overview: "overview",
-  suppliers: "suppliermanagement",
-  suppliermanagement: "suppliermanagement",
-  products: "productmanagement",
-  productmanagement: "productmanagement",
-  ratings: "ratingsmoderation",
-  ratingsmoderation: "ratingsmoderation",
-  categories: "categorymanagement",
-  categorymanagement: "categorymanagement",
-  buyers: "buyermanagement",
-  buyermanagement: "buyermanagement",
-  enquiries: "enquirymanagement",
-  enquirymanagement: "enquirymanagement",
-  notifications: "notificationmanagement",
-  notificationmanagement: "notificationmanagement",
-  users: "usermanagement",
-  usermanagement: "usermanagement",
-  analytics: "platforminsights",
-  platforminsights: "platforminsights",
-};
+	const adminLegacyLinkMap = {
+	  overview: "overview",
+	  suppliers: "suppliermanagement",
+	  suppliermanagement: "suppliermanagement",
+	  products: "productmanagement",
+	  productmanagement: "productmanagement",
+	  ratings: "ratingsmoderation",
+	  ratingsmoderation: "ratingsmoderation",
+	  categories: "categorymanagement",
+	  categorymanagement: "categorymanagement",
+	  buyers: "buyermanagement",
+	  buyermanagement: "buyermanagement",
+	  enquiries: "enquirymanagement",
+	  enquirymanagement: "enquirymanagement",
+	  notifications: "notificationmanagement",
+	  notificationmanagement: "notificationmanagement",
+	  users: "usermanagement",
+	  usermanagement: "usermanagement",
+	  roles: "rolemanagement",
+	  rolemanagement: "rolemanagement",
+	  permissions: "permissionmanagement",
+	  permissionmanagement: "permissionmanagement",
+	  analytics: "platforminsights",
+	  platforminsights: "platforminsights",
+	};
 
 const adminPathBySection = navigationConfig.admin.reduce((acc, item) => {
   acc[item.id] = item.path;
@@ -188,10 +195,11 @@ const getNotificationColor = (type, urgent) => {
 export const DashboardShell = ({ children }) => {
   const { currentRole, setCurrentRole } = useRole();
   const { currentUser, logout } = useAuth();
+  const { hasPermission } = usePermissions();
   const { activeSection, setActiveSection } = useNavigation();
   const navigate = useNavigate();
   const location = useLocation();
-  const isAdminRole = ["admin", "sub_admin", "content_manager"].includes(currentRole);
+  const isAdminRole = !["buyer", "supplier"].includes(currentRole);
   const { data: adminNotifications = [] } = useGetNotificationsQuery(undefined, { skip: !isAdminRole });
   const [updateNotificationRead] = useUpdateNotificationReadMutation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -208,7 +216,14 @@ export const DashboardShell = ({ children }) => {
   }, [adminNotifications, currentRole, isAdminRole]);
   const recentNotifications = useMemo(() => notificationsList.slice(0, 4), [notificationsList]);
 
-  const navItems = navigationConfig[currentRole] || [];
+  const navItems = useMemo(() => {
+    if (isAdminRole) {
+      const base = navigationConfig.admin || [];
+      if (currentRole === "admin") return base;
+      return base.filter((item) => hasPermission(`admin.${item.id}`));
+    }
+    return navigationConfig[currentRole] || [];
+  }, [currentRole, hasPermission, isAdminRole]);
   const RoleIcon = roleIcons[currentRole];
   const adminPathSection = location.pathname.split("/")[2] || "overview";
   const buyerPathSection = location.pathname.split("/")[2] || "overview";
@@ -311,7 +326,7 @@ export const DashboardShell = ({ children }) => {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar - Desktop */}
       <aside 
-        className={`hidden lg:flex flex-col bg-card/50 backdrop-blur-md border-r border-border transition-all duration-300 ${
+        className={`dashboard-bg-background hidden lg:flex flex-col bg-card/50 backdrop-blur-md border-r border-border transition-all duration-300 ${
           sidebarOpen ? "w-64" : "w-16"
         }`}
       >
@@ -446,7 +461,7 @@ export const DashboardShell = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation */}
-        <header className="h-16 flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-md border-b border-border">
+        <header className="h-16 flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-md border-b border-border dashboard-bg-background">
           {/* Mobile Menu Button */}
           <Button
             variant="ghost"

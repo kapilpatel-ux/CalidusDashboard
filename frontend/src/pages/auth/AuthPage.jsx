@@ -71,7 +71,7 @@ export const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background tactical-grid noise-overlay flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background tactical-grid noise-overlay flex items-center justify-center p-4 dashboard-bg-background">
       <div className="w-full max-w-5xl grid lg:grid-cols-[0.9fr_1.1fr] border border-border bg-card/60 backdrop-blur-md">
         <div className="hidden lg:flex flex-col justify-between border-r border-border p-8">
           <div>

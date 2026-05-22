@@ -6,7 +6,7 @@ const authUserSchema = new Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, enum: ["admin", "sub_admin", "content_manager", "buyer", "supplier"], required: true },
+    role: { type: String, required: true },
     profileId: { type: String, default: "" },
     company: { type: String, default: "" },
     phone: { type: String, default: "" },

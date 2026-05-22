@@ -41,21 +41,11 @@ export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
       label: "Review",
       render: (value) => <p className="text-sm max-w-xs truncate">{value}</p>,
     },
-    {
-      key: "supplierReply",
-      label: "Reply",
-      render: (value, row) =>
-        value ? (
-          <StatusBadge status={row.supplierReplyStatus || row.replyStatus || "pending"} />
-        ) : (
-          <span className="text-xs text-muted-foreground">No reply</span>
-        ),
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (value) => <StatusBadge status={value} />,
-    },
+	    {
+	      key: "status",
+	      label: "Status",
+	      render: (value) => <StatusBadge status={value} />,
+	    },
     {
       key: "actions",
       label: "Actions",
@@ -147,41 +137,10 @@ export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
             />
           )}
 
-          {row.supplierReply && (row.supplierReplyStatus || row.replyStatus || "pending") === "pending" && (
-            <>
-              <ActionButton
-                icon={Check}
-                label="Approve Reply"
-                className="text-emerald-400 hover:text-emerald-300"
-                testId={`approve-reply-${row.id}`}
-                onClick={() =>
-                  handleConfirmAction(
-                    "approve-reply",
-                    row,
-                    `Approve supplier reply for "${row.productName}"?`
-                  )
-                }
-              />
-              <ActionButton
-                icon={X}
-                label="Reject Reply"
-                className="text-red-400 hover:text-red-300"
-                testId={`reject-reply-${row.id}`}
-                onClick={() =>
-                  handleConfirmAction(
-                    "reject-reply",
-                    row,
-                    `Reject supplier reply for "${row.productName}"?`
-                  )
-                }
-              />
-            </>
-          )}
-
-          <ActionButton
-            icon={Trash2}
-            label="Remove"
-            className="text-red-400 hover:text-red-300"
+	          <ActionButton
+	            icon={Trash2}
+	            label="Remove"
+	            className="text-red-400 hover:text-red-300"
             testId={`remove-rating-${row.id}`}
             onClick={() =>
               handleConfirmAction(
@@ -198,17 +157,17 @@ export const RatingsModeration = ({ onView, onConfirmAction } = {}) => {
 
   if (isLoading) return <p>Loading ratings...</p>;
   
-  return (
-    <div className="space-y-6" data-testid="ratings-moderation">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold font-['Barlow_Condensed'] uppercase tracking-wide mb-1">
-            Ratings Moderation
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Review and moderate buyer ratings and supplier replies
-          </p>
-        </div>
+	  return (
+	    <div className="space-y-6" data-testid="ratings-moderation">
+	      <div className="flex items-center justify-between flex-wrap gap-4">
+	        <div>
+	          <h1 className="text-2xl font-bold font-['Barlow_Condensed'] uppercase tracking-wide mb-1">
+	            Ratings Moderation
+	          </h1>
+	          <p className="text-sm text-muted-foreground">
+	            Review and moderate buyer ratings
+	          </p>
+	        </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[150px] bg-black/20" data-testid="rating-status-filter">
