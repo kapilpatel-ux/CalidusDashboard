@@ -49,6 +49,19 @@ export const ProductManagement = ({
     return matchesStatus && matchesSupplier && matchesCategory;
   });
 
+  const deriveRating = (row) => {
+    if (typeof row.rating === "number" && row.rating > 0) return row.rating;
+    if (typeof row.averageRating === "number" && row.averageRating > 0) return row.averageRating;
+    if (Array.isArray(row.ratings) && row.ratings.length > 0) {
+      const total = row.ratings.reduce((sum, rating) => {
+        const value = typeof rating === "number" ? rating : Number(rating?.rating ?? 0);
+        return sum + (Number.isFinite(value) ? value : 0);
+      }, 0);
+      return total / row.ratings.length;
+    }
+    return 0;
+  };
+
   const columns = [
     {
       key: "name",
@@ -81,12 +94,14 @@ export const ProductManagement = ({
     {
       key: "rating",
       label: "Rating",
-      render: (value) =>
-        value > 0 ? (
-          <RatingStars rating={value} size="sm" />
+      render: (_, row) => {
+        const rating = deriveRating(row);
+        return rating > 0 ? (
+          <RatingStars rating={rating} size="sm" />
         ) : (
           <span className="text-xs text-muted-foreground">No ratings</span>
-        ),
+        );
+      },
     },
     {
       key: "status",
