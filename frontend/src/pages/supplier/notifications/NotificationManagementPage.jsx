@@ -6,15 +6,22 @@ import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButto
 import { Bell, CheckCircle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
-import { suppliers } from "@/data/mockData";
+// import { suppliers } from "@/data/mockData";
 import { useGetSupplierNotificationsQuery, useUpdateSupplierNotificationReadMutation } from "@/store/api/supplier/notificationApi";
 
 export const SupplierNotificationManagement = () => {
   const { currentUser } = useAuth();
-  const currentSupplier = suppliers[0];
-  const supplierId = currentUser?.profileId || currentSupplier.id;
+  // const currentSupplier = suppliers[0];
+  // const supplierId = currentUser?.profileId || currentSupplier.id;
 
-  const { data: notifications = [], isLoading } = useGetSupplierNotificationsQuery(supplierId);
+  const supplierId = currentUser?.profileId || currentUser?.id;
+
+ 
+  const { data: notifications = [], isLoading } =
+  useGetSupplierNotificationsQuery(supplierId, {
+    skip: !supplierId,
+  });
+
   const [updateRead] = useUpdateSupplierNotificationReadMutation();
   const [readFilter, setReadFilter] = useState("all");
 
@@ -33,7 +40,8 @@ export const SupplierNotificationManagement = () => {
 
   const columns = [
     { key: "title", label: "Title", render: (value, row) => <div><p className="font-medium">{value}</p><p className="text-xs text-muted-foreground">{row.message}</p></div> },
-    { key: "type", label: "Type", render: (value) => <Badge variant="secondary">{value}</Badge> },
+    { key: "type", label: "Type", render: (value) => <Badge variant="secondary">
+    {value === "product" ? "Product" : value === "category" ? "Category" : value}</Badge> },
     { key: "date", label: "Date" },
     { key: "read", label: "State", render: (value) => <Badge className={value ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}>{value ? "Read" : "Unread"}</Badge> },
     {
@@ -49,7 +57,8 @@ export const SupplierNotificationManagement = () => {
   ];
 
   if (isLoading) return <p>Loading notifications...</p>;
-
+  if (!supplierId) return <p>Supplier profile not found.</p>;
+  
   return (
     <div className="space-y-6" data-testid="supplier-notification-management">
       <div className="flex items-center justify-between flex-wrap gap-4">

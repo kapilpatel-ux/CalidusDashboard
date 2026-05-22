@@ -9,6 +9,8 @@ import logo from "@/assets/images/calidusheader.png";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import { useGetSuppliersQuery } from "@/store/api/admin/supplierApi";
 import { useCreateContactSupplierMutation } from "@/store/api/contactSupplierApi";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import {
   Select,
   SelectContent,
@@ -26,6 +28,7 @@ const initialForm = {
   supplierCountry: "",
   supplierId: "",
   email: "",
+  phone: "",
   productId: "",
 };
 
@@ -71,6 +74,13 @@ export default function ContactSupplierPage() {
     const company = form.company.trim();
     const buyerCountry = String(form.buyerCountry || "").trim();
 
+    const phone = String(form.phone || "").trim();
+
+    if (!/^\d{10,15}$/.test(phone)) {
+      toast.error("Enter a valid mobile number");
+      return;
+    }
+    
     if (!fullName || !company || !email || !buyerCountry || !selectedSupplier || !selectedProduct) {
       toast.error("Please complete all fields");
       return;
@@ -83,6 +93,7 @@ export default function ContactSupplierPage() {
         supplierId: selectedSupplier.id,
         supplierCompany: selectedSupplier.name,
         email,
+        phone,
         country: buyerCountry,
         productId: selectedProduct.id,
         productName: selectedProduct.name,
@@ -124,7 +135,7 @@ export default function ContactSupplierPage() {
               Create account
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Field label="Full name">
                 <Input
                   value={form.fullName}
@@ -146,7 +157,7 @@ export default function ContactSupplierPage() {
               </Field>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Field label="Email">
                 <Input
                   value={form.email}
@@ -155,6 +166,18 @@ export default function ContactSupplierPage() {
                   type="email"
                   placeholder="Enter your email"
                   className="h-[51px] border-[#29292E] bg-[#070709] text-white placeholder:text-[#9D9DA5]"
+                />
+              </Field>
+
+              <Field label="Mobile Number">
+                <PhoneInput
+                  country={"us"}
+                  value={form.phone}
+                  onChange={(value) => updateField("phone", value)}
+                  inputClass="!w-full !h-[51px] !bg-[#070709] !text-white !border-[#29292E]"
+                  buttonClass="!bg-[#070709] !border-[#29292E]"
+                  dropdownClass="!bg-[#070709] !text-white"
+                  containerClass="phone-input-dark"
                 />
               </Field>
 
@@ -186,7 +209,7 @@ export default function ContactSupplierPage() {
               Supplier details
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Field label="Supplier country">
                 <Select
                   value={form.supplierCountry}

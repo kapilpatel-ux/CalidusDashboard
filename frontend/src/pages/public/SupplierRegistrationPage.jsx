@@ -173,6 +173,7 @@ export const SupplierRegistrationPage = () => {
     tradeLicenseExpiry: "",
     vatCertificateFile: null,
     vatCertificateExpiry: "",
+    datasheetFile: null,
     productCatalogueFile: null,
   });
   const [errors, setErrors] = useState({});
@@ -328,6 +329,7 @@ export const SupplierRegistrationPage = () => {
       requireField("tradeLicenseExpiry", "Trade license expiry date is required");
       if (!form.vatCertificateFile) nextErrors.vatCertificateFile = "VAT certificate is required";
       requireField("vatCertificateExpiry", "VAT certificate expiry date is required");
+      if (!form.datasheetFile) nextErrors.datasheetFile = "Datasheet is required";
       if (!form.productCatalogueFile) nextErrors.productCatalogueFile = "Product catalogue is required";
     }
 
@@ -414,6 +416,14 @@ export const SupplierRegistrationPage = () => {
             fileName: form.productCatalogueFile.name,
             mimeType: form.productCatalogueFile.type,
             size: form.productCatalogueFile.size,
+          }
+        : null,
+      form.datasheetFile
+        ? {
+            type: "datasheet",
+            fileName: form.datasheetFile.name,
+            mimeType: form.datasheetFile.type,
+            size: form.datasheetFile.size,
           }
         : null,
     ].filter(Boolean);
@@ -944,6 +954,13 @@ export const SupplierRegistrationPage = () => {
                     maxSizeMb={50}
                   />
 
+                  <Dropzone
+                    id="datasheet-file"
+                    label="Datasheet *"
+                    fileKey="datasheetFile"
+                    testId="supplier-reg-datasheet"
+                  />
+
                   <div>
                     <Label className="text-sm font-medium">Select Your Certifications</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -1065,7 +1082,7 @@ export const SupplierRegistrationPage = () => {
                   <div className="rounded-sm bg-muted/15 border border-border p-5">
                     <p className="text-base font-semibold">Certifications</p>
                     <div className="mt-4 flex flex-wrap gap-3">
-                      {[form.tradeLicenseFile, form.vatCertificateFile, form.productCatalogueFile]
+                      {[form.tradeLicenseFile, form.vatCertificateFile, form.productCatalogueFile, form.datasheetFile]
                         .filter(Boolean)
                         .map((file) => (
                           <div

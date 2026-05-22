@@ -9,12 +9,8 @@ import {
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
-import { Users, Eye, Ban, Trash2, RotateCcw } from "lucide-react";
-import {
-  useGetBuyersQuery,
-  useUpdateBuyerStatusMutation,
-  useDeleteBuyerMutation,
-} from "@/store/api/admin/buyerApi";
+import { Users, Eye, Ban, Trash2, RotateCcw, Check, X } from "lucide-react";
+import { useGetBuyersQuery } from "@/store/api/admin/buyerApi";
 import { useAdminActions } from "../AdminContext";
 
 export const BuyerManagement = ({ onView } = {}) => {
@@ -22,8 +18,6 @@ export const BuyerManagement = ({ onView } = {}) => {
   const handleView = onView || openBuyerSheet;
 
   const { data: buyers = [], isLoading } = useGetBuyersQuery();
-  const [updateBuyerStatus] = useUpdateBuyerStatusMutation();
-  const [deleteBuyer] = useDeleteBuyerMutation();
 
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -67,6 +61,37 @@ export const BuyerManagement = ({ onView } = {}) => {
             testId={`view-buyer-${row.id}`}
             onClick={() => handleView(row)}
           />
+
+          {row.status === "pending" && (
+            <>
+              <ActionButton
+                icon={Check}
+                label="Approve"
+                className="text-emerald-400 hover:text-emerald-300"
+                testId={`approve-buyer-${row.id}`}
+                onClick={() =>
+                  openConfirmDialog(
+                    "approve-buyer",
+                    row,
+                    `Approve buyer "${row.name}"?`
+                  )
+                }
+              />
+              <ActionButton
+                icon={X}
+                label="Reject"
+                className="text-red-400 hover:text-red-300"
+                testId={`reject-buyer-${row.id}`}
+                onClick={() =>
+                  openConfirmDialog(
+                    "reject-buyer",
+                    row,
+                    `Reject buyer "${row.name}"?`
+                  )
+                }
+              />
+            </>
+          )}
 
           {["active", "suspended", "inactive"].includes(row.status) && (
             <ActionButton
@@ -128,7 +153,9 @@ export const BuyerManagement = ({ onView } = {}) => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="suspended">Suspended</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>

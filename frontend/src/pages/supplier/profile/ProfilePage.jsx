@@ -16,6 +16,7 @@ import { useGetSupplierProfileQuery, useUpdateSupplierProfileMutation } from "@/
 const defaultProfileDocuments = [
   { name: "Trade License", type: "trade_license", status: "pending", expiryDate: "" },
   { name: "VAT Certificate", type: "vat_certificate", status: "pending", expiryDate: "" },
+  { name: "Datasheet", type: "datasheet", status: "pending", expiryDate: "" },
 ];
 
 const formatDocumentName = (document = {}) =>
@@ -26,8 +27,26 @@ const formatDocumentName = (document = {}) =>
     .join(" ");
 
 const normalizeDocuments = (documents = []) => {
-  const source = documents.length > 0 ? documents : defaultProfileDocuments;
-  return source.map((document) => ({
+  const source = Array.isArray(documents) ? documents : [];
+  const byType = source.reduce((acc, document) => {
+    const key = document.type || document.name;
+    if (key) acc[String(key)] = document;
+    return acc;
+  }, {});
+
+  const mergedDefaults = defaultProfileDocuments.map((defaultDocument) => ({
+    ...defaultDocument,
+    ...(byType[defaultDocument.type] || {}),
+  }));
+
+  const extraDocuments = source.filter((document) => {
+    const key = document.type || document.name;
+    return !defaultProfileDocuments.some(
+      (defaultDocument) => defaultDocument.type === key || defaultDocument.name === key
+    );
+  });
+
+  return [...mergedDefaults, ...extraDocuments].map((document) => ({
     ...document,
     name: formatDocumentName(document),
     status: document.status || "active",
@@ -44,7 +63,8 @@ export const SupplierProfile = () => {
   const [profileForm, setProfileForm] = useState({});
   const [selectedDocumentFile, setSelectedDocumentFile] = useState(null);
   const documentInputRef = useRef(null);
-
+  const [profileErrors, setProfileErrors] = useState({});
+  
   const openEdit = () => {
     setProfileForm({
       ...supplier,
@@ -104,7 +124,43 @@ export const SupplierProfile = () => {
     });
   };
 
+  const validateProfileForm = () => {
+    const errors = {};
+
+    const companyName = String(profileForm.name || "").trim();
+
+    if (!companyName) {
+      errors.name = "Company name is required";
+    } else if (companyName.length < 1) {
+      errors.name = "Company name must be at least 1 characters";
+    } else if (companyName.length > 50) {
+      errors.name = "Company name cannot exceed 50 characters";
+    }
+
+    if (!String(profileForm.type || "").trim()) {
+      errors.type = "Supplier type is required";
+    }
+
+    if (!String(profileForm.country || "").trim()) {
+      errors.country = "Country is required";
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(profileForm.email || "").trim())) {
+      errors.email = "Enter a valid email address";
+    }
+
+    if (!/^\+?[0-9]{10,15}$/.test(String(profileForm.phone || "").trim())) {
+      errors.phone = "Enter a valid phone number";
+    }
+
+    setProfileErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSaveProfile = async () => {
+
+    if(!validateProfileForm()) return;
+
     const documents = profileForm.documents || [];
 
     try {
@@ -131,12 +187,13 @@ export const SupplierProfile = () => {
   const countryOptions = useMemo(() => countryList().getData(), []);
   if (isLoading) return <p>Loading company profile...</p>;
   if (error) return <p>Failed to load company profile.</p>;
+  const profileDocuments = normalizeDocuments(supplier.documents || []);
 
   const handleUploadDocument = async () => {
     if (!validateDocumentFile(selectedDocumentFile)) return;
 
-    const updatedDocs = (supplier.documents || []).map((doc) =>
-      doc.name === uploadDocDialog.document.name
+    const updatedDocs = profileDocuments.map((doc) =>
+      (doc.type || doc.name) === (uploadDocDialog.document.type || uploadDocDialog.document.name)
         ? applyUploadedFileToDocument(doc, selectedDocumentFile)
         : doc
     );
@@ -187,7 +244,7 @@ export const SupplierProfile = () => {
             <div className="dashboard-card">
               <div className="dashboard-card-header"><h3 className="dashboard-card-title">Documents & Certifications</h3></div>
               <div className="dashboard-card-content space-y-3">
-                {(supplier.documents || []).map((doc, idx) => (
+                {profileDocuments.map((doc, idx) => (
                   <DocumentRow
                     key={`${doc.name}-${idx}`}
                     doc={doc}
@@ -198,7 +255,7 @@ export const SupplierProfile = () => {
               </div>
             </div>
 
-            <div className="dashboard-card">
+            {/* <div className="dashboard-card">
               <div className="dashboard-card-header"><h3 className="dashboard-card-title">Certifications</h3></div>
               <div className="dashboard-card-content">
                 <div className="flex flex-wrap gap-3">
@@ -210,7 +267,7 @@ export const SupplierProfile = () => {
                   ))}
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="space-y-6">
@@ -235,6 +292,7 @@ export const SupplierProfile = () => {
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Company Name</Label>
               <Input value={profileForm.name || ""} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} className="bg-black/20 mt-1" />
+              <FieldError error={profileErrors.name} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -247,6 +305,7 @@ export const SupplierProfile = () => {
                     <SelectItem value="Tier 2">Tier 2</SelectItem>
                   </SelectContent>
                 </Select>
+                <FieldError error={profileErrors.type} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country</Label>
@@ -289,16 +348,19 @@ export const SupplierProfile = () => {
                       }),
                     }}
                   />
+                  <FieldError error={profileErrors.country} />
                 </div>
               </div>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
               <Input value={profileForm.email || ""} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} className="bg-black/20 mt-1" />
+              <FieldError error={profileErrors.email} />
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
               <Input value={profileForm.phone || ""} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="bg-black/20 mt-1" />
+              <FieldError error={profileErrors.phone} />
             </div>
             <div className="pt-2 border-t border-border">
               <div className="mb-3">
@@ -423,6 +485,12 @@ const Info = ({ label, value }) => (
     <p className="font-medium">{value || "N/A"}</p>
   </div>
 );
+
+const FieldError = ({ error }) =>
+  error ? (
+    <p className="text-red-400 text-xs mt-1">{error}</p>
+  ) : null;
+
 
 const IconInfo = ({ label, value, icon: Icon }) => (
   <div>

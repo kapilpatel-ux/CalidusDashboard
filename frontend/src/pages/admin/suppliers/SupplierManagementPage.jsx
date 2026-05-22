@@ -12,7 +12,6 @@ import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButto
 import { Building2, Eye, Check, X, Ban, Trash2, RotateCcw } from "lucide-react";
 import {
   useGetSuppliersQuery,
-  useUpdateSupplierStatusMutation,
   useDeleteSupplierMutation,
 } from "@/store/api/admin/supplierApi";
 import { useAdminActions } from "../AdminContext";
@@ -30,8 +29,6 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
   console.log("SUPPLIERS:", suppliers);
   console.log("ERROR:", error);
   
-  const [updateSupplierStatus] = useUpdateSupplierStatusMutation();
-
   const [deleteSupplier] = useDeleteSupplierMutation();
 
   const [statusFilter, setStatusFilter] = useState("all");
@@ -103,10 +100,13 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
                 label="Approve"
                 className="text-emerald-400 hover:text-emerald-300"
                 testId={`approve-supplier-${row.id}`}
-                onClick={() => updateSupplierStatus({
-                  id: row.id,
-                  status: "active",
-                })}
+                onClick={() =>
+                  handleConfirmAction(
+                    "approve-supplier",
+                    row,
+                    `Approve supplier "${row.name}"?`
+                  )
+                }
               />
               <ActionButton
                 icon={X}
@@ -114,10 +114,11 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
                 className="text-red-400 hover:text-red-300"
                 testId={`reject-supplier-${row.id}`}
                 onClick={() =>
-                  updateSupplierStatus({
-                    id: row.id,
-                    status: "rejected",
-                  })
+                  handleConfirmAction(
+                    "reject-supplier",
+                    row,
+                    `Reject supplier "${row.name}"?`
+                  )
                 }
               />
             </>

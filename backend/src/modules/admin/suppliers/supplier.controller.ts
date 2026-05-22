@@ -118,12 +118,25 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
         { _id: 0, id: 1 },
       ).lean();
 
-      if (!existingSupplierUser) {
-        const tempPassword = crypto.randomBytes(10).toString("base64url");
-        const userId = createReadableId("USR");
-
+      const tempPassword = crypto.randomBytes(10).toString("base64url");
+      if (existingSupplierUser) {
+        await AuthUserModel.updateOne(
+          { id: existingSupplierUser.id },
+          {
+            $set: {
+              name: (updated as { name?: string }).name || "Supplier",
+              email: supplierEmail,
+              phone: (updated as { phone?: string }).phone || "",
+              passwordHash: hashPassword(tempPassword),
+              profileId: updated.id,
+              company: (updated as { name?: string }).name || "",
+              status: "active",
+            },
+          },
+        );
+      } else {
         await AuthUserModel.create({
-          id: userId,
+          id: createReadableId("USR"),
           name: (updated as { name?: string }).name || "Supplier",
           email: supplierEmail,
           phone: (updated as { phone?: string }).phone || "",
@@ -133,37 +146,37 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
           company: (updated as { name?: string }).name || "",
           status: "active",
         });
+      }
 
-        const appUrl = env.appUrl || env.corsOrigins[0] || "http://localhost:3000";
-        const subject = "Your supplier account has been approved";
-        const text = [
-          `Hello ${(updated as { name?: string }).name || "Supplier"},`,
-          "",
-          "Your supplier account has been approved.",
-          "",
-          `Login URL: ${appUrl}`,
-          `Email: ${supplierEmail}`,
-          `Password: ${tempPassword}`,
-          "",
-          "For security, please change your password after logging in.",
-        ].join("\n");
+      const appUrl = env.appUrl || env.corsOrigins[0] || "http://localhost:3000";
+      const subject = "Welcome to Calidus Dashboard";
+      const text = [
+        `Hello ${(updated as { name?: string }).name || "Supplier"},`,
+        "",
+        "Welcome to Calidus Dashboard. Your supplier account has been approved.",
+        "",
+        `Login URL: ${appUrl}`,
+        `Email: ${supplierEmail}`,
+        `Password: ${tempPassword}`,
+        "",
+        "For security, please change your password after logging in.",
+      ].join("\n");
 
-        const html = `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <p>Hello ${(updated as { name?: string }).name || "Supplier"},</p>
-            <p>Your supplier account has been approved.</p>
-            <p><strong>Login URL:</strong> <a href="${appUrl}">${appUrl}</a><br/>
-            <strong>Email:</strong> ${supplierEmail}<br/>
-            <strong>Password:</strong> ${tempPassword}</p>
-            <p>For security, please change your password after logging in.</p>
-          </div>
-        `;
+      const html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <p>Hello ${(updated as { name?: string }).name || "Supplier"},</p>
+          <p>Welcome to Calidus Dashboard. Your supplier account has been approved.</p>
+          <p><strong>Login URL:</strong> <a href="${appUrl}">${appUrl}</a><br/>
+          <strong>Email:</strong> ${supplierEmail}<br/>
+          <strong>Password:</strong> ${tempPassword}</p>
+          <p>For security, please change your password after logging in.</p>
+        </div>
+      `;
 
-        try {
-          await sendSmtpEmail(supplierEmail, { subject, text, html });
-        } catch (err) {
-          console.error("Failed to send supplier approval credentials email", err);
-        }
+      try {
+        await sendSmtpEmail(supplierEmail, { subject, text, html });
+      } catch (err) {
+        console.error("Failed to send supplier approval credentials email", err);
       }
     }
   }

@@ -4,6 +4,7 @@ import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
 import { ProductModel } from "./product.model.js";
 import { createAdminNotification } from "../notifications/notification.service.js";
+import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 
 const WORDPRESS_DEFAULT_LIMIT = 20;
 const WORDPRESS_MAX_LIMIT = 100;
@@ -87,9 +88,17 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
+  
+  const payload = {
+    ...req.body,
+    status: "pending",
+    updatedAt: new Date().toISOString(),
+    approvalRequiredReason: "Product details updated",
+  };
+
   const updated = await ProductModel.findOneAndUpdate(
     { id: req.params.productId },
-    { $set: req.body },
+    { $set: payload },
     { new: true, projection: { _id: 0 } },
   ).lean();
 
@@ -98,13 +107,24 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const updateProductStatus = asyncHandler(async (req: Request, res: Response) => {
+  const status = String(req.body.status || "").toLowerCase();
   const updated = await ProductModel.findOneAndUpdate(
     { id: req.params.productId },
-    { $set: { status: req.body.status } },
+    { $set: { status } },
     { new: true, projection: { _id: 0 } },
   ).lean();
 
   if (!updated) throw new HttpError(404, "Product not found");
+
+  if (updated.supplierId && ["approved", "rejected"].includes(status)) {
+    await createSupplierNotification({
+      supplierId: updated.supplierId,
+      type: "product",
+      title: status === "approved" ? "Product Approved" : "Product Rejected",
+      message: `Your product "${updated.name}" has been ${status}.`,
+      link: "productmanagement",
+    });
+  }
   res.json(updated);
 });
 

@@ -8,6 +8,7 @@ import {
   approveCategory,
   updateCategory,
   updateSubcategory,
+  rejectCategory,
 } from "./category.controller.js";
 import {
   createCategorySchema,
@@ -21,6 +22,7 @@ categoryRoutes.get("/", listCategories);
 categoryRoutes.post("/", validateBody(createCategorySchema), createCategory);
 
 categoryRoutes.patch("/:categoryId/approve", approveCategory);
+categoryRoutes.patch("/:categoryId/reject", rejectCategory);
 
 categoryRoutes.put("/:categoryId", validateBody(updateCategorySchema), updateCategory);
 

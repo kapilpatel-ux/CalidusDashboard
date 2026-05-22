@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   useGetCategoriesForAdminQuery,
   useApproveCategoryMutation,
+  useRejectCategoryMutation,
 } from "@/store/api/admin/categoryApi";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import { useAdminActions } from "../AdminContext";
@@ -33,6 +34,7 @@ export const CategoryManagement = ({
   const { data: categories = [], isLoading } = useGetCategoriesForAdminQuery();
   const { data: products = [] } = useGetProductsQuery();
   const [approveCategory, { isLoading: isApproving }] = useApproveCategoryMutation();
+  const [rejectCategory, { isLoading: isRejecting }] = useRejectCategoryMutation();
 
   const productCountByCategory = (Array.isArray(products) ? products : []).reduce(
     (acc, product) => {
@@ -47,7 +49,7 @@ export const CategoryManagement = ({
   if (isLoading) return <p>Loading categories...</p>;
 
   const pendingCategories = categories.filter((category) => category?.status === "pending");
-  const approvedCategories = categories.filter((category) => category?.status !== "pending");
+  const approvedCategories = categories.filter((category) => category?.status === "approved");
 
   const handleApprove = async (category) => {
     try {
@@ -55,6 +57,15 @@ export const CategoryManagement = ({
       toast.success(`Category "${category.name}" approved`);
     } catch (error) {
       toast.error(error?.data?.message || "Failed to approve category");
+    }
+  };
+
+  const handleReject = async (category) => {
+    try {
+      await rejectCategory(category.id).unwrap();
+      toast.success(`Category "${category.name}" rejected`);
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to reject category");
     }
   };
   
@@ -100,11 +111,21 @@ export const CategoryManagement = ({
                   <Badge className="bg-amber-500/20 text-amber-400">Pending</Badge>
                   <Button
                     size="sm"
-                    disabled={isApproving}
+                    disabled={isApproving || isRejecting}
                     onClick={() => handleApprove(category)}
                     data-testid={`approve-category-${category.id}`}
                   >
                     Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    // variant="destructive"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                    disabled={isApproving || isRejecting}
+                    onClick={() => handleReject(category)}
+                    data-testid={`reject-category-${category.id}`}
+                  >
+                    Reject
                   </Button>
                 </div>
               </div>

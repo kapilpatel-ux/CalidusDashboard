@@ -37,7 +37,7 @@ export const SupplierCategoryManagement = () => {
   );
 
   const pendingRequests = supplierCategories.filter((category) => category.status === "pending");
-  const approvedCategories = supplierCategories.filter((category) => category.status !== "pending");
+  const approvedCategories = supplierCategories.filter((category) => category.status === "approved");
 
   const submitRequest = async () => {
     const name = String(requestedName || "").trim();

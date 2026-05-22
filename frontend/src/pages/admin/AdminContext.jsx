@@ -243,6 +243,24 @@ export const AdminProvider = () => {
           setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, replyStatus: "rejected", supplierReplyStatus: "rejected" } : r));
           toast.error("Supplier reply rejected");
           break;
+        case "approve-buyer":
+          await store.dispatch(
+            buyerApi.endpoints.updateBuyerStatus.initiate({
+              id: item.id,
+              status: "active",
+            })
+          ).unwrap();
+          toast.success(`Buyer "${item.name}" approved`);
+          break;
+        case "reject-buyer":
+          await store.dispatch(
+            buyerApi.endpoints.updateBuyerStatus.initiate({
+              id: item.id,
+              status: "rejected",
+            })
+          ).unwrap();
+          toast.error(`Buyer "${item.name}" rejected`);
+          break;
         case "suspend-buyer":
           await store.dispatch(
             buyerApi.endpoints.updateBuyerStatus.initiate({

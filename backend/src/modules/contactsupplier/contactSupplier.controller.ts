@@ -9,18 +9,40 @@ import { hashPassword } from "../auth/auth.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
+type BuyerRecord = {
+  id: string;
+  company?: string;
+};
+
+type AuthUserRecord = {
+  id: string;
+  profileId?: string;
+  role?: string;
+  company?: string;
+};
+
 export const createContactSupplier = asyncHandler(async (req: Request, res: Response) => {
   const productName = req.body.productName || req.body.product;
   const email = String(req.body.email).toLowerCase().trim();
   const existingUser = await AuthUserModel.findOne(
     { email },
     { _id: 0, id: 1, profileId: 1, role: 1, company: 1 },
-  ).lean();
-  let buyerId = existingUser?.role === "buyer" ? existingUser.profileId || "" : "";
-  let buyerCompany = existingUser?.company || "";
+  ).lean() as AuthUserRecord | null;
+  const existingBuyer = await BuyerModel.findOne(
+    {
+      $or: [
+        ...(existingUser?.profileId ? [{ id: existingUser.profileId }] : []),
+        { email },
+      ],
+    },
+    { _id: 0 },
+  ).lean() as BuyerRecord | null;
+  let buyerId = existingBuyer?.id || (existingUser?.role === "buyer" ? existingUser.profileId || "" : "");
+  let buyerCompany = existingBuyer?.company || existingUser?.company || "";
 
-  if (!existingUser) {
-    buyerId = createReadableId("BUY");
+  if (!buyerId) buyerId = createReadableId("BUY");
+
+  if (!existingBuyer) {
     buyerCompany = String(req.body.company || "").trim() || "Independent Buyer";
 
     await BuyerModel.create({
@@ -31,11 +53,13 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
       email,
       phone: "",
       joinDate: dateOnly(),
-      status: "active",
+      status: "pending",
       enquiriesSent: 0,
       ratingsSubmitted: 0,
     });
+  }
 
+  if (!existingUser) {
     await AuthUserModel.create({
       id: createReadableId("USR"),
       name: req.body.fullName,
@@ -44,8 +68,13 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
       role: "buyer",
       profileId: buyerId,
       company: buyerCompany,
-      status: "active",
+      status: "pending",
     });
+  } else if (existingUser.role === "buyer" && (!existingUser.profileId || existingUser.profileId !== buyerId)) {
+    await AuthUserModel.updateOne(
+      { id: existingUser.id },
+      { $set: { profileId: buyerId, company: buyerCompany, status: "pending" } },
+    );
   }
 
   const payload = {
@@ -74,7 +103,8 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
 
   res.status(201).json({
     ...created.toJSON(),
-    userAlreadyExisted: Boolean(existingUser),
+    userAlreadyExisted: Boolean(existingUser && existingBuyer),
     userCreated: !existingUser,
+    buyerProfileRecreated: Boolean(existingUser && !existingBuyer),
   });
 });

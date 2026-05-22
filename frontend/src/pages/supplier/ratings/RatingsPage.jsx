@@ -160,10 +160,10 @@ export const SupplierRatings = () => {
                   )}
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setViewSheet({ open: true, item: rating })}>View Details</Button>
-                    <Button variant="outline" size="sm" className="gap-2" onClick={() => openReplyDialog(rating)}>
+                    {/* <Button variant="outline" size="sm" className="gap-2" onClick={() => openReplyDialog(rating)}>
                       <MessageSquare className="h-3 w-3" />
                       Reply
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               </div>

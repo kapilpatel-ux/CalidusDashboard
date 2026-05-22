@@ -3,6 +3,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
 import { CategoryModel } from "./category.model.js";
+import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 
 export const listCategories = asyncHandler(async (_req: Request, res: Response) => {
   const includePending = String(_req.query.includePending || "").toLowerCase() === "true";
@@ -45,12 +46,72 @@ export const approveCategory = asyncHandler(async (req: Request, res: Response) 
   ).lean();
 
   if (!updated) throw new HttpError(404, "Category not found");
+
+  const category = updated as {
+    supplierId?: string;
+    requestedBy?: string;
+    name?: string;
+  };
+
+  const supplierId = category.supplierId || category.requestedBy;
+
+  if (supplierId) {
+    await createSupplierNotification({
+      supplierId,
+      type: "category",
+      title: "Category Approved",
+      message: `Your category "${category.name}" has been approved.`,
+      link: "categorymanagement",
+    });
+  }
+  res.json(updated);
+});
+
+export const rejectCategory = asyncHandler(async (req: Request, res: Response) => {
+  const updated = await CategoryModel.findOneAndUpdate(
+    { id: req.params.categoryId },
+    {
+      $set: {
+        status: "rejected",
+        rejectedAt: new Date().toISOString(),
+      },
+    },
+    { new: true, projection: { _id: 0 } },
+  ).lean();
+
+  if (!updated) throw new HttpError(404, "Category not found");
+
+  console.log("REJECTED CATEGORY UPDATED:", updated);
+
+  const category = updated as {
+    supplierId?: string;
+    requestedBy?: string;
+    name?: string;
+  };
+
+  const supplierId = category.supplierId || category.requestedBy;
+
+  if (supplierId) {
+    await createSupplierNotification({
+      supplierId,
+      type: "category",
+      title: "Category Rejected",
+      message: `Your category "${category.name}" has been rejected.`,
+      link: "categorymanagement",
+    });
+  }
+
   res.json(updated);
 });
 
 export const updateCategory = asyncHandler(async (req: Request, res: Response) => {
-  const payload = { ...req.body };
-  console.log("Update payload:", payload);
+  const payload = {
+    ...req.body,
+    status: "pending",
+    updatedAt: new Date().toISOString(),
+    approvalRequiredReason: "Category details updated",
+  };
+
   if (payload.subcategories) {
     payload.subcategories = payload.subcategories.map(
       (subcategory: { id?: string; name: string }) => ({
@@ -85,6 +146,9 @@ export const updateSubcategory = asyncHandler(async (req: Request, res: Response
   );
 
   category.set("subcategories", updatedSubcategories);
+  category.set("status", "pending");
+  category.set("updatedAt", new Date().toISOString());
+  category.set("approvalRequiredReason", "Subcategory details updated");
   await category.save();
 
   const updated = await CategoryModel.findOne(
