@@ -91,6 +91,9 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
     buyerId,
     buyerName: req.body.fullName,
     buyerCompany,
+    buyerEmail: email,
+    buyerCountry: req.body.country,
+    buyerPhone: phone,
 
     message: `Contact email: ${email}\nPhone: ${phone}\nCompany: ${buyerCompany}\nCountry: ${req.body.country}`,
 

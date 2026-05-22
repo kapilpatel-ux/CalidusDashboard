@@ -10,6 +10,8 @@ const enquirySchema = new Schema(
     buyerId: { type: String, default: "" },
     buyerName: { type: String, default: "" },
     buyerCompany: { type: String, default: "" },
+    buyerEmail: { type: String, default: "" },
+    buyerCountry: { type: String, default: "" },
     message: { type: String, default: "" },
     date: { type: String, default: "" },
     status: { type: String, default: "pending" },
