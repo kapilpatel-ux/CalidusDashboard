@@ -6,7 +6,7 @@ export const createContactSupplierSchema = z.object({
   supplierId: z.string().trim().min(1, "Supplier is required").optional(),
   supplierCompany: z.string().trim().min(1, "Supplier company is required"),
   email: z.string().trim().email("Valid email is required"),
-  phone: z.string().trim().min(10, "Phone number is required").max(16, "Phone number is too long"),
+  phone: z.string().trim().regex(/^\d{4,20}$/, "Valid phone number is required"),
   country: z.string().trim().min(1, "Country is required"),
   productId: z.string().trim().min(1, "Product is required").optional(),
   productName: z.string().trim().min(1, "Product is required").optional(),

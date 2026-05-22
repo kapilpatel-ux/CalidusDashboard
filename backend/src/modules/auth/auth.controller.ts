@@ -111,6 +111,15 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const email = String(req.body.email).toLowerCase().trim();
   const user = await AuthUserModel.findOne({ email }).lean();
 
+  console.log("LOGIN DEBUG:", {
+    email,
+    userFound: Boolean(user),
+    role: user?.role,
+    status: user?.status,
+    hashStarts: user?.passwordHash?.slice(0, 20),
+    passwordMatch: user ? verifyPassword(req.body.password, user.passwordHash) : false,
+  });
+
   if (!user || !verifyPassword(req.body.password, user.passwordHash)) {
     throw new HttpError(401, "Invalid email or password");
   }

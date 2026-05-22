@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
-import { Eye, Calendar, User, Building2, Package, Hash } from "lucide-react";
+import { Eye, Calendar, User, Building2, Package, Hash, Mail, MapPin } from "lucide-react";
 import { useGetEnquiriesQuery } from "@/store/api/admin/enquiryApi";
 
 export const EnquiryManagement = () => {
@@ -86,6 +86,15 @@ export const EnquiryManagement = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">{viewSheet.item.buyerCompany || "Buyer company not available"}</p>
                   <p className="text-xs text-muted-foreground mt-1">Buyer ID: {viewSheet.item.buyerId || "N/A"}</p>
+
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                    <Mail className="h-3 w-3" />
+                    {viewSheet.item.buyerEmail || viewSheet.item.email || "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                    <MapPin className="h-3 w-3" />
+                    {viewSheet.item.buyerCountry || viewSheet.item.country || "N/A"}
+                  </p>
                 </div>
 
                 <div className="p-4 bg-muted/30 rounded-sm">
@@ -103,13 +112,6 @@ export const EnquiryManagement = () => {
                   </div>
                   <p className="text-xs text-muted-foreground">Product ID: {viewSheet.item.productId || "N/A"}</p>
                 </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Buyer Message</h4>
-                <p className="text-sm leading-relaxed p-3 bg-muted/20 rounded-sm">{viewSheet.item.message || "No message available"}</p>
               </div>
 
               {viewSheet.item.reply && (

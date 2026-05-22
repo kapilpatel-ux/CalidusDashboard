@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Calendar, CheckCircle, Clock, MessageSquare, Send, User, Eye, Package, Building2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, CheckCircle, Clock, MessageSquare, Send, User, Eye, Package, Building2, Mail, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,7 +12,6 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { useAuth } from "@/App";
-import { currentSupplier } from "@/data/mockData";
 import {
   useGetSupplierEnquiriesQuery,
   useReplyToSupplierEnquiryMutation,
@@ -34,7 +33,7 @@ const getEnquiryTime = (enquiry = {}) => {
 
 export const SupplierEnquiries = () => {
   const { currentUser } = useAuth();
-  const supplierId = currentUser?.profileId || currentSupplier.id;
+  const supplierId = currentUser?.profileId || currentUser?.id;
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewSheet, setViewSheet] = useState({ open: false, item: null });
@@ -261,6 +260,15 @@ export const SupplierEnquiries = () => {
                   <DetailItem label="Buyer Name" value={viewSheet.item.buyerName} />
                   <DetailItem label="Buyer Company" value={viewSheet.item.buyerCompany} />
                   <DetailItem label="Buyer ID" value={viewSheet.item.buyerId} />
+                  <DetailItem
+                    label="Buyer Email"
+                    value={viewSheet.item.buyerEmail || viewSheet.item.email}
+                  />
+
+                  <DetailItem
+                    label="Buyer Country"
+                    value={viewSheet.item.buyerCountry || viewSheet.item.country}
+                  />
                   <DetailItem label="Received Date" value={viewSheet.item.date} />
                 </div>
               </div>
@@ -288,20 +296,9 @@ export const SupplierEnquiries = () => {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <DetailItem label="Supplier Name" value={viewSheet.item.supplierName || currentSupplier.name} />
+                  <DetailItem label="Supplier Name" value={viewSheet.item.supplierName} />
                   <DetailItem label="Supplier ID" value={viewSheet.item.supplierId || supplierId} />
                 </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">
-                  Buyer Message
-                </h4>
-                <p className="min-h-[120px] whitespace-pre-wrap rounded-sm border border-border bg-muted/20 p-4 text-sm leading-6">
-                  {viewSheet.item.message || "No message available."}
-                </p>
               </div>
 
               {viewSheet.item.reply ? (
