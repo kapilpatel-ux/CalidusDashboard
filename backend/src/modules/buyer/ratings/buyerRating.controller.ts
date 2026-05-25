@@ -5,6 +5,7 @@ import { createReadableId } from "../../../utils/id.js";
 import { ProductModel } from "../../admin/products/product.model.js";
 import { RatingModel } from "../../admin/ratings/rating.model.js";
 import { BuyerModel } from "../../admin/buyers/buyer.model.js";
+import { refreshRatingAggregates } from "../../admin/ratings/rating.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
@@ -65,6 +66,11 @@ export const createBuyerRating = asyncHandler(async (req: Request, res: Response
 
 export const updateBuyerRating = asyncHandler(async (req: Request, res: Response) => {
   const buyerId = String(req.params.buyerId);
+  const existing = await RatingModel.findOne(
+    { id: req.params.ratingId, buyerId },
+    { _id: 0 },
+  ).lean();
+
   const updated = await RatingModel.findOneAndUpdate(
     { id: req.params.ratingId, buyerId },
     {
@@ -78,5 +84,9 @@ export const updateBuyerRating = asyncHandler(async (req: Request, res: Response
   ).lean();
 
   if (!updated) throw new HttpError(404, "Rating not found");
+  await Promise.all([
+    refreshRatingAggregates(existing || {}),
+    refreshRatingAggregates(updated),
+  ]);
   res.json(updated);
 });

@@ -28,6 +28,11 @@ import { buyerApi } from "@/store/api/admin/buyerApi";
 import { userApi } from "@/store/api/admin/userApi";
 import { roleApi } from "@/store/api/admin/roleApi";
 import { permissionApi } from "@/store/api/admin/permissionApi";
+import { buyerRatingApi } from "@/store/api/buyer/buyerRatingApi";
+
+const invalidateBuyerRatingCache = () => {
+  store.dispatch(buyerRatingApi.util.invalidateTags(["BuyerRating"]));
+};
 
 const AdminActionsContext = createContext({
   openConfirmDialog: () => {},
@@ -216,6 +221,7 @@ export const AdminProvider = () => {
               status: "approved",
             })
           ).unwrap();
+          invalidateBuyerRatingCache();
           setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, status: "approved" } : r));
           toast.success("Rating approved and now visible");
           break;
@@ -226,6 +232,7 @@ export const AdminProvider = () => {
               status: "rejected",
             })
           ).unwrap();
+          invalidateBuyerRatingCache();
           setRatingsData((prev) => prev.map((r) => r.id === item.id ? { ...r, status: "rejected" } : r));
           toast.error("Rating rejected and hidden");
           break;
@@ -236,10 +243,12 @@ export const AdminProvider = () => {
               status: "suspended",
             })
           ).unwrap();
+          invalidateBuyerRatingCache();
           toast.warning(`Rating for "${item.productName}" suspended`);
           break;
         case "remove-rating":
           await store.dispatch(ratingApi.endpoints.deleteRating.initiate(item.id)).unwrap();
+          invalidateBuyerRatingCache();
           setRatingsData((prev) => prev.filter((r) => r.id !== item.id));
           toast.success("Rating removed");
           break;

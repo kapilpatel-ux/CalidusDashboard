@@ -1,4 +1,17 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { ratingApi } from "@/store/api/admin/ratingApi";
+import { productApi } from "@/store/api/admin/productApi";
+import { supplierRatingApi } from "@/store/api/supplier/supplierRatingApi";
+import { supplierOverviewApi } from "@/store/api/supplier/supplierOverviewApi";
+import { buyerProfileApi } from "@/store/api/buyer/buyerProfileApi";
+
+const invalidateRatingDependents = (dispatch) => {
+  dispatch(ratingApi.util.invalidateTags(["Rating"]));
+  dispatch(productApi.util.invalidateTags(["Product"]));
+  dispatch(supplierRatingApi.util.invalidateTags(["SupplierRating"]));
+  dispatch(supplierOverviewApi.util.invalidateTags(["SupplierOverview"]));
+  dispatch(buyerProfileApi.util.invalidateTags(["BuyerProfile"]));
+};
 
 export const buyerRatingApi = createApi({
   reducerPath: "buyerRatingApi",
@@ -19,6 +32,14 @@ export const buyerRatingApi = createApi({
         body: payload,
       }),
       invalidatesTags: ["BuyerRating"],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          invalidateRatingDependents(dispatch);
+        } catch (_) {
+          // handled by calling component
+        }
+      },
     }),
 
     updateBuyerRating: builder.mutation({
@@ -28,6 +49,14 @@ export const buyerRatingApi = createApi({
         body: payload,
       }),
       invalidatesTags: ["BuyerRating"],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          invalidateRatingDependents(dispatch);
+        } catch (_) {
+          // handled by calling component
+        }
+      },
     }),
   }),
 });

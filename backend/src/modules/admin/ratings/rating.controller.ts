@@ -3,25 +3,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
 import { RatingModel } from "./rating.model.js";
-import { ProductModel } from "../products/product.model.js";
-
-const refreshProductRating = async (productId?: string) => {
-  if (!productId) return;
-
-  const approvedRatings = await RatingModel.find(
-    { productId, status: "approved" },
-    { rating: 1, _id: 0 },
-  ).lean();
-
-  const average = approvedRatings.length
-    ? approvedRatings.reduce((sum, item) => sum + Number(item.rating || 0), 0) / approvedRatings.length
-    : 0;
-
-  await ProductModel.updateOne(
-    { id: productId },
-    { $set: { rating: Number(average.toFixed(1)) } },
-  );
-};
+import { refreshRatingAggregates } from "./rating.service.js";
 
 export const listRatings = asyncHandler(async (_req: Request, res: Response) => {
   const ratings = await RatingModel.find({}, { _id: 0 }).lean();
@@ -31,16 +13,24 @@ export const listRatings = asyncHandler(async (_req: Request, res: Response) => 
 export const createRating = asyncHandler(async (req: Request, res: Response) => {
   const payload = { ...req.body, id: req.body.id || createReadableId("RAT") };
   const created = await RatingModel.create(payload);
+  await refreshRatingAggregates(created.toJSON());
   res.status(201).json(created.toJSON());
 });
 
 export const updateRating = asyncHandler(async (req: Request, res: Response) => {
+  const existing = await RatingModel.findOne({ id: req.params.ratingId }, { _id: 0 }).lean();
+
   const updated = await RatingModel.findOneAndUpdate(
     { id: req.params.ratingId },
     { $set: req.body },
     { new: true, projection: { _id: 0 } },
   ).lean();
   if (!updated) throw new HttpError(404, "Rating not found");
+
+  await Promise.all([
+    refreshRatingAggregates(existing || {}),
+    refreshRatingAggregates(updated),
+  ]);
   res.json(updated);
 });
 
@@ -51,7 +41,7 @@ export const updateRatingStatus = asyncHandler(async (req: Request, res: Respons
     { new: true, projection: { _id: 0 } },
   ).lean();
   if (!updated) throw new HttpError(404, "Rating not found");
-  await refreshProductRating(updated.productId);
+  await refreshRatingAggregates(updated);
   res.json(updated);
 });
 
@@ -69,11 +59,11 @@ export const deleteRating = asyncHandler(async (req: Request, res: Response) => 
 
   const existing = await RatingModel.findOne(
     { id: req.params.ratingId },
-    { productId: 1, _id: 0 },
+    { productId: 1, supplierId: 1, supplierName: 1, buyerId: 1, _id: 0 },
   ).lean();
 
   const result = await RatingModel.deleteOne({ id: req.params.ratingId });
   if (!result.deletedCount) throw new HttpError(404, "Rating not found");
-  await refreshProductRating(existing?.productId);
+  await refreshRatingAggregates(existing || {});
   res.json({ success: true, message: "Rating deleted" });
 });

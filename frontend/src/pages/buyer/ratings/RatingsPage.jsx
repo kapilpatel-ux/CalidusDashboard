@@ -29,7 +29,6 @@ import { RatingStars } from "@/components/shared/RatingStars";
 import { Calendar, Edit, Eye, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
-// import { currentBuyer } from "@/data/mockData";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import {
   useCreateBuyerRatingMutation,
@@ -44,8 +43,8 @@ export const BuyerRatings = () => {
   const [viewSheet, setViewSheet] = useState({ open: false, item: null });
   const [newRating, setNewRating] = useState({ productId: "", rating: 5, review: "" });
   const [editRatingForm, setEditRatingForm] = useState({ rating: 5, review: "" });
-  const buyerId = currentUser?.profileId || currentBuyer.id;
-  const { data: ratings = [], isLoading: isRatingsLoading, isError: isRatingsError } = useGetBuyerRatingsQuery(buyerId);
+  const buyerId = currentUser?.profileId || currentUser?.id;
+  const { data: ratings = [], isLoading: isRatingsLoading, isError: isRatingsError } = useGetBuyerRatingsQuery(buyerId, { skip: !buyerId });
   const { data: products = [], isLoading: isProductsLoading } = useGetProductsQuery();
   const [createBuyerRating, { isLoading: isCreating }] = useCreateBuyerRatingMutation();
   const [updateBuyerRating, { isLoading: isUpdating }] = useUpdateBuyerRatingMutation();
@@ -112,7 +111,13 @@ export const BuyerRatings = () => {
         </div>
 
         <div className="space-y-4">
-          {isRatingsLoading ? (
+          {!buyerId ? (
+            <div className="dashboard-card">
+              <div className="dashboard-card-content py-8 text-center text-sm text-destructive">
+                Buyer profile not found.
+              </div>
+            </div>
+          ) : isRatingsLoading ? (
             <div className="dashboard-card">
               <div className="dashboard-card-content py-8 text-center text-sm text-muted-foreground">
                 Loading ratings...

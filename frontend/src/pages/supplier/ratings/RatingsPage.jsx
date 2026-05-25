@@ -30,7 +30,6 @@ export const SupplierRatings = () => {
     isError,
   } = useGetSupplierRatingsQuery(supplierId, { skip: !supplierId });
   const sortedRatings = ratings.slice().sort((a, b) => getRatingTime(b) - getRatingTime(a));
-
   const approvedRatings = sortedRatings.filter((rating) => rating.status === "approved");
   const averageRating = approvedRatings.length > 0
     ? approvedRatings.reduce((sum, rating) => sum + Number(rating.rating || 0), 0) / approvedRatings.length
@@ -54,8 +53,8 @@ export const SupplierRatings = () => {
               </div>
               <div className="flex-1 space-y-2">
                 {[5, 4, 3, 2, 1].map((star) => {
-                  const count = sortedRatings.filter((rating) => Math.floor(rating.rating) === star).length;
-                  const percentage = sortedRatings.length > 0 ? (count / sortedRatings.length) * 100 : 0;
+                  const count = approvedRatings.filter((rating) => Math.floor(rating.rating) === star).length;
+                  const percentage = approvedRatings.length > 0 ? (count / approvedRatings.length) * 100 : 0;
                   return (
                     <div key={star} className="flex items-center gap-2">
                       <span className="text-sm w-3">{star}</span>
