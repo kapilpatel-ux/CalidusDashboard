@@ -27,7 +27,7 @@ import {
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
-import { Building2, Calendar, Eye, Hash, Mail, MapPin, Package, Plus, Send, User } from "lucide-react";
+import { Building2, Calendar, Eye, Hash, Mail, MapPin, Package, Phone, Plus, Send, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
 import { currentBuyer } from "@/data/mockData";
@@ -36,6 +36,24 @@ import {
   useCreateBuyerEnquiryMutation,
   useGetBuyerEnquiriesQuery,
 } from "@/store/api/buyer/buyerEnquiryApi";
+
+const parseContactPayload = (message = "") => {
+  const text = String(message || "").trim();
+  if (!/^contact email\s*:/i.test(text)) return {};
+
+  return text.split(/\r?\n/).reduce((details, line) => {
+    const [rawKey, ...rawValue] = line.split(":");
+    const key = String(rawKey || "").trim().toLowerCase();
+    const value = rawValue.join(":").trim();
+
+    if (!key || !value) return details;
+    if (key === "contact email") details.email = value;
+    if (key === "phone") details.phone = value;
+    if (key === "company") details.company = value;
+    if (key === "country") details.country = value;
+    return details;
+  }, {});
+};
 
 export const BuyerEnquiries = () => {
   const { currentUser } = useAuth();
@@ -109,6 +127,11 @@ export const BuyerEnquiries = () => {
   );
 
   const selectedEnquiry = viewSheet.item || {};
+  const contactDetails = parseContactPayload(selectedEnquiry.message);
+  const buyerCompany = selectedEnquiry.buyerCompany || contactDetails.company;
+  const buyerEmail = selectedEnquiry.buyerEmail || selectedEnquiry.email || contactDetails.email;
+  const buyerPhone = selectedEnquiry.buyerPhone || selectedEnquiry.phone || contactDetails.phone;
+  const buyerCountry = selectedEnquiry.buyerCountry || selectedEnquiry.country || contactDetails.country;
 
   return (
     <>
@@ -256,24 +279,17 @@ export const BuyerEnquiries = () => {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <DetailItem label="Buyer Name" value={selectedEnquiry.buyerName} icon={User} />
-                  <DetailItem label="Buyer Company" value={selectedEnquiry.buyerCompany} icon={Building2} />
-                  <DetailItem label="Buyer Email" value={selectedEnquiry.buyerEmail} icon={Mail} />
-                  <DetailItem label="Buyer Country" value={selectedEnquiry.buyerCountry} icon={MapPin} />
+                  <DetailItem label="Buyer Company" value={buyerCompany} icon={Building2} />
+                  <DetailItem label="Buyer Email" value={buyerEmail} icon={Mail} />
+                  <DetailItem label="Buyer Phone" value={buyerPhone} icon={Phone} />
+                  <DetailItem label="Buyer Country" value={buyerCountry} icon={MapPin} />
                 </div>
               </div>
 
               <Separator />
 
-              <div className="space-y-2">
-                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Your Message</h4>
-                <p className="min-h-[110px] whitespace-pre-wrap rounded-sm border border-border bg-muted/20 p-4 text-sm leading-6">
-                  {selectedEnquiry.message || "No message available."}
-                </p>
-              </div>
-
               {selectedEnquiry.reply ? (
                 <>
-                  <Separator />
                   <div className="space-y-2">
                     <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Supplier's Reply</h4>
                     <div className="rounded-sm border border-primary/20 bg-primary/10 p-4">
