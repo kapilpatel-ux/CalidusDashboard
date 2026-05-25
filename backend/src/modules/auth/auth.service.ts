@@ -20,14 +20,27 @@ export function hashPassword(password: string) {
 }
 
 export function verifyPassword(password: string, storedHash: string) {
-  const [storedIterations, salt, hash] = storedHash.split(":");
-  if (!storedIterations || !salt || !hash) return false;
+  try {
+    if (!storedHash || typeof storedHash !== "string") return false;
 
-  const candidate = crypto
-    .pbkdf2Sync(password, salt, Number(storedIterations), keyLength, algorithm)
-    .toString("hex");
+    const [storedIterations, salt, hash] = storedHash.split(":");
+    if (!storedIterations || !salt || !hash) return false;
 
-  return crypto.timingSafeEqual(Buffer.from(candidate, "hex"), Buffer.from(hash, "hex"));
+    const iterationsNumber = Number(storedIterations);
+    if (!Number.isFinite(iterationsNumber) || iterationsNumber <= 0) return false;
+
+    const candidate = crypto
+      .pbkdf2Sync(password, salt, iterationsNumber, keyLength, algorithm)
+      .toString("hex");
+
+    const candidateBuf = Buffer.from(candidate, "hex");
+    const hashBuf = Buffer.from(hash, "hex");
+    if (candidateBuf.length !== hashBuf.length) return false;
+
+    return crypto.timingSafeEqual(candidateBuf, hashBuf);
+  } catch {
+    return false;
+  }
 }
 
 export function signJwt(payload: Record<string, unknown>) {

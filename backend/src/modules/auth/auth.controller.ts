@@ -110,6 +110,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const email = String(req.body.email).toLowerCase().trim();
   const user = await AuthUserModel.findOne({ email }).lean();
+  const passwordOk = user ? verifyPassword(req.body.password, user.passwordHash) : false;
 
   console.log("LOGIN DEBUG:", {
     email,
@@ -117,10 +118,10 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     role: user?.role,
     status: user?.status,
     hashStarts: user?.passwordHash?.slice(0, 20),
-    passwordMatch: user ? verifyPassword(req.body.password, user.passwordHash) : false,
+    passwordMatch: passwordOk,
   });
 
-  if (!user || !verifyPassword(req.body.password, user.passwordHash)) {
+  if (!user || !passwordOk) {
     throw new HttpError(401, "Invalid email or password");
   }
 

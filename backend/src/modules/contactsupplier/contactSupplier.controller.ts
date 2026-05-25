@@ -4,8 +4,10 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import { createReadableId } from "../../utils/id.js";
 import { BuyerModel } from "../admin/buyers/buyer.model.js";
 import { EnquiryModel } from "../admin/enquiries/enquiry.model.js";
+import { env } from "../../config/env.js";
 import { AuthUserModel } from "../auth/auth.model.js";
 import { hashPassword } from "../auth/auth.service.js";
+import { sendSmtpEmail } from "../../utils/smtpEmail.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
@@ -61,17 +63,49 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
   }
 
   if (!existingUser) {
+    const tempPassword = crypto.randomBytes(10).toString("base64url");
     await AuthUserModel.create({
       id: createReadableId("USR"),
       name: req.body.fullName,
       email,
       phone,
-      passwordHash: hashPassword(crypto.randomBytes(24).toString("hex")),
+      passwordHash: hashPassword(tempPassword),
       role: "buyer",
       profileId: buyerId,
       company: buyerCompany,
       status: "pending",
     });
+
+    const appUrl = env.appUrl || env.corsOrigins[0] || "http://localhost:3000";
+    const buyerName = req.body.fullName || "Buyer";
+    const subject = "Welcome to Calidus Dashboard";
+    const text = [
+      `Hello ${buyerName},`,
+      "",
+      "Your account has been created from a supplier enquiry.",
+      "",
+      `Login URL: ${appUrl}`,
+      `Email: ${email}`,
+      `Password: ${tempPassword}`,
+      "",
+      "For security, please change your password after logging in.",
+    ].join("\n");
+    const html = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <p>Hello ${buyerName},</p>
+        <p>Your account has been created from a supplier enquiry.</p>
+        <p><strong>Login URL:</strong> <a href="${appUrl}">${appUrl}</a><br/>
+        <strong>Email:</strong> ${email}<br/>
+        <strong>Password:</strong> ${tempPassword}</p>
+        <p>For security, please change your password after logging in.</p>
+      </div>
+    `;
+
+    try {
+      await sendSmtpEmail(email, { subject, text, html });
+    } catch (err) {
+      console.error("Failed to send contact-supplier credentials email", err);
+    }
   } else if (existingUser.role === "buyer" && (!existingUser.profileId || existingUser.profileId !== buyerId)) {
     await AuthUserModel.updateOne(
       { id: existingUser.id },
