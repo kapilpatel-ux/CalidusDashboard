@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { RatingStars } from "@/components/shared/RatingStars";
-import { Calendar, Edit, Eye, Plus, Star } from "lucide-react";
+import { Building2, Calendar, Edit, Eye, Hash, Package, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
@@ -56,22 +56,30 @@ export const BuyerRatings = () => {
     : "Choose a product";
 
   const handleSubmitRating = async () => {
-    if (newRating.productId && newRating.review.trim()) {
-      try {
-        await createBuyerRating({
-          buyerId,
-          payload: {
-            productId: newRating.productId,
-            rating: newRating.rating,
-            review: newRating.review,
-          },
-        }).unwrap();
-        toast.success("Rating submitted successfully");
-        setNewRating({ productId: "", rating: 5, review: "" });
-        setSubmitRatingDialog(false);
-      } catch (error) {
-        toast.error(error?.data?.message || "Unable to submit rating");
-      }
+    if (!newRating.productId) {
+      toast.error("Please select a product");
+      return;
+    }
+
+    if (!newRating.review.trim()) {
+      toast.error("Please write your review");
+      return;
+    }
+
+    try {
+      await createBuyerRating({
+        buyerId,
+        payload: {
+          productId: newRating.productId,
+          rating: newRating.rating,
+          review: newRating.review,
+        },
+      }).unwrap();
+      toast.success("Rating submitted successfully");
+      setNewRating({ productId: "", rating: 5, review: "" });
+      setSubmitRatingDialog(false);
+    } catch (error) {
+      toast.error(error?.data?.message || "Unable to submit rating");
     }
   };
 
@@ -81,6 +89,11 @@ export const BuyerRatings = () => {
   };
 
   const handleEditRating = async () => {
+    if (!editRatingForm.review.trim()) {
+      toast.error("Please write your review");
+      return;
+    }
+
     if (editRatingDialog.item) {
       try {
         await updateBuyerRating({
@@ -95,6 +108,18 @@ export const BuyerRatings = () => {
       }
     }
   };
+
+  const DetailItem = ({ label, value, icon: Icon }) => (
+    <div className="rounded-sm border border-border bg-black/20 px-3 py-3">
+      <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-medium">{value || "Not available"}</p>
+    </div>
+  );
+
+  const selectedRating = viewSheet.item || {};
 
   return (
     <>
@@ -144,12 +169,15 @@ export const BuyerRatings = () => {
             ratings.map((rating) => (
               <div key={rating.id} className="dashboard-card" data-testid={`rating-card-${rating.id}`}>
                 <div className="dashboard-card-content">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
                       <p className="font-medium">{rating.productName}</p>
-                      <p className="text-xs text-muted-foreground">Submitted on {rating.submissionDate}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {rating.supplierName ? `Supplier: ${rating.supplierName}` : "Supplier not available"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Submitted on {rating.submissionDate || "N/A"}</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-end gap-1">
                       <StatusBadge status={rating.status} />
                       <RatingStars rating={rating.rating} size="sm" />
                     </div>
@@ -235,7 +263,7 @@ export const BuyerRatings = () => {
           </div>
           <DialogFooter className="min-w-0 flex-wrap gap-2">
             <Button variant="outline" onClick={() => setSubmitRatingDialog(false)}>Cancel</Button>
-            <Button onClick={handleSubmitRating} disabled={isCreating} data-testid="submit-rating-btn">
+            <Button onClick={handleSubmitRating} disabled={isCreating || !newRating.productId || !newRating.review.trim()} data-testid="submit-rating-btn">
               {isCreating ? "Submitting..." : "Submit Rating"}
             </Button>
           </DialogFooter>
@@ -280,7 +308,7 @@ export const BuyerRatings = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditRatingDialog({ open: false, item: null })}>Cancel</Button>
-            <Button onClick={handleEditRating} disabled={isUpdating} data-testid="save-rating-btn">
+            <Button onClick={handleEditRating} disabled={isUpdating || !editRatingForm.review.trim()} data-testid="save-rating-btn">
               {isUpdating ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
@@ -288,32 +316,85 @@ export const BuyerRatings = () => {
       </Dialog>
 
       <Sheet open={viewSheet.open} onOpenChange={(open) => setViewSheet({ ...viewSheet, open })}>
-        <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Rating Details</SheetTitle>
           </SheetHeader>
           {viewSheet.item && (
             <div className="mt-6 space-y-6">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold">{viewSheet.item.productName}</h3>
-                  <p className="text-sm text-muted-foreground">Your review</p>
+                  <h3 className="text-xl font-semibold">{selectedRating.productName || "Product not available"}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Rating ID: {selectedRating.id || "Not available"}
+                  </p>
                 </div>
-                <StatusBadge status={viewSheet.item.status} />
+                <StatusBadge status={selectedRating.status} />
               </div>
+
               <div className="p-4 bg-muted/30 rounded-sm text-center">
-                <RatingStars rating={viewSheet.item.rating} size="lg" />
-                <p className="text-3xl font-bold font-['Barlow_Condensed'] mt-2">{viewSheet.item.rating}.0</p>
+                <RatingStars rating={Number(selectedRating.rating || 0)} size="lg" />
+                <p className="text-3xl font-bold font-['Barlow_Condensed'] mt-2">
+                  {Number(selectedRating.rating || 0).toFixed(1)}
+                </p>
               </div>
+
               <Separator />
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold uppercase tracking-wide">Product Information</h4>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailItem label="Product Name" value={selectedRating.productName} icon={Package} />
+                  <DetailItem label="Product ID" value={selectedRating.productId} icon={Hash} />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold uppercase tracking-wide">Supplier Information</h4>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailItem label="Supplier Name" value={selectedRating.supplierName} icon={Building2} />
+                  <DetailItem label="Supplier ID" value={selectedRating.supplierId} icon={Hash} />
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="space-y-2">
                 <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Your Review</h4>
-                <p className="text-sm leading-relaxed">{viewSheet.item.review}</p>
+                <p className="min-h-[110px] whitespace-pre-wrap rounded-sm border border-border bg-muted/20 p-4 text-sm leading-6">
+                  {selectedRating.review || "No review available."}
+                </p>
               </div>
+
+              {selectedRating.supplierReply && selectedRating.supplierReplyStatus === "approved" && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Supplier Reply</h4>
+                    <div className="rounded-sm border border-primary/20 bg-primary/10 p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">{selectedRating.supplierName || "Supplier"}</span>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm leading-6">{selectedRating.supplierReply}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Separator />
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Submitted on {viewSheet.item.submissionDate}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DetailItem label="Submitted Date" value={selectedRating.submissionDate} icon={Calendar} />
+                <DetailItem label="Current Status" value={selectedRating.status} />
               </div>
             </div>
           )}

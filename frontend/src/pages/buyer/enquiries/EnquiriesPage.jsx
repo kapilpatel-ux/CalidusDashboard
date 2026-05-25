@@ -27,7 +27,7 @@ import {
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
-import { Building2, Calendar, Eye, Plus, Send } from "lucide-react";
+import { Building2, Calendar, Eye, Hash, Mail, MapPin, Package, Plus, Send, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
 import { currentBuyer } from "@/data/mockData";
@@ -97,6 +97,18 @@ export const BuyerEnquiries = () => {
       ),
     },
   ];
+
+  const DetailItem = ({ label, value, icon: Icon }) => (
+    <div className="rounded-sm border border-border bg-black/20 px-3 py-3">
+      <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-medium">{value || "Not available"}</p>
+    </div>
+  );
+
+  const selectedEnquiry = viewSheet.item || {};
 
   return (
     <>
@@ -193,43 +205,99 @@ export const BuyerEnquiries = () => {
       </Dialog>
 
       <Sheet open={viewSheet.open} onOpenChange={(open) => setViewSheet({ ...viewSheet, open })}>
-        <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">Enquiry Details</SheetTitle>
           </SheetHeader>
           {viewSheet.item && (
             <div className="mt-6 space-y-6">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold">{viewSheet.item.productName}</h3>
-                  <p className="text-sm text-muted-foreground">to {viewSheet.item.supplierName}</p>
+                  <h3 className="text-xl font-semibold">{selectedEnquiry.productName || "Product not available"}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Enquiry ID: {selectedEnquiry.id || "Not available"}
+                  </p>
                 </div>
-                <StatusBadge status={viewSheet.item.status} />
+                <StatusBadge status={selectedEnquiry.status} />
               </div>
+
               <Separator />
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold uppercase tracking-wide">Product Information</h4>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailItem label="Product Name" value={selectedEnquiry.productName} icon={Package} />
+                  <DetailItem label="Product ID" value={selectedEnquiry.productId} icon={Hash} />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold uppercase tracking-wide">Supplier Information</h4>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailItem label="Supplier Name" value={selectedEnquiry.supplierName} icon={Building2} />
+                  <DetailItem label="Supplier ID" value={selectedEnquiry.supplierId} icon={Hash} />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold uppercase tracking-wide">Buyer Information</h4>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailItem label="Buyer Name" value={selectedEnquiry.buyerName} icon={User} />
+                  <DetailItem label="Buyer Company" value={selectedEnquiry.buyerCompany} icon={Building2} />
+                  <DetailItem label="Buyer Email" value={selectedEnquiry.buyerEmail} icon={Mail} />
+                  <DetailItem label="Buyer Country" value={selectedEnquiry.buyerCountry} icon={MapPin} />
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="space-y-2">
                 <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Your Message</h4>
-                <p className="text-sm leading-relaxed p-3 bg-muted/20 rounded-sm">{viewSheet.item.message}</p>
+                <p className="min-h-[110px] whitespace-pre-wrap rounded-sm border border-border bg-muted/20 p-4 text-sm leading-6">
+                  {selectedEnquiry.message || "No message available."}
+                </p>
               </div>
-              {viewSheet.item.reply && (
+
+              {selectedEnquiry.reply ? (
                 <>
                   <Separator />
                   <div className="space-y-2">
                     <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Supplier's Reply</h4>
-                    <div className="p-3 bg-primary/10 rounded-sm">
+                    <div className="rounded-sm border border-primary/20 bg-primary/10 p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Building2 className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">{viewSheet.item.supplierName}</span>
+                        <span className="text-sm font-medium">{selectedEnquiry.supplierName || "Supplier"}</span>
                       </div>
-                      <p className="text-sm leading-relaxed">{viewSheet.item.reply}</p>
+                      <p className="whitespace-pre-wrap text-sm leading-6">{selectedEnquiry.reply}</p>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Reply Date: {selectedEnquiry.replyDate || "Not available"}
+                      </p>
                     </div>
                   </div>
                 </>
+              ) : (
+                <div className="rounded-sm border border-dashed border-border bg-black/20 p-4 text-sm text-muted-foreground">
+                  Supplier has not replied yet.
+                </div>
               )}
+
               <Separator />
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Sent on {viewSheet.item.date}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DetailItem label="Sent Date" value={selectedEnquiry.date} icon={Calendar} />
+                <DetailItem label="Current Status" value={selectedEnquiry.status} />
               </div>
             </div>
           )}

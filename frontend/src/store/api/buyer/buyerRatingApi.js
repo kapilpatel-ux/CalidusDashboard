@@ -4,6 +4,7 @@ import { productApi } from "@/store/api/admin/productApi";
 import { supplierRatingApi } from "@/store/api/supplier/supplierRatingApi";
 import { supplierOverviewApi } from "@/store/api/supplier/supplierOverviewApi";
 import { buyerProfileApi } from "@/store/api/buyer/buyerProfileApi";
+import { buyerOverviewApi } from "@/store/api/buyer/buyerOverviewApi";
 
 const invalidateRatingDependents = (dispatch) => {
   dispatch(ratingApi.util.invalidateTags(["Rating"]));
@@ -11,6 +12,7 @@ const invalidateRatingDependents = (dispatch) => {
   dispatch(supplierRatingApi.util.invalidateTags(["SupplierRating"]));
   dispatch(supplierOverviewApi.util.invalidateTags(["SupplierOverview"]));
   dispatch(buyerProfileApi.util.invalidateTags(["BuyerProfile"]));
+  dispatch(buyerOverviewApi.util.invalidateTags(["BuyerOverview"]));
 };
 
 export const buyerRatingApi = createApi({

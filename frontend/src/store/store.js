@@ -20,6 +20,7 @@ import { supplierProductApi } from "./api/supplier/supplierProductApi";
 import { supplierProfileApi } from "./api/supplier/supplierProfileApi";
 import { supplierRatingApi } from "./api/supplier/supplierRatingApi";
 import { buyerEnquiryApi } from "./api/buyer/buyerEnquiryApi";
+import { buyerOverviewApi } from "./api/buyer/buyerOverviewApi";
 import { buyerProfileApi } from "./api/buyer/buyerProfileApi";
 import { buyerRatingApi } from "./api/buyer/buyerRatingApi";
 import { contactSupplierApi } from "./api/contactSupplierApi";
@@ -47,10 +48,11 @@ export const store = configureStore({
     [supplierProfileApi.reducerPath]: supplierProfileApi.reducer,
     [supplierRatingApi.reducerPath]: supplierRatingApi.reducer,
     [buyerEnquiryApi.reducerPath]: buyerEnquiryApi.reducer,
+    [buyerOverviewApi.reducerPath]: buyerOverviewApi.reducer,
     [buyerProfileApi.reducerPath]: buyerProfileApi.reducer,
     [buyerRatingApi.reducerPath]: buyerRatingApi.reducer,
     [contactSupplierApi.reducerPath]: contactSupplierApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(supplierApi.middleware, productApi.middleware, ratingApi.middleware, categoryApi.middleware, buyerApi.middleware, analyticsApi.middleware, dashboardApi.middleware, enquiryApi.middleware, notificationApi.middleware, userApi.middleware, roleApi.middleware, permissionApi.middleware, authApi.middleware, supplierEnquiryApi.middleware, supplierCategoryRequestApi.middleware , supplierNotificationApi.middleware, supplierOverviewApi.middleware, supplierProductApi.middleware, supplierProfileApi.middleware, supplierRatingApi.middleware, buyerEnquiryApi.middleware, buyerProfileApi.middleware, buyerRatingApi.middleware, contactSupplierApi.middleware),
+    getDefaultMiddleware().concat(supplierApi.middleware, productApi.middleware, ratingApi.middleware, categoryApi.middleware, buyerApi.middleware, analyticsApi.middleware, dashboardApi.middleware, enquiryApi.middleware, notificationApi.middleware, userApi.middleware, roleApi.middleware, permissionApi.middleware, authApi.middleware, supplierEnquiryApi.middleware, supplierCategoryRequestApi.middleware , supplierNotificationApi.middleware, supplierOverviewApi.middleware, supplierProductApi.middleware, supplierProfileApi.middleware, supplierRatingApi.middleware, buyerEnquiryApi.middleware, buyerOverviewApi.middleware, buyerProfileApi.middleware, buyerRatingApi.middleware, contactSupplierApi.middleware),
 });

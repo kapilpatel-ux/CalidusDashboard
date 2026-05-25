@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { enquiryApi } from "@/store/api/admin/enquiryApi";
 import { supplierEnquiryApi } from "@/store/api/supplier/supplierEnquiryApi";
 import { supplierOverviewApi } from "@/store/api/supplier/supplierOverviewApi";
+import { buyerOverviewApi } from "@/store/api/buyer/buyerOverviewApi";
 
 export const buyerEnquiryApi = createApi({
   reducerPath: "buyerEnquiryApi",
@@ -30,6 +31,7 @@ export const buyerEnquiryApi = createApi({
           dispatch(enquiryApi.util.invalidateTags(["Enquiry"]));
           dispatch(supplierEnquiryApi.util.invalidateTags(["SupplierEnquiry"]));
           dispatch(supplierOverviewApi.util.invalidateTags(["SupplierOverview"]));
+          dispatch(buyerOverviewApi.util.invalidateTags(["BuyerOverview"]));
         } catch (_) {
           // The mutation error is handled by the page-level toast.
         }

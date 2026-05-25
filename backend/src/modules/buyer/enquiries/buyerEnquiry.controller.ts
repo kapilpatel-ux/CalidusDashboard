@@ -25,7 +25,10 @@ export const listBuyerEnquiries = asyncHandler(async (req: Request, res: Respons
 export const createBuyerEnquiry = asyncHandler(async (req: Request, res: Response) => {
   const buyerId = String(req.params.buyerId);
   const [buyer, product] = await Promise.all([
-    BuyerModel.findOne({ id: buyerId }, { _id: 0, id: 1, name: 1, company: 1 }).lean(),
+    BuyerModel.findOne(
+      { id: buyerId },
+      { _id: 0, id: 1, name: 1, company: 1, email: 1, country: 1 },
+    ).lean(),
     ProductModel.findOne(
       { id: req.body.productId },
       { _id: 0, id: 1, name: 1, supplierId: 1, supplierName: 1, status: 1 },
@@ -37,6 +40,7 @@ export const createBuyerEnquiry = asyncHandler(async (req: Request, res: Respons
   if (product.status !== "approved") throw new HttpError(400, "Only approved products can be enquired about");
 
   const buyerRecord = buyer as { name?: string; company?: string };
+  const buyerContact = buyer as { email?: string; country?: string };
   const created = await EnquiryModel.create({
     id: createReadableId("ENQ"),
     productId: product.id,
@@ -46,6 +50,8 @@ export const createBuyerEnquiry = asyncHandler(async (req: Request, res: Respons
     buyerId,
     buyerName: buyerRecord.name || buyerId,
     buyerCompany: buyerRecord.company || "",
+    buyerEmail: buyerContact.email || "",
+    buyerCountry: buyerContact.country || "",
     message: req.body.message,
     date: dateOnly(),
     status: "pending",

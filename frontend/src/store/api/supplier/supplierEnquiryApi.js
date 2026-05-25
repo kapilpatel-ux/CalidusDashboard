@@ -1,5 +1,13 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { enquiryApi } from "@/store/api/admin/enquiryApi";
+import { buyerOverviewApi } from "@/store/api/buyer/buyerOverviewApi";
+import { supplierOverviewApi } from "@/store/api/supplier/supplierOverviewApi";
+
+const invalidateEnquiryDependents = (dispatch) => {
+  dispatch(enquiryApi.util.invalidateTags(["Enquiry"]));
+  dispatch(buyerOverviewApi.util.invalidateTags(["BuyerOverview"]));
+  dispatch(supplierOverviewApi.util.invalidateTags(["SupplierOverview"]));
+};
 
 export const supplierEnquiryApi = createApi({
   reducerPath: "supplierEnquiryApi",
@@ -22,6 +30,14 @@ export const supplierEnquiryApi = createApi({
         body: { reply },
       }),
       invalidatesTags: ["SupplierEnquiry"],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          invalidateEnquiryDependents(dispatch);
+        } catch (_) {
+          // Page-level toast handles mutation failures.
+        }
+      },
     }),
 
     updateSupplierEnquiryStatus: builder.mutation({
@@ -34,7 +50,7 @@ export const supplierEnquiryApi = createApi({
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
-          dispatch(enquiryApi.util.invalidateTags(["Enquiry"]));
+          invalidateEnquiryDependents(dispatch);
         } catch (_) {
           // Page-level toast handles mutation failures.
         }

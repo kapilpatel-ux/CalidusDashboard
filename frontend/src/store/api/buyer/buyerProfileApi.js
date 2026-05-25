@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { buyerOverviewApi } from "@/store/api/buyer/buyerOverviewApi";
 
 export const buyerProfileApi = createApi({
   reducerPath: "buyerProfileApi",
@@ -19,6 +20,14 @@ export const buyerProfileApi = createApi({
         body: payload,
       }),
       invalidatesTags: ["BuyerProfile"],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(buyerOverviewApi.util.invalidateTags(["BuyerOverview"]));
+        } catch (_) {
+          // handled by calling component
+        }
+      },
     }),
   }),
 });

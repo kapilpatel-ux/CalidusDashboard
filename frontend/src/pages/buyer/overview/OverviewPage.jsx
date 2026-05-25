@@ -9,13 +9,16 @@ import {
   Star,
   UserCircle,
 } from "lucide-react";
-import { useGetSupplierOverviewQuery } from "@/store/api/supplier/supplierOverviewApi";
+import { useAuth } from "@/App";
+import { useGetBuyerOverviewQuery } from "@/store/api/buyer/buyerOverviewApi";
 
 export const BuyerOverview = () => {
-  const supplierId = "SUP001";
+  const { currentUser } = useAuth();
+  const buyerId = currentUser?.profileId || currentUser?.id;
 
-  const { data, isLoading, error } = useGetSupplierOverviewQuery(supplierId);
+  const { data, isLoading, error } = useGetBuyerOverviewQuery(buyerId, { skip: !buyerId });
 
+  if (!buyerId) return <p>Buyer profile not found.</p>;
   if (isLoading) return <p>Loading overview...</p>;
   if (error) return <p>Failed to load overview.</p>;
 

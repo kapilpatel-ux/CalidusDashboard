@@ -2,11 +2,13 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { productApi } from "@/store/api/admin/productApi";
 import { supplierRatingApi } from "@/store/api/supplier/supplierRatingApi";
 import { supplierOverviewApi } from "@/store/api/supplier/supplierOverviewApi";
+import { buyerOverviewApi } from "@/store/api/buyer/buyerOverviewApi";
 
 const invalidateModerationDependents = (dispatch) => {
   dispatch(productApi.util.invalidateTags(["Product"]));
   dispatch(supplierRatingApi.util.invalidateTags(["SupplierRating"]));
   dispatch(supplierOverviewApi.util.invalidateTags(["SupplierOverview"]));
+  dispatch(buyerOverviewApi.util.invalidateTags(["BuyerOverview"]));
 };
 
 export const ratingApi = createApi({
