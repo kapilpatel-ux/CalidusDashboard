@@ -64,7 +64,7 @@ const navigationConfig = {
 	    { id: "notificationmanagement", label: "Notification Management", icon: Bell, path: "/admin/notificationmanagement" },
 	    { id: "usermanagement", label: "User Management", icon: Shield, path: "/admin/usermanagement" },
 	    { id: "rolemanagement", label: "Role Management", icon: KeyRound, path: "/admin/rolemanagement" },
-	    // { id: "permissionmanagement", label: "Permission Management", icon: FileText, path: "/admin/permissionmanagement" },
+	    { id: "permissionmanagement", label: "Permission Management", icon: FileText, path: "/admin/permissionmanagement" },
 	    { id: "platforminsights", label: "Platform Insights", icon: BarChart3, path: "/admin/platforminsights" },
 	  ],
   sub_admin: [

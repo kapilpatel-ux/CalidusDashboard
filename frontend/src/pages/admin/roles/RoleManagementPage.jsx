@@ -47,7 +47,7 @@ export const RoleManagement = () => {
       label: "Actions",
       render: (_, row) => (
         <ActionButtonGroup>
-          {/* <ActionButton
+          <ActionButton
             icon={KeyRound}
             label="Permissions"
             testId={`role-permissions-${row.key}`}
@@ -55,7 +55,7 @@ export const RoleManagement = () => {
               setActiveRole(row);
               setPermissionsDialogOpen(true);
             }}
-          /> */}
+          />
           <ActionButton
             icon={Pencil}
             label="Edit"

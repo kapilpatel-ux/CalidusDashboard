@@ -1,17 +1,41 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { useAdminActions } from "../AdminContext";
 import { useGetAdminPermissionsQuery } from "@/store/api/admin/permissionApi";
+import { AssignPermissionToRolesDialog } from "../dialogs/AssignPermissionToRolesDialog";
+import { useGetAdminRolesQuery } from "@/store/api/admin/roleApi";
 
 export const PermissionManagement = () => {
   const { openAddPermissionDialog, openEditDialog, openConfirmDialog } = useAdminActions();
   const { data: permissions = [], isLoading } = useGetAdminPermissionsQuery();
+  const { data: roles = [], isLoading: isRolesLoading } = useGetAdminRolesQuery();
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [activePermission, setActivePermission] = useState(null);
 
   const data = useMemo(() => (Array.isArray(permissions) ? permissions : []), [permissions]);
+  const rolesList = useMemo(() => (Array.isArray(roles) ? roles : []), [roles]);
+
+  const permissionAssignments = useMemo(() => {
+    const map = new Map();
+    for (const role of rolesList) {
+      const roleKey = role?.key;
+      const roleLabel = role?.label || roleKey;
+      const perms = Array.isArray(role?.permissions) ? role.permissions : [];
+      for (const permKey of perms) {
+        if (!map.has(permKey)) map.set(permKey, []);
+        map.get(permKey).push({ key: roleKey, label: roleLabel });
+      }
+    }
+    for (const [permKey, list] of map.entries()) {
+      list.sort((a, b) => String(a.label).localeCompare(String(b.label)));
+      map.set(permKey, list);
+    }
+    return map;
+  }, [rolesList]);
 
   const columns = [
     {
@@ -30,6 +54,29 @@ export const PermissionManagement = () => {
       render: (value) => <Badge variant="outline">{value || "Admin"}</Badge>,
     },
     {
+      key: "__assigned_roles",
+      label: "Assigned Roles",
+      render: (_, row) => {
+        if (isRolesLoading) return <span className="text-xs text-muted-foreground">Loading...</span>;
+        const assigned = permissionAssignments.get(row.key) || [];
+        if (assigned.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+        const visible = assigned.slice(0, 3);
+        const remaining = assigned.length - visible.length;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {visible.map((r) => (
+              <Badge key={r.key} variant="secondary">
+                {r.label}
+              </Badge>
+            ))}
+            {remaining > 0 ? (
+              <Badge variant="outline">+{remaining}</Badge>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
       key: "isSystem",
       label: "Type",
       render: (value) =>
@@ -40,6 +87,15 @@ export const PermissionManagement = () => {
       label: "Actions",
       render: (_, row) => (
         <ActionButtonGroup>
+          <ActionButton
+            icon={KeyRound}
+            label="Assign"
+            testId={`assign-permission-${row.key}`}
+            onClick={() => {
+              setActivePermission(row);
+              setAssignDialogOpen(true);
+            }}
+          />
           <ActionButton
             icon={Pencil}
             label="Edit"
@@ -92,7 +148,12 @@ export const PermissionManagement = () => {
         pageSize={10}
         testId="admin-permissions-table"
       />
+
+      <AssignPermissionToRolesDialog
+        open={assignDialogOpen}
+        setOpen={setAssignDialogOpen}
+        permission={activePermission}
+      />
     </div>
   );
 };
-

@@ -8,11 +8,23 @@ import { SupplierModel } from "../suppliers/supplier.model.js";
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
 export const getAnalytics = asyncHandler(async (_req: Request, res: Response) => {
-  const [supplierCount, buyerCount, productCount, ratingCount, topSuppliers] = await Promise.all([
+  const [
+    supplierCount,
+    buyerCount,
+    productCount,
+    ratingCount,
+    approvedRatingsCount,
+    pendingRatingsCount,
+    rejectedRatingsCount,
+    topSuppliers,
+  ] = await Promise.all([
     SupplierModel.countDocuments(),
     BuyerModel.countDocuments(),
     ProductModel.countDocuments(),
     RatingModel.countDocuments(),
+    RatingModel.countDocuments({ status: "approved" }),
+    RatingModel.countDocuments({ status: "pending" }),
+    RatingModel.countDocuments({ status: "rejected" }),
     SupplierModel.find({}, { _id: 0, name: 1, rating: 1 }).sort({ rating: -1 }).limit(5).lean(),
   ]);
 
@@ -29,6 +41,11 @@ export const getAnalytics = asyncHandler(async (_req: Request, res: Response) =>
       name: supplier.name,
       rating: supplier.rating || 0,
     })),
+    approvalDistribution: {
+      approved: approvedRatingsCount,
+      pending: pendingRatingsCount,
+      rejected: rejectedRatingsCount,
+    },
     totals: {
       suppliers: supplierCount,
       buyers: buyerCount,

@@ -38,15 +38,22 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export const PlatformInsights = ( ) => {
 
-  const { data: analyticsData, isLoading } = useGetAnalyticsQuery();
+  const {
+    data: analyticsData,
+    isLoading,
+    isError,
+    error,
+  } = useGetAnalyticsQuery();
 
   if (isLoading) return <p>Loading analytics...</p>;
+  if (isError) return <p>Failed to load analytics{error?.status ? ` (${error.status})` : ""}.</p>;
   if (!analyticsData) return <p>No analytics found.</p>;
   
+  const approvalDistribution = analyticsData.approvalDistribution || {};
   const pieData = [
-    { name: "Approved", value: 65 },
-    { name: "Pending", value: 20 },
-    { name: "Rejected", value: 15 },
+    { name: "Approved", value: Number(approvalDistribution.approved || 0) },
+    { name: "Pending", value: Number(approvalDistribution.pending || 0) },
+    { name: "Rejected", value: Number(approvalDistribution.rejected || 0) },
   ];
 
   const COLORS = ["#3b82f6", "#f59e0b", "#ef4444"];
@@ -192,26 +199,32 @@ export const PlatformInsights = ( ) => {
           </div>
 
           <div className="dashboard-card-content flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  dataKey="value"
-                  label
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {pieData.reduce((sum, item) => sum + Number(item.value || 0), 0) === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No approval data yet.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    dataKey="value"
+                    label
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
