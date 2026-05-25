@@ -7,6 +7,8 @@ import { env } from "../../../config/env.js";
 import { sendSmtpEmail } from "../../../utils/smtpEmail.js";
 import { AuthUserModel } from "../../auth/auth.model.js";
 import { hashPassword } from "../../auth/auth.service.js";
+import { objectsToCsv } from "../../../utils/csv.js";
+import { parseCsv } from "../../../utils/csvParse.js";
 import { SupplierModel } from "./supplier.model.js";
 
 const WORDPRESS_DEFAULT_LIMIT = 20;
@@ -188,4 +190,180 @@ export const deleteSupplier = asyncHandler(async (req: Request, res: Response) =
   const result = await SupplierModel.deleteOne({ id: req.params.supplierId });
   if (!result.deletedCount) throw new HttpError(404, "Supplier not found");
   res.json({ success: true, message: "Supplier deleted" });
+});
+
+export const exportSuppliersCsv = asyncHandler(async (req: Request, res: Response) => {
+  const status = String(req.query.status ?? "").trim().toLowerCase();
+  const documentStatus = String(req.query.documentStatus ?? "").trim().toLowerCase();
+  const q = String(req.query.q ?? "").trim();
+
+  const query: Record<string, unknown> = {};
+  if (status && status !== "all") query.status = { $regex: new RegExp(`^${escapeRegex(status)}$`, "i") };
+  if (documentStatus && documentStatus !== "all") query.documentStatus = { $regex: new RegExp(`^${escapeRegex(documentStatus)}$`, "i") };
+  if (q) {
+    const regex = new RegExp(escapeRegex(q), "i");
+    query.$or = [{ name: regex }, { email: regex }, { country: regex }, { type: regex }, { businessType: regex }];
+  }
+
+  const suppliers = await SupplierModel.find(query, { _id: 0 }).sort({ joinDate: -1, id: 1 }).lean();
+
+  const csv = objectsToCsv(suppliers as Record<string, unknown>[], [
+    { key: "id", label: "id" },
+    { key: "name", label: "name" },
+    { key: "email", label: "email" },
+    { key: "phone", label: "phone" },
+    { key: "type", label: "type" },
+    { key: "businessType", label: "businessType" },
+    { key: "calidusCluster", label: "calidusCluster" },
+    { key: "country", label: "country" },
+    { key: "productsCount", label: "productsCount" },
+    { key: "documentStatus", label: "documentStatus" },
+    { key: "status", label: "status" },
+    { key: "joinDate", label: "joinDate" },
+    { key: "rating", label: "rating" },
+    { key: "totalEnquiries", label: "totalEnquiries" },
+    { key: "profileViews", label: "profileViews" },
+  ]);
+
+  const date = new Date().toISOString().slice(0, 10);
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename=\"suppliers_${date}.csv\"`);
+  res.setHeader("Cache-Control", "no-store");
+  res.send(csv);
+});
+
+const SUPPLIER_COLUMNS = [
+  "id",
+  "name",
+  "email",
+  "phone",
+  "type",
+  "businessType",
+  "calidusCluster",
+  "country",
+  "productsCount",
+  "documentStatus",
+  "status",
+  "joinDate",
+  "rating",
+  "totalEnquiries",
+  "profileViews",
+] as const;
+
+const toNumberOrUndefined = (value: string) => {
+  if (!value) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+export const importSuppliersCsv = asyncHandler(async (req: Request, res: Response) => {
+  const csvText = String(req.body?.csv ?? "");
+  if (!csvText.trim()) throw new HttpError(400, "CSV content is required");
+
+  const parsed = parseCsv(csvText);
+  if (!parsed.headers.length) throw new HttpError(400, "CSV file is empty or missing headers");
+
+  const expected = new Set<string>(SUPPLIER_COLUMNS);
+  const provided = new Set<string>(parsed.headers.filter(Boolean));
+  const missingFields = SUPPLIER_COLUMNS.filter((h) => !provided.has(h));
+  const unknownFields = parsed.headers.filter((h) => h && !expected.has(h));
+
+  if (missingFields.length || unknownFields.length) {
+    res.status(400).json({
+      message: "CSV headers do not match the expected format",
+      expectedFields: SUPPLIER_COLUMNS,
+      missingFields,
+      unknownFields,
+    });
+    return;
+  }
+
+  const errors: Array<{ line: number; message: string }> = [];
+  let created = 0;
+  let updated = 0;
+
+  for (let index = 0; index < parsed.rows.length; index++) {
+    const line = index + 2;
+    const row = parsed.rows[index];
+    const email = String(row.email || "").toLowerCase().trim();
+    const name = String(row.name || "").trim();
+    if (!email) {
+      errors.push({ line, message: "Missing required field: email" });
+      continue;
+    }
+    if (!name) {
+      errors.push({ line, message: "Missing required field: name" });
+      continue;
+    }
+
+    const payload: Record<string, unknown> = {
+      name,
+      email,
+      phone: String(row.phone || "").trim(),
+      type: String(row.type || "").trim() || "OEM",
+      businessType: String(row.businessType || "").trim(),
+      calidusCluster: String(row.calidusCluster || "").trim(),
+      country: String(row.country || "").trim(),
+      documentStatus: String(row.documentStatus || "").trim() || "active",
+      status: String(row.status || "").trim() || "pending",
+      joinDate: String(row.joinDate || "").trim(),
+    };
+
+    const productsCount = toNumberOrUndefined(String(row.productsCount || ""));
+    if (row.productsCount && productsCount === undefined) {
+      errors.push({ line, message: `Invalid number in productsCount: "${row.productsCount}"` });
+      continue;
+    }
+    const rating = toNumberOrUndefined(String(row.rating || ""));
+    if (row.rating && rating === undefined) {
+      errors.push({ line, message: `Invalid number in rating: "${row.rating}"` });
+      continue;
+    }
+    const totalEnquiries = toNumberOrUndefined(String(row.totalEnquiries || ""));
+    if (row.totalEnquiries && totalEnquiries === undefined) {
+      errors.push({ line, message: `Invalid number in totalEnquiries: "${row.totalEnquiries}"` });
+      continue;
+    }
+    const profileViews = toNumberOrUndefined(String(row.profileViews || ""));
+    if (row.profileViews && profileViews === undefined) {
+      errors.push({ line, message: `Invalid number in profileViews: "${row.profileViews}"` });
+      continue;
+    }
+
+    if (productsCount !== undefined) payload.productsCount = productsCount;
+    if (rating !== undefined) payload.rating = rating;
+    if (totalEnquiries !== undefined) payload.totalEnquiries = totalEnquiries;
+    if (profileViews !== undefined) payload.profileViews = profileViews;
+
+    const id = String(row.id || "").trim();
+    if (id) {
+      const result = await SupplierModel.updateOne({ id }, { $set: payload }, { upsert: true });
+      if (result.upsertedCount) created += 1;
+      else updated += 1;
+      continue;
+    }
+
+    const existingByEmail = await SupplierModel.findOne({ email }, { _id: 0, id: 1 }).lean() as { id?: string } | null;
+    if (existingByEmail?.id) {
+      await SupplierModel.updateOne({ id: existingByEmail.id }, { $set: payload });
+      updated += 1;
+    } else {
+      const newId = createReadableId("SUP");
+      await SupplierModel.create({ id: newId, ...payload });
+      created += 1;
+    }
+  }
+
+  if (errors.length) {
+    res.status(422).json({
+      message: "Some rows failed validation",
+      created,
+      updated,
+      failed: errors.length,
+      errors,
+    });
+    return;
+  }
+
+  res.json({ created, updated, failed: 0 });
 });

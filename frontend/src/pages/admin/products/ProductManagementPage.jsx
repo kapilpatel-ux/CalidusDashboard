@@ -10,7 +10,8 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { RatingStars } from "@/components/shared/RatingStars";
-import { Building2, Eye, Check, X, Edit, Trash2, Ban, RotateCcw  } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building2, Eye, Check, X, Edit, Trash2, Ban, RotateCcw, Download } from "lucide-react";
 import {
   useGetProductsQuery,
   useUpdateProductStatusMutation,
@@ -38,6 +39,8 @@ export const ProductManagement = ({
   const [statusFilter, setStatusFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [isExporting, setIsExporting] = useState(false);
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
   const uniqueSuppliers = [...new Set(products.map((p) => p.supplierName))].filter(Boolean);
   const uniqueCategories = [...new Set(products.map((p) => p.category))].filter(Boolean);
@@ -48,6 +51,30 @@ export const ProductManagement = ({
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
     return matchesStatus && matchesSupplier && matchesCategory;
   });
+
+  const exportCsv = async () => {
+    const date = new Date().toISOString().slice(0, 10);
+    const url = `${backendUrl}/api/products/export?status=${encodeURIComponent(statusFilter)}&supplierName=${encodeURIComponent(supplierFilter)}&category=${encodeURIComponent(categoryFilter)}`;
+    setIsExporting(true);
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`Export failed (${resp.status})`);
+      const blob = await resp.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `products_${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export products CSV. Check backend logs.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const deriveRating = (row) => {
     if (typeof row.rating === "number" && row.rating > 0) return row.rating;
@@ -280,9 +307,21 @@ export const ProductManagement = ({
         columns={columns}
         data={filteredProducts}
         searchPlaceholder="Search products or suppliers..."
-        searchKey="name"
+        searchKeys={["name", "supplierName", "category", "subcategory"]}
         pageSize={10}
         testId="products-table"
+        toolbarRight={
+          <Button
+            variant="outline"
+            className="h-9 bg-black/20 border-border rounded-sm"
+            onClick={exportCsv}
+            disabled={isExporting}
+            data-testid="export-products-csv"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {isExporting ? "Exporting..." : "Export CSV"}
+          </Button>
+        }
       />
     </div>
   );

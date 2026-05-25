@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
+import { objectsToCsv } from "../../../utils/csv.js";
 import { ProductModel } from "./product.model.js";
 import { createAdminNotification } from "../notifications/notification.service.js";
 import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
@@ -132,4 +133,44 @@ export const deleteProduct = asyncHandler(async (req: Request, res: Response) =>
   const result = await ProductModel.deleteOne({ id: req.params.productId });
   if (!result.deletedCount) throw new HttpError(404, "Product not found");
   res.json({ success: true, message: "Product deleted" });
+});
+
+export const exportProductsCsv = asyncHandler(async (req: Request, res: Response) => {
+  const status = String(req.query.status ?? "").trim().toLowerCase();
+  const supplierName = String(req.query.supplierName ?? "").trim();
+  const category = String(req.query.category ?? "").trim();
+  const q = String(req.query.q ?? "").trim();
+
+  const query: Record<string, unknown> = {};
+  if (status && status !== "all") query.status = { $regex: new RegExp(`^${escapeRegex(status)}$`, "i") };
+  if (supplierName && supplierName !== "all") query.supplierName = supplierName;
+  if (category && category !== "all") query.category = category;
+  if (q) {
+    const regex = new RegExp(escapeRegex(q), "i");
+    query.$or = [{ name: regex }, { supplierName: regex }, { category: regex }, { subcategory: regex }];
+  }
+
+  const products = await ProductModel.find(query, { _id: 0 }).sort({ createdAt: -1, id: 1 }).lean();
+
+  const csv = objectsToCsv(products as Record<string, unknown>[], [
+    { key: "id", label: "id" },
+    { key: "name", label: "name" },
+    { key: "supplierId", label: "supplierId" },
+    { key: "supplierName", label: "supplierName" },
+    { key: "category", label: "category" },
+    { key: "subcategory", label: "subcategory" },
+    { key: "status", label: "status" },
+    { key: "rating", label: "rating" },
+    { key: "price", label: "price" },
+    { key: "availability", label: "availability" },
+    { key: "countryOfOrigin", label: "countryOfOrigin" },
+    { key: "createdDate", label: "createdDate" },
+    { key: "createdAt", label: "createdAt" },
+  ]);
+
+  const date = new Date().toISOString().slice(0, 10);
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename=\"products_${date}.csv\"`);
+  res.setHeader("Cache-Control", "no-store");
+  res.send(csv);
 });

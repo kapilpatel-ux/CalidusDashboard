@@ -17,6 +17,7 @@ export const DataTable = ({
   data,
   searchPlaceholder = "Search...",
   searchKey,
+  searchKeys,
   pageSize = 10,
   className,
   testId,
@@ -26,13 +27,24 @@ export const DataTable = ({
   const [currentPage, setCurrentPage] = useState(1);
 
   // Filter data based on search
-  const filteredData = searchKey
-    ? data.filter((item) =>
-        String(item[searchKey])
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      )
-    : data;
+  const normalizedSearch = searchTerm.toLowerCase();
+  const effectiveSearchKeys =
+    Array.isArray(searchKeys) && searchKeys.length
+      ? searchKeys
+      : searchKey
+        ? [searchKey]
+        : [];
+
+  const filteredData =
+    effectiveSearchKeys.length && normalizedSearch
+      ? data.filter((item) =>
+          effectiveSearchKeys.some((key) =>
+            String(item?.[key] ?? "")
+              .toLowerCase()
+              .includes(normalizedSearch)
+          )
+        )
+      : data;
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / pageSize);
@@ -41,10 +53,10 @@ export const DataTable = ({
 
   return (
     <div className={cn("space-y-4", className)} data-testid={testId}>
-      {(searchKey || toolbarRight) && (
+      {(effectiveSearchKeys.length || toolbarRight) && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Search */}
-          {searchKey && (
+          {effectiveSearchKeys.length > 0 && (
             <div className="relative w-full max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

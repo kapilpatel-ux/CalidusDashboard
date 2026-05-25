@@ -9,7 +9,8 @@ import {
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
-import { Building2, Eye, Check, X, Ban, Trash2, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building2, Eye, Check, X, Ban, Trash2, RotateCcw, Download } from "lucide-react";
 import {
   useGetSuppliersQuery,
   useDeleteSupplierMutation,
@@ -39,6 +40,91 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
     const matchesDoc = docFilter === "all" || s.documentStatus === docFilter;
     return matchesStatus && matchesDoc;
   });
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+  const requiredSupplierColumns = [
+    "id",
+    "name",
+    "email",
+    "phone",
+    "type",
+    "businessType",
+    "calidusCluster",
+    "country",
+    "productsCount",
+    "documentStatus",
+    "status",
+    "joinDate",
+    "rating",
+    "totalEnquiries",
+    "profileViews",
+  ];
+
+  const exportCsv = async () => {
+    const date = new Date().toISOString().slice(0, 10);
+    const url = `${backendUrl}/api/suppliers/export?status=${encodeURIComponent(statusFilter)}&documentStatus=${encodeURIComponent(docFilter)}`;
+    setIsExporting(true);
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`Export failed (${resp.status})`);
+      const blob = await resp.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `suppliers_${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export suppliers CSV. Check backend logs / SMTP config is unrelated.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const importCsv = async (file) => {
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const csv = await file.text();
+      const resp = await fetch(`${backendUrl}/api/suppliers/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csv }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const msg =
+          data?.message ||
+          data?.detail ||
+          `Import failed (${resp.status}). Ensure the CSV has the correct columns.`;
+        const expectedFields = Array.isArray(data?.expectedFields) && data.expectedFields.length
+          ? data.expectedFields
+          : requiredSupplierColumns;
+
+        if (resp.status === 400) {
+          alert(
+            `${msg}\n\nRequired columns:\n${expectedFields.join(", ")}\n\nMissing: ${(data.missingFields || []).join(", ") || "None"}\nUnknown: ${(data.unknownFields || []).join(", ") || "None"}`
+          );
+        } else if (data?.errors?.length) {
+          alert(`${msg}\n\nFirst error (line ${data.errors[0].line}): ${data.errors[0].message}`);
+        } else {
+          alert(msg);
+        }
+        return;
+      }
+      alert(`Import completed.\nCreated: ${data.created || 0}\nUpdated: ${data.updated || 0}\nFailed: ${data.failed || 0}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to import suppliers CSV. Check console for details.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const getDocStatusBadge = (status) => {
     switch (status) {
@@ -236,9 +322,45 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
         columns={columns}
         data={filteredSuppliers}
         searchPlaceholder="Search suppliers..."
-        searchKey="name"
+        searchKeys={["name", "email", "country", "businessType", "type"]}
         pageSize={10}
         testId="suppliers-table"
+        toolbarRight={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-9 bg-black/20 border-border rounded-sm"
+              onClick={exportCsv}
+              disabled={isExporting || isImporting}
+              data-testid="export-suppliers-csv"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? "Exporting..." : "Export CSV"}
+            </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="h-9 bg-black/20 border-border rounded-sm"
+              disabled={isExporting || isImporting}
+              data-testid="import-suppliers-csv"
+            >
+              <label>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    importCsv(file);
+                  }}
+                />
+                {isImporting ? "Importing..." : "Import CSV"}
+              </label>
+            </Button>
+          </div>
+        }
       />
     </div>
   );
