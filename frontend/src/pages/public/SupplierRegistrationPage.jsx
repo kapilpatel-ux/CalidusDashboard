@@ -605,9 +605,7 @@ export const SupplierRegistrationPage = () => {
       if (countryCode && form.stateCode && city && cityOptions.length && !cityOptions.some((option) => option.name === city)) {
         nextErrors.cityState = `Select a city available for ${state}`;
       }
-      if (!postalCode) {
-        nextErrors.postalCode = "Postal code is required";
-      } else if (countryCode) {
+      if (postalCode && countryCode) {
         const postalValidation = postalCodes.validate(countryCode, postalCode);
         if (postalValidation !== true) {
           nextErrors.postalCode = `Enter a valid postal code for ${country}`;
@@ -1212,7 +1210,7 @@ export const SupplierRegistrationPage = () => {
                     </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        ZIP / Postal Code *
+                        ZIP / Postal Code
                       </Label>
                       <Input
                         value={form.postalCode}

@@ -20,12 +20,13 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { COUNTRIES } from "@/data/countries";
-import { validatePhoneNumber } from "@/lib/phoneValidation";
+import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
 
 const initialForm = {
   fullName: "",
   company: "",
-  buyerCountry: "",
+  buyerCountry: getCountryNameFromDialCode("+1") || "United States",
+  phoneCountryCode: "+1",
   supplierCountry: "",
   supplierId: "",
   email: "",
@@ -73,7 +74,7 @@ export default function ContactSupplierPage() {
     const fullName = form.fullName.trim();
     const email = form.email.trim();
     const company = form.company.trim();
-    const buyerCountry = String(form.buyerCountry || "").trim();
+    const buyerCountry = String(form.buyerCountry || getCountryNameFromDialCode(form.phoneCountryCode) || "").trim();
 
     const phone = String(form.phone || "").trim();
 
@@ -83,7 +84,12 @@ export default function ContactSupplierPage() {
       return;
     }
     
-    if (!fullName || !company || !email || !buyerCountry || !selectedSupplier || !selectedProduct) {
+    if (!buyerCountry) {
+      toast.error("Please select a valid mobile country code");
+      return;
+    }
+
+    if (!fullName || !company || !email || !selectedSupplier || !selectedProduct) {
       toast.error("Please complete all fields");
       return;
     }
@@ -176,34 +182,19 @@ export default function ContactSupplierPage() {
                 <PhoneInput
                   country={"us"}
                   value={form.phone}
-                  onChange={(value) => updateField("phone", value)}
+                  onChange={(value, data) => {
+                    updateField("phone", value);
+                    const dialCode = data?.dialCode ? `+${data.dialCode}` : "";
+                    const inferredCountry = String(getCountryNameFromDialCode(dialCode) || data?.name || "").trim();
+                    if (dialCode) updateField("phoneCountryCode", dialCode);
+                    if (inferredCountry) updateField("buyerCountry", inferredCountry);
+                  }}
                   inputClass="!w-full !h-[51px] !bg-[#070709] !text-white !border-[#29292E]"
                   // buttonClass="!bg-[#070709] !border-[#29292E]"
                   buttonClass="!bg-[#070709] !border-[#29292E] hover:!bg-[#070709] focus:!bg-[#070709]"
                   dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"
                   containerClass="phone-input-container"
                 />
-              </Field>
-
-              <Field label="Country">
-                <Select
-                  value={form.buyerCountry}
-                  onValueChange={(value) => updateField("buyerCountry", value)}
-                  required
-                >
-                  <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="h-72">
-                      {COUNTRIES.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
               </Field>
             </div>
           </div>

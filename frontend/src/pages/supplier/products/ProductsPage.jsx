@@ -35,6 +35,7 @@ const emptyEditForm = {
   name: "",
   image: "",
   category: "",
+  leadTime: "",
   countryOfOrigin: "",
   keyFeatures: "",
   supplierName: "",
@@ -58,6 +59,7 @@ const emptyAddForm = {
   name: "",
   image: "",
   category: "",
+  leadTime: "",
   countryOfOrigin: "",
   keyFeatures: "",
   supplierName: "",
@@ -401,6 +403,7 @@ export const SupplierProducts = () => {
       name: product.name || "",
       image: getProductImage(product),
       category: product.category || "",
+      leadTime: product.leadTime || "",
       countryOfOrigin: product.countryOfOrigin || "",
       keyFeatures: product.shortDescription || product.description || "",
       supplierName: supplierSnapshot.name || product.supplierName || currentSupplier.name || "",
@@ -442,6 +445,7 @@ export const SupplierProducts = () => {
       image: image || null,
       images: image ? [{ url: image }] : [],
       category: form.category,
+      leadTime: String(form.leadTime || "").trim(),
       countryOfOrigin: form.countryOfOrigin,
       shortDescription: form.keyFeatures,
       description: form.keyFeatures,
@@ -693,6 +697,7 @@ export const SupplierProducts = () => {
                 </Button>
               </div>
               <ProductSelectField label="Country" value={addForm.countryOfOrigin} onChange={(value) => setAddField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
+              <ProductTextField label="Lead Time" value={addForm.leadTime} onChange={(value) => setAddField("leadTime", value)} placeholder="e.g. 2-3 weeks" />
               <ProductTextField label="Key Features" value={addForm.keyFeatures} onChange={(value) => setAddField("keyFeatures", value)} placeholder="Enter key features" />
               <ProductDatasheetField value={addForm.datasheet} onChange={(value) => setAddField("datasheet", value)} testId="add-product-datasheet" />
             </FormSection>
@@ -878,6 +883,7 @@ export const SupplierProducts = () => {
                 </Button>
               </div>
               <ProductSelectField label="Country" value={editForm.countryOfOrigin} onChange={(value) => setEditField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
+              <ProductTextField label="Lead Time" value={editForm.leadTime} onChange={(value) => setEditField("leadTime", value)} placeholder="e.g. 2-3 weeks" />
               <ProductTextField label="Key Features" value={editForm.keyFeatures} onChange={(value) => setEditField("keyFeatures", value)} placeholder="Enter key features" />
             </FormSection>
 

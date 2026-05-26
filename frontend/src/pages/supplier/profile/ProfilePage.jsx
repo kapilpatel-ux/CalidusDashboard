@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactSelect from "react-select";
 import countryList from "react-select-country-list";
 import PhoneInput from "react-phone-input-2";
@@ -22,6 +22,23 @@ const defaultProfileDocuments = [
 ];
 
 const SUPPLIER_IMAGE_MAX_MB = 5;
+
+const pad2 = (n) => String(n).padStart(2, "0");
+const toLocalISODate = (date) =>
+  `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+const getTomorrowLocalISODate = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  return toLocalISODate(d);
+};
+const isOnOrAfter = (dateString, minDateString) =>
+  String(dateString || "") >= String(minDateString || "");
+const isFutureDateSelected = (dateString, minDateString) => {
+  const normalized = String(dateString || "").trim();
+  if (!normalized) return false;
+  return isOnOrAfter(normalized, minDateString);
+};
 
 const formatDocumentName = (document = {}) =>
   document.name ||
@@ -82,9 +99,31 @@ export const SupplierProfile = () => {
   const [uploadDocDialog, setUploadDocDialog] = useState({ open: false, document: null });
   const [profileForm, setProfileForm] = useState({});
   const [selectedDocumentFile, setSelectedDocumentFile] = useState(null);
+  const [selectedDocumentExpiryDate, setSelectedDocumentExpiryDate] = useState("");
   const documentInputRef = useRef(null);
   const [profileErrors, setProfileErrors] = useState({});
+  const minExpiryDate = useMemo(() => getTomorrowLocalISODate(), []);
+  const documentsRequireFutureExpiry = useMemo(
+    () => (profileForm.documents || []).some((d) => Boolean(String(d?.fileName || "").trim())),
+    [profileForm.documents]
+  );
+  const canSaveProfile =
+    !documentsRequireFutureExpiry ||
+    (profileForm.documents || []).every((d) => {
+      if (!String(d?.fileName || "").trim()) return true;
+      return isFutureDateSelected(d?.expiryDate, minExpiryDate);
+    });
+  const canUploadDocument =
+    Boolean(selectedDocumentFile) && isFutureDateSelected(selectedDocumentExpiryDate, minExpiryDate);
   
+  useEffect(() => {
+    if (uploadDocDialog.open) {
+      setSelectedDocumentExpiryDate(String(uploadDocDialog.document?.expiryDate || ""));
+    } else {
+      setSelectedDocumentExpiryDate("");
+    }
+  }, [uploadDocDialog.open, uploadDocDialog.document]);
+
   const openEdit = () => {
     setProfileForm({
       ...supplier,
@@ -123,7 +162,9 @@ export const SupplierProfile = () => {
     ...document,
     name: formatDocumentName(document),
     status: "active",
-    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    expiryDate:
+      String(document?.expiryDate || "").trim() ||
+      new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     fileName: file.name,
     fileType: file.type,
     fileSize: file.size,
@@ -135,6 +176,23 @@ export const SupplierProfile = () => {
 
     const updatedDocuments = (profileForm.documents || []).map((document, documentIndex) =>
       documentIndex === index ? applyUploadedFileToDocument(document, file) : document
+    );
+
+    setProfileForm({
+      ...profileForm,
+      documents: updatedDocuments,
+      documentStatus: getDocumentStatus(updatedDocuments),
+    });
+  };
+
+  const updateDocumentExpiryDate = (index, expiryDate) => {
+    const normalized = String(expiryDate || "").trim();
+    if (normalized && !isOnOrAfter(normalized, minExpiryDate)) {
+      toast.error("Expiry date must be a future date");
+      return;
+    }
+    const updatedDocuments = (profileForm.documents || []).map((document, documentIndex) =>
+      documentIndex === index ? { ...document, expiryDate: normalized } : document
     );
 
     setProfileForm({
@@ -215,6 +273,14 @@ export const SupplierProfile = () => {
     if(!validateProfileForm()) return;
 
     const documents = profileForm.documents || [];
+    const invalidExpiry = documents.some((doc) => {
+      const expiry = String(doc?.expiryDate || "").trim();
+      return expiry && !isOnOrAfter(expiry, minExpiryDate);
+    });
+    if (invalidExpiry) {
+      toast.error("Please set document expiry dates to a future date");
+      return;
+    }
 
     try {
       const updated = await updateSupplierProfile({
@@ -245,10 +311,18 @@ export const SupplierProfile = () => {
 
   const handleUploadDocument = async () => {
     if (!validateDocumentFile(selectedDocumentFile)) return;
+    const normalizedExpiry = String(selectedDocumentExpiryDate || "").trim();
+    if (normalizedExpiry && !isOnOrAfter(normalizedExpiry, minExpiryDate)) {
+      toast.error("Expiry date must be a future date");
+      return;
+    }
 
     const updatedDocs = profileDocuments.map((doc) =>
       (doc.type || doc.name) === (uploadDocDialog.document.type || uploadDocDialog.document.name)
-        ? applyUploadedFileToDocument(doc, selectedDocumentFile)
+        ? {
+            ...applyUploadedFileToDocument(doc, selectedDocumentFile),
+            expiryDate: normalizedExpiry || doc.expiryDate || "",
+          }
         : doc
     );
 
@@ -260,6 +334,7 @@ export const SupplierProfile = () => {
       toast.success(`${uploadDocDialog.document.name} re-uploaded successfully`);
       setUploadDocDialog({ open: false, document: null });
       setSelectedDocumentFile(null);
+      setSelectedDocumentExpiryDate("");
     } catch (err) {
       toast.error(err?.data?.message || "Failed to upload document");
     }
@@ -509,26 +584,54 @@ export const SupplierProfile = () => {
                           {status}
                         </span>
                       </div>
-                      <div className="mt-3">
-                        <input
-                          id={`edit-profile-doc-input-${idx}`}
-                          type="file"
-                          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                          className="hidden"
-                          onChange={(event) => {
-                            handleEditDocumentFile(idx, event.target.files?.[0] || null);
-                            event.target.value = "";
-                          }}
-                          data-testid={`edit-profile-doc-input-${idx}`}
-                        />
-                        <label
-                          htmlFor={`edit-profile-doc-input-${idx}`}
-                          className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                          data-testid={`edit-profile-doc-upload-${idx}`}
-                        >
-                          <Upload className="h-4 w-4" />
-                          Upload / Replace
-                        </label>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Expiry Date
+                          </Label>
+                          <Input
+                            type="date"
+                            value={doc.expiryDate || ""}
+                            onChange={(event) => updateDocumentExpiryDate(idx, event.target.value)}
+                            min={minExpiryDate}
+                            className="bg-black/20 mt-1"
+                            data-testid={`edit-profile-doc-expiry-${idx}`}
+                            disabled={isSaving}
+                          />
+                          {String(doc?.fileName || "").trim() && (
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              Required when a document is uploaded
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-end">
+                          <div className="w-full">
+                            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              Replace File
+                            </Label>
+                            <div className="mt-1">
+                              <input
+                                id={`edit-profile-doc-input-${idx}`}
+                                type="file"
+                                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                className="hidden"
+                                onChange={(event) => {
+                                  handleEditDocumentFile(idx, event.target.files?.[0] || null);
+                                  event.target.value = "";
+                                }}
+                                data-testid={`edit-profile-doc-input-${idx}`}
+                              />
+                              <label
+                                htmlFor={`edit-profile-doc-input-${idx}`}
+                                className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-sm border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                                data-testid={`edit-profile-doc-upload-${idx}`}
+                              >
+                                <Upload className="h-4 w-4" />
+                                Upload / Replace
+                              </label>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -539,7 +642,7 @@ export const SupplierProfile = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditProfileDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveProfile} disabled={isSaving} data-testid="save-profile-btn">
+            <Button onClick={handleSaveProfile} disabled={isSaving || !canSaveProfile} data-testid="save-profile-btn">
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
@@ -550,7 +653,12 @@ export const SupplierProfile = () => {
         open={uploadDocDialog.open}
         onOpenChange={(open) => {
           setUploadDocDialog({ ...uploadDocDialog, open });
-          if (!open) setSelectedDocumentFile(null);
+          if (!open) {
+            setSelectedDocumentFile(null);
+            setSelectedDocumentExpiryDate("");
+          } else {
+            setSelectedDocumentExpiryDate(String(uploadDocDialog.document?.expiryDate || ""));
+          }
         }}
       >
         <DialogContent>
@@ -561,6 +669,27 @@ export const SupplierProfile = () => {
             )}
           </DialogHeader>
           <div className="py-4">
+            <div className="mb-4">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                Expiry Date
+              </Label>
+              <Input
+                type="date"
+                value={selectedDocumentExpiryDate || ""}
+                onChange={(event) => {
+                  const next = String(event.target.value || "").trim();
+                  if (next && !isOnOrAfter(next, minExpiryDate)) {
+                    toast.error("Expiry date must be a future date");
+                    return;
+                  }
+                  setSelectedDocumentExpiryDate(next);
+                }}
+                min={minExpiryDate}
+                className="bg-black/20 mt-1"
+                data-testid="document-expiry-date"
+                disabled={isSaving}
+              />
+            </div>
             <input
               ref={documentInputRef}
               type="file"
@@ -584,8 +713,17 @@ export const SupplierProfile = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadDocDialog({ open: false, document: null })}>Cancel</Button>
-            <Button onClick={handleUploadDocument} disabled={!selectedDocumentFile || isSaving} data-testid="upload-doc-btn">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUploadDocDialog({ open: false, document: null });
+                setSelectedDocumentFile(null);
+                setSelectedDocumentExpiryDate("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUploadDocument} disabled={!canUploadDocument || isSaving} data-testid="upload-doc-btn">
               {isSaving ? "Uploading..." : "Upload Document"}
             </Button>
           </DialogFooter>

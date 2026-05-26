@@ -113,7 +113,7 @@ export const ProductDetailSheet = ({
             <Section title="Technical Details">
               <DetailRow label="Technical Specs" value={product.technicalSpecs} />
               <DetailRow label="Application Use Case" value={product.applicationUseCase} />
-              <DetailRow label="AI Summary" value={product.aiSummary} />
+              {/* <DetailRow label="AI Summary" value={product.aiSummary} /> */}
             </Section>
 
             <Section title="Specifications">
@@ -124,7 +124,7 @@ export const ProductDetailSheet = ({
               )}
             </Section>
 
-            <Section title="Certifications">
+            {/* <Section title="Certifications">
               {product.certifications?.length > 0 ? (
                 <BadgeList items={product.certifications} />
               ) : (
@@ -138,9 +138,9 @@ export const ProductDetailSheet = ({
               ) : (
                 <Empty text="No industry tags available." />
               )}
-            </Section>
+            </Section> */}
 
-            <Section title="Dimensions">
+            {/* <Section title="Dimensions">
               {product.dimensions && Object.keys(product.dimensions).length > 0 ? (
                 Object.entries(product.dimensions).map(([key, value]) => (
                   <DetailRow key={key} label={key} value={value} />
@@ -148,14 +148,14 @@ export const ProductDetailSheet = ({
               ) : (
                 <Empty text="No dimensions available." />
               )}
-            </Section>
+            </Section> */}
 
             <Section title="Documents">
               {product.datasheet && (
                 <DocCard title="Datasheet" doc={product.datasheet} />
               )}
 
-              {product.technicalDocs?.length > 0 ? (
+              {/* {product.technicalDocs?.length > 0 ? (
                 product.technicalDocs.map((doc, index) => (
                   <DocCard
                     key={doc.id || index}
@@ -165,7 +165,7 @@ export const ProductDetailSheet = ({
                 ))
               ) : !product.datasheet ? (
                 <Empty text="No documents available." />
-              ) : null}
+              ) : null} */}
             </Section>
 
             {product.videoUrl && (
