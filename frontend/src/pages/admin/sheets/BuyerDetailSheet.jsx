@@ -71,12 +71,12 @@ export const BuyerDetailSheet = ({ viewSheet, setViewSheet }) => {
               <DetailRow label="Last Active" value={buyer.lastActive} />
             </Section>
 
-            <Section title="Extra Details">
+            {/* <Section title="Extra Details">
               <DetailRow label="Industry" value={buyer.industry} />
               <DetailRow label="Designation" value={buyer.designation} />
               <DetailRow label="Website" value={buyer.website} />
               <DetailRow label="Address" value={buyer.address} />
-            </Section>
+            </Section> */}
           </div>
         )}
       </SheetContent>

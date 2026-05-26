@@ -5,6 +5,7 @@ import { createReadableId } from "../../../utils/id.js";
 import { BuyerModel } from "../../admin/buyers/buyer.model.js";
 import { EnquiryModel } from "../../admin/enquiries/enquiry.model.js";
 import { ProductModel } from "../../admin/products/product.model.js";
+import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
@@ -60,5 +61,16 @@ export const createBuyerEnquiry = asyncHandler(async (req: Request, res: Respons
   });
 
   await syncBuyerEnquiryCount(buyerId);
+  try {
+    await createSupplierNotification({
+      supplierId: product.supplierId,
+      type: "enquiry",
+      title: "New Product Enquiry",
+      message: `${buyerRecord.name || buyerId} sent an enquiry for ${product.name}.`,
+      link: "enquiries",
+    });
+  } catch (err) {
+    console.error("Failed to create supplier notification for buyer enquiry", err);
+  }
   res.status(201).json(created.toJSON());
 });

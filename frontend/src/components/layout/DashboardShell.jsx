@@ -48,10 +48,11 @@ import {
   Clock,
 	  FileText
 	} from "lucide-react";
-import { messages, supplierNotifications } from "@/data/mockData";
+import { messages } from "@/data/mockData";
 import { useGetNotificationsQuery, useUpdateNotificationReadMutation } from "@/store/api/admin/notificationApi";
 import { useGetBuyerProfileQuery } from "@/store/api/buyer/buyerProfileApi";
 import { useGetSupplierProfileQuery } from "@/store/api/supplier/supplierProfileApi";
+import { useGetSupplierNotificationsQuery, useUpdateSupplierNotificationReadMutation } from "@/store/api/supplier/notificationApi";
 
 // Navigation items for each role
 const navigationConfig = {
@@ -211,6 +212,10 @@ export const DashboardShell = ({ children }) => {
   const [messagesList] = useState(messages);
   const buyerProfileId = currentRole === "buyer" ? currentUser?.profileId : "";
   const supplierProfileId = currentRole === "supplier" ? currentUser?.profileId : "";
+  const { data: supplierNotifications = [] } = useGetSupplierNotificationsQuery(supplierProfileId, {
+    skip: !supplierProfileId,
+  });
+  const [updateSupplierNotificationRead] = useUpdateSupplierNotificationReadMutation();
   const { data: buyerProfile = {} } = useGetBuyerProfileQuery(buyerProfileId, {
     skip: !buyerProfileId,
   });
@@ -245,7 +250,7 @@ export const DashboardShell = ({ children }) => {
     if (currentRole === "supplier") return supplierNotifications;
     if (isAdminRole) return adminNotifications;
     return [];
-  }, [adminNotifications, currentRole, isAdminRole]);
+  }, [adminNotifications, currentRole, isAdminRole, supplierNotifications]);
   const recentNotifications = useMemo(() => notificationsList.slice(0, 4), [notificationsList]);
 
   const navItems = useMemo(() => {
@@ -279,6 +284,12 @@ export const DashboardShell = ({ children }) => {
     if (isAdminRole && notification?.id) {
       try {
         await updateNotificationRead({ id: notification.id, read: true }).unwrap();
+      } catch (err) {
+        // non-blocking
+      }
+    } else if (currentRole === "supplier" && supplierProfileId && notification?.id) {
+      try {
+        await updateSupplierNotificationRead({ supplierId: supplierProfileId, id: notification.id, read: true }).unwrap();
       } catch (err) {
         // non-blocking
       }

@@ -6,6 +6,7 @@ import { ProductModel } from "../../admin/products/product.model.js";
 import { RatingModel } from "../../admin/ratings/rating.model.js";
 import { BuyerModel } from "../../admin/buyers/buyer.model.js";
 import { refreshRatingAggregates } from "../../admin/ratings/rating.service.js";
+import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
@@ -60,6 +61,17 @@ export const createBuyerRating = asyncHandler(async (req: Request, res: Response
 
   const created = await RatingModel.create(payload);
   await syncBuyerRatingCount(buyerId);
+  try {
+    await createSupplierNotification({
+      supplierId: product.supplierId,
+      type: "rating",
+      title: "New Product Rating",
+      message: `${buyerRecord.name || buyerId} rated ${product.name} ${req.body.rating}/5.`,
+      link: "ratings",
+    });
+  } catch (err) {
+    console.error("Failed to create supplier notification for buyer rating", err);
+  }
 
   res.status(201).json(created.toJSON());
 });
