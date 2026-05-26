@@ -7,6 +7,7 @@ const statusStyles = {
   suspended: "status-badge-suspended",
   rejected: "status-badge-rejected",
   replied: "status-badge-replied",
+  resolved: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
 };
 
 export const StatusBadge = ({ status, className }) => {
