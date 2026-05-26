@@ -10,13 +10,36 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { Button } from "@/components/ui/button";
-import { Building2, Eye, Check, X, Ban, Trash2, RotateCcw, Download } from "lucide-react";
+import { ArrowDown, ArrowUp, Building2, CalendarDays, Eye, Check, X, Ban, Trash2, RotateCcw, Download } from "lucide-react";
 import {
   useGetSuppliersQuery,
   useDeleteSupplierMutation,
 } from "@/store/api/admin/supplierApi";
 import { useAdminActions } from "../AdminContext";
 import { useRole } from "@/App";
+
+const getSupplierDate = (supplier = {}) =>
+  supplier.joinDate || supplier.createdAt || supplier.createdDate || supplier.date || "";
+
+const getSupplierDateTime = (supplier = {}) => {
+  const value = getSupplierDate(supplier);
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const formatSupplierDate = (supplier = {}) => {
+  const value = getSupplierDate(supplier);
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
   const { currentRole } = useRole();
@@ -34,12 +57,21 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [docFilter, setDocFilter] = useState("all");
+  const [dateSortDirection, setDateSortDirection] = useState("desc");
 
-  const filteredSuppliers = suppliers.filter((s) => {
-    const matchesStatus = statusFilter === "all" || s.status === statusFilter;
-    const matchesDoc = docFilter === "all" || s.documentStatus === docFilter;
-    return matchesStatus && matchesDoc;
-  });
+  const filteredSuppliers = suppliers
+    .filter((s) => {
+      const matchesStatus = statusFilter === "all" || s.status === statusFilter;
+      const matchesDoc = docFilter === "all" || s.documentStatus === docFilter;
+      return matchesStatus && matchesDoc;
+    })
+    .slice()
+    .sort((a, b) => {
+      const firstTime = getSupplierDateTime(a);
+      const secondTime = getSupplierDateTime(b);
+      const sortValue = firstTime - secondTime;
+      return dateSortDirection === "asc" ? sortValue : -sortValue;
+    });
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -156,6 +188,26 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
     { key: "type", label: "Business Type", render: (value, row) => row.businessType || value || "N/A" },
     { key: "calidusCluster", label: "Cluster", render: (value) => value || "N/A" },
     { key: "country", label: "Country" },
+    {
+      key: "joinDate",
+      label: (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+          onClick={() => setDateSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
+          data-testid="supplier-date-sort-btn"
+        >
+          Date
+          {dateSortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+        </button>
+      ),
+      render: (_, row) => (
+        <div className="flex items-center gap-2 text-sm">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <span>{formatSupplierDate(row)}</span>
+        </div>
+      ),
+    },
     { key: "productsCount", label: "Products" },
     {
       key: "documentStatus",

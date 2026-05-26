@@ -9,6 +9,7 @@ import { AuthUserModel } from "../../auth/auth.model.js";
 import { hashPassword } from "../../auth/auth.service.js";
 import { objectsToCsv } from "../../../utils/csv.js";
 import { parseCsv } from "../../../utils/csvParse.js";
+import { createAdminNotification } from "../notifications/notification.service.js";
 import { BuyerModel } from "./buyer.model.js";
 
 type BuyerRecord = {
@@ -275,6 +276,19 @@ export const importBuyersCsv = asyncHandler(async (req: Request, res: Response) 
       errors,
     });
     return;
+  }
+
+  if (created > 0) {
+    try {
+      await createAdminNotification({
+        type: "buyer",
+        title: "Buyers Imported",
+        message: `${created} buyer${created === 1 ? "" : "s"} created from CSV import.`,
+        link: "buyermanagement",
+      });
+    } catch (err) {
+      console.error("Failed to create admin notification for buyer import", err);
+    }
   }
 
   res.json({ created, updated, failed: 0 });

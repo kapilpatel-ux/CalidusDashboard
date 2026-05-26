@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Building2, Edit, Mail, MapPin, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
+import { validatePhoneNumber } from "@/lib/phoneValidation";
 
 import { currentBuyer } from "@/data/mockData";
 import {
@@ -46,8 +47,9 @@ export const BuyerProfile = () => {
 
     const phone = String(profileForm.phone || "").trim();
 
-    if (!/^\d{4,16}$/.test(phone)) {
-      toast.error("Enter a valid phone number");
+    const phoneError = validatePhoneNumber(phone, profileForm.country);
+    if (phoneError) {
+      toast.error(phoneError);
       return;
     }
 

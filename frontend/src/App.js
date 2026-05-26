@@ -6,6 +6,7 @@ import { DashboardShell } from "@/components/layout/DashboardShell";
 import { AuthPage } from "@/pages/auth/AuthPage";
 import ContactSupplierPage from "@/pages/ContactSupplierPage";
 import { SupplierRegistrationPage } from "@/pages/public/SupplierRegistrationPage";
+import { useGetAdminRolesQuery } from "@/store/api/admin/roleApi";
 
 import {
   AdminProvider,
@@ -97,9 +98,6 @@ function App() {
   // Permissions are stored against admin roles (sub_admin/content_manager/custom roles)
   // Platform admin is treated as full access.
   // This is a UI guard; backend endpoints are currently not permission-protected.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { useGetAdminRolesQuery } = require("@/store/api/admin/roleApi");
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: adminRoles = [] } = useGetAdminRolesQuery(undefined, { skip: !isAdminRole });
 
   const permissionSet = useMemo(() => {

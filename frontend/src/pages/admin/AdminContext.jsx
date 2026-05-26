@@ -28,6 +28,7 @@ import { buyerApi } from "@/store/api/admin/buyerApi";
 import { userApi } from "@/store/api/admin/userApi";
 import { roleApi } from "@/store/api/admin/roleApi";
 import { permissionApi } from "@/store/api/admin/permissionApi";
+import { validatePhoneNumber } from "@/lib/phoneValidation";
 import { buyerRatingApi } from "@/store/api/buyer/buyerRatingApi";
 
 const invalidateBuyerRatingCache = () => {
@@ -512,6 +513,12 @@ export const AdminProvider = () => {
     };
 
     if (!payload.name || !payload.email || !payload.phone || !payload.password || !payload.role) return;
+
+    const phoneError = validatePhoneNumber(payload.phone);
+    if (phoneError) {
+      toast.error(phoneError);
+      return;
+    }
 
     try {
       setIsCreatingUser(true);

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { COUNTRIES } from "@/data/countries";
+import { validatePhoneNumber } from "@/lib/phoneValidation";
 
 const initialForm = {
   fullName: "",
@@ -76,8 +77,9 @@ export default function ContactSupplierPage() {
 
     const phone = String(form.phone || "").trim();
 
-    if (!/^\d{4,16}$/.test(phone)) {
-      toast.error("Enter a valid mobile number");
+    const phoneError = validatePhoneNumber(phone, buyerCountry);
+    if (phoneError) {
+      toast.error(phoneError);
       return;
     }
     

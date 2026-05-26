@@ -131,11 +131,20 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body as Partial<{
     name: string;
     email: string;
+    phone: string;
+    company: string;
     role: string;
   }>;
 
-  if (!payload.name && !payload.email && !payload.role) {
+  if (!payload.name && !payload.email && payload.phone === undefined && payload.company === undefined && !payload.role) {
     throw new HttpError(400, "No update fields provided");
+  }
+
+  if (payload.email) {
+    const email = String(payload.email).toLowerCase().trim();
+    const existing = await AuthUserModel.findOne({ email, id: { $ne: req.params.userId } }).lean();
+    if (existing) throw new HttpError(409, "Email is already registered");
+    payload.email = email;
   }
 
   if (payload.role) {

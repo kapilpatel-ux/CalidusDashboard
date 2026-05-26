@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import ReactSelect from "react-select";
 import countryList from "react-select-country-list";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import { toast } from "sonner";
-import { Award, Building2, Calendar, Edit, FileCheck, FileWarning, FileX, Mail, MapPin, Phone, RefreshCw, Upload } from "lucide-react";
+import { Award, Building2, Calendar, Edit, FileCheck, FileWarning, FileX, ImagePlus, Mail, MapPin, Phone, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,12 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import { useGetSupplierProfileQuery, useUpdateSupplierProfileMutation } from "@/store/api/supplier/supplierProfileApi";
+import { validatePhoneNumber } from "@/lib/phoneValidation";
 
 const defaultProfileDocuments = [
   { name: "Trade License", type: "trade_license", status: "pending", expiryDate: "" },
   { name: "VAT Certificate", type: "vat_certificate", status: "pending", expiryDate: "" },
-  { name: "Datasheet", type: "datasheet", status: "pending", expiryDate: "" },
 ];
+
+const SUPPLIER_IMAGE_MAX_MB = 5;
 
 const formatDocumentName = (document = {}) =>
   document.name ||
@@ -25,6 +29,21 @@ const formatDocumentName = (document = {}) =>
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+
+const getEffectiveDocumentStatus = (document = {}) => {
+  const expiryDateValue = document.expiryDate;
+  if (expiryDateValue) {
+    const expiryDate = new Date(expiryDateValue);
+    if (!Number.isNaN(expiryDate.getTime())) {
+      expiryDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (expiryDate < today) return "expired";
+    }
+  }
+
+  return document.status || "active";
+};
 
 const normalizeDocuments = (documents = []) => {
   const source = Array.isArray(documents) ? documents : [];
@@ -41,6 +60,7 @@ const normalizeDocuments = (documents = []) => {
 
   const extraDocuments = source.filter((document) => {
     const key = document.type || document.name;
+    if (String(key || "").toLowerCase() === "datasheet") return false;
     return !defaultProfileDocuments.some(
       (defaultDocument) => defaultDocument.type === key || defaultDocument.name === key
     );
@@ -49,7 +69,7 @@ const normalizeDocuments = (documents = []) => {
   return [...mergedDefaults, ...extraDocuments].map((document) => ({
     ...document,
     name: formatDocumentName(document),
-    status: document.status || "active",
+    status: getEffectiveDocumentStatus(document),
   }));
 };
 
@@ -94,8 +114,8 @@ export const SupplierProfile = () => {
   };
 
   const getDocumentStatus = (documents = []) => {
-    if (documents.some((document) => document.status === "expired")) return "expired";
-    if (documents.some((document) => document.status === "expiring")) return "expiring";
+    if (documents.some((document) => getEffectiveDocumentStatus(document) === "expired")) return "expired";
+    if (documents.some((document) => getEffectiveDocumentStatus(document) === "expiring")) return "expiring";
     return "active";
   };
 
@@ -124,6 +144,38 @@ export const SupplierProfile = () => {
     });
   };
 
+  const handleProfileImageFile = (file) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setProfileErrors((current) => ({ ...current, image: "Please select a valid image file" }));
+      return;
+    }
+
+    if (file.size > SUPPLIER_IMAGE_MAX_MB * 1024 * 1024) {
+      setProfileErrors((current) => ({ ...current, image: `Image must be ${SUPPLIER_IMAGE_MAX_MB}MB or smaller` }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfileForm((current) => ({
+        ...current,
+        image: String(reader.result || ""),
+        imageFileName: file.name,
+      }));
+      setProfileErrors((current) => {
+        const next = { ...current };
+        delete next.image;
+        return next;
+      });
+    };
+    reader.onerror = () => {
+      setProfileErrors((current) => ({ ...current, image: "Unable to read selected image" }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const validateProfileForm = () => {
     const errors = {};
 
@@ -149,8 +201,9 @@ export const SupplierProfile = () => {
       errors.email = "Enter a valid email address";
     }
 
-    if (!/^\+?[0-9]{10,15}$/.test(String(profileForm.phone || "").trim())) {
-      errors.phone = "Enter a valid phone number";
+    const phoneError = validatePhoneNumber(profileForm.phone, profileForm.country);
+    if (phoneError) {
+      errors.phone = phoneError;
     }
 
     setProfileErrors(errors);
@@ -172,6 +225,7 @@ export const SupplierProfile = () => {
           country: profileForm.country,
           email: profileForm.email,
           phone: profileForm.phone,
+          image: profileForm.image || null,
           documents,
           documentStatus: getDocumentStatus(documents),
         },
@@ -230,6 +284,23 @@ export const SupplierProfile = () => {
             <div className="dashboard-card">
               <div className="dashboard-card-header"><h3 className="dashboard-card-title">Company Information</h3></div>
               <div className="dashboard-card-content space-y-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="h-24 w-24 overflow-hidden rounded-sm border border-border bg-muted/20">
+                    {supplier.image ? (
+                      <img src={supplier.image} alt={supplier.name || "Supplier"} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Supplier Image</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {supplier.image ? "Image uploaded" : "No image uploaded"}
+                    </p>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Info label="Company Name" value={supplier.name} />
                   <Info label="Supplier Type" value={supplier.type} />
@@ -293,6 +364,39 @@ export const SupplierProfile = () => {
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Company Name</Label>
               <Input value={profileForm.name || ""} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} className="bg-black/20 mt-1" />
               <FieldError error={profileErrors.name} />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Supplier Image</Label>
+              <div className={`mt-1 grid gap-4 rounded-sm border bg-black/10 p-3 md:grid-cols-[140px_1fr] ${profileErrors.image ? "border-red-500/50" : "border-border"}`}>
+                <div className="h-28 overflow-hidden rounded-sm border border-border bg-muted/20">
+                  {profileForm.image ? (
+                    <img src={profileForm.image} alt="Supplier preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImagePlus className="h-7 w-7 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col justify-center gap-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      handleProfileImageFile(event.target.files?.[0] || null);
+                      event.target.value = "";
+                    }}
+                    className="bg-black/20 file:mr-3 file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
+                    data-testid="edit-profile-image"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload a new company logo or supplier image. JPG, PNG, WEBP up to {SUPPLIER_IMAGE_MAX_MB}MB.
+                  </p>
+                  {profileForm.imageFileName && (
+                    <p className="text-xs text-muted-foreground truncate">Selected: {profileForm.imageFileName}</p>
+                  )}
+                </div>
+              </div>
+              <FieldError error={profileErrors.image} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -359,7 +463,15 @@ export const SupplierProfile = () => {
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
-              <Input value={profileForm.phone || ""} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="bg-black/20 mt-1" />
+              <PhoneInput
+                country={"ae"}
+                value={profileForm.phone || ""}
+                onChange={(value) => setProfileForm({ ...profileForm, phone: value })}
+                inputClass="!w-full !h-[40px] !bg-black/20 !text-white !border-[#2a2a2a]"
+                buttonClass="!bg-black/20 !border-[#2a2a2a]"
+                dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"
+                containerClass="mt-1 phone-input-container"
+              />
               <FieldError error={profileErrors.phone} />
             </div>
             <div className="pt-2 border-t border-border">
@@ -371,13 +483,16 @@ export const SupplierProfile = () => {
                 {(profileForm.documents || []).length === 0 ? (
                   <p className="text-sm text-muted-foreground rounded-sm border border-border p-3">No documents uploaded yet.</p>
                 ) : (
-                  (profileForm.documents || []).map((doc, idx) => (
+                  (profileForm.documents || []).map((doc, idx) => {
+                    const status = getEffectiveDocumentStatus(doc);
+
+                    return (
                     <div key={`${doc.name}-${idx}`} className="rounded-sm border border-border bg-black/10 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            {doc.status === "expired" ? <FileX className="h-4 w-4 shrink-0 text-red-400" /> :
-                             doc.status === "expiring" ? <FileWarning className="h-4 w-4 shrink-0 text-amber-400" /> :
+                            {status === "expired" ? <FileX className="h-4 w-4 shrink-0 text-red-400" /> :
+                             status === "expiring" ? <FileWarning className="h-4 w-4 shrink-0 text-amber-400" /> :
                              <FileCheck className="h-4 w-4 shrink-0 text-emerald-400" />}
                             <p className="text-sm font-medium truncate">{formatDocumentName(doc)}</p>
                           </div>
@@ -387,11 +502,11 @@ export const SupplierProfile = () => {
                           </p>
                         </div>
                         <span className={`text-xs uppercase ${
-                          doc.status === "expired" ? "text-red-400" :
-                          doc.status === "expiring" ? "text-amber-400" :
+                          status === "expired" ? "text-red-400" :
+                          status === "expiring" ? "text-amber-400" :
                           "text-emerald-400"
                         }`}>
-                          {doc.status || "active"}
+                          {status}
                         </span>
                       </div>
                       <div className="mt-3">
@@ -416,7 +531,8 @@ export const SupplierProfile = () => {
                         </label>
                       </div>
                     </div>
-                  ))
+                  );
+                  })
                 )}
               </div>
             </div>
@@ -502,27 +618,31 @@ const IconInfo = ({ label, value, icon: Icon }) => (
   </div>
 );
 
-const DocumentRow = ({ doc, idx, onUpload }) => (
-  <div className={`p-3 rounded-sm flex items-center justify-between ${
-    doc.status === "expired" ? "bg-red-500/10 border border-red-500/20" :
-    doc.status === "expiring" ? "bg-amber-500/10 border border-amber-500/20" :
-    "bg-muted/30"
-  }`}>
-    <div className="flex items-center gap-3">
-      {doc.status === "expired" ? <FileX className="h-5 w-5 text-red-400" /> :
-       doc.status === "expiring" ? <FileWarning className="h-5 w-5 text-amber-400" /> :
-       <FileCheck className="h-5 w-5 text-emerald-400" />}
-      <div>
-        <p className="text-sm font-medium">{doc.name}</p>
-        <p className={`text-xs ${doc.status === "expired" ? "text-red-400" : doc.status === "expiring" ? "text-amber-400" : "text-muted-foreground"}`}>
-          {doc.status === "expired" ? "EXPIRED" : `Expires: ${doc.expiryDate}`}
-        </p>
-        {doc.fileName && <p className="text-xs text-muted-foreground">Uploaded: {doc.fileName}</p>}
+const DocumentRow = ({ doc, idx, onUpload }) => {
+  const status = getEffectiveDocumentStatus(doc);
+
+  return (
+    <div className={`p-3 rounded-sm flex items-center justify-between ${
+      status === "expired" ? "bg-red-500/10 border border-red-500/20" :
+      status === "expiring" ? "bg-amber-500/10 border border-amber-500/20" :
+      "bg-muted/30"
+    }`}>
+      <div className="flex items-center gap-3">
+        {status === "expired" ? <FileX className="h-5 w-5 text-red-400" /> :
+         status === "expiring" ? <FileWarning className="h-5 w-5 text-amber-400" /> :
+         <FileCheck className="h-5 w-5 text-emerald-400" />}
+        <div>
+          <p className="text-sm font-medium">{doc.name}</p>
+          <p className={`text-xs ${status === "expired" ? "text-red-400" : status === "expiring" ? "text-amber-400" : "text-muted-foreground"}`}>
+            {status === "expired" ? "EXPIRED" : `Expires: ${doc.expiryDate || "N/A"}`}
+          </p>
+          {doc.fileName && <p className="text-xs text-muted-foreground">Uploaded: {doc.fileName}</p>}
+        </div>
       </div>
+      <Button variant="outline" size="sm" className="gap-1" onClick={onUpload} data-testid={`reupload-doc-${idx}`}>
+        <RefreshCw className="h-3 w-3" />
+        Re-upload
+      </Button>
     </div>
-    <Button variant="outline" size="sm" className="gap-1" onClick={onUpload} data-testid={`reupload-doc-${idx}`}>
-      <RefreshCw className="h-3 w-3" />
-      Re-upload
-    </Button>
-  </div>
-);
+  );
+};

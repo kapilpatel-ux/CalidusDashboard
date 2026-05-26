@@ -9,6 +9,7 @@ import { AuthUserModel } from "../../auth/auth.model.js";
 import { hashPassword } from "../../auth/auth.service.js";
 import { objectsToCsv } from "../../../utils/csv.js";
 import { parseCsv } from "../../../utils/csvParse.js";
+import { createAdminNotification } from "../notifications/notification.service.js";
 import { SupplierModel } from "./supplier.model.js";
 
 const WORDPRESS_DEFAULT_LIMIT = 20;
@@ -78,6 +79,16 @@ export const getSupplier = asyncHandler(async (req: Request, res: Response) => {
 export const createSupplier = asyncHandler(async (req: Request, res: Response) => {
   const payload = { ...req.body, id: req.body.id || createReadableId("SUP") };
   const created = await SupplierModel.create(payload);
+  try {
+    await createAdminNotification({
+      type: "supplier",
+      title: "New Supplier Created",
+      message: `${payload.name || "A supplier"} (${payload.email || "no email"}) was created.`,
+      link: "suppliermanagement",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for supplier creation", err);
+  }
   res.status(201).json(created.toJSON());
 });
 
@@ -363,6 +374,19 @@ export const importSuppliersCsv = asyncHandler(async (req: Request, res: Respons
       errors,
     });
     return;
+  }
+
+  if (created > 0) {
+    try {
+      await createAdminNotification({
+        type: "supplier",
+        title: "Suppliers Imported",
+        message: `${created} supplier${created === 1 ? "" : "s"} created from CSV import.`,
+        link: "suppliermanagement",
+      });
+    } catch (err) {
+      console.error("Failed to create admin notification for supplier import", err);
+    }
   }
 
   res.json({ created, updated, failed: 0 });

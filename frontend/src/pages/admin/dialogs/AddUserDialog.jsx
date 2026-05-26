@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import {
   Select,
   SelectContent,
@@ -69,10 +71,14 @@ export const AddUserDialog = ({
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">
               Mobile Number
             </Label>
-            <Input
+            <PhoneInput
+              country={"us"}
               value={newUser.phone || ""}
-              onChange={(e) => setNewUser((prev) => ({ ...prev, phone: e.target.value }))}
-              className="bg-black/20 mt-1"
+              onChange={(value) => setNewUser((prev) => ({ ...prev, phone: value }))}
+              inputClass="!w-full !h-[40px] !bg-black/20 !text-white !border-[#2a2a2a]"
+              buttonClass="!bg-black/20 !border-[#2a2a2a]"
+              dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"
+              containerClass="mt-1 phone-input-container"
               data-testid="add-user-phone"
             />
           </div>

@@ -10,7 +10,18 @@ import { hashPassword, signJwt, verifyPassword } from "./auth.service.js";
 
 const today = () => new Date().toISOString().split("T")[0];
 
-function buildAuthResponse(user: { id: string; name: string; email: string; role: string; profileId?: string; company?: string; status?: string }) {
+function buildAuthResponse(user: {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  profileId?: string;
+  company?: string;
+  phone?: string;
+  status?: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}) {
   const safeUser = {
     id: user.id,
     name: user.name,
@@ -18,7 +29,10 @@ function buildAuthResponse(user: { id: string; name: string; email: string; role
     role: user.role,
     profileId: user.profileId || "",
     company: user.company || "",
+    phone: user.phone || "",
     status: user.status || "active",
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   };
 
   return {
@@ -59,6 +73,16 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
       ratingsSubmitted: 0,
     });
     company = (buyer.toJSON() as { company?: string }).company || company;
+    try {
+      await createAdminNotification({
+        type: "buyer",
+        title: "New Buyer Created",
+        message: `${req.body.name} (${email}) has registered as a buyer.`,
+        link: "buyermanagement",
+      });
+    } catch (err) {
+      console.error("Failed to create admin notification for buyer signup", err);
+    }
   }
 
   if (role === "supplier") {

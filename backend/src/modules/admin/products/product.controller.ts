@@ -90,7 +90,7 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
 
 export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
   
-  const payload = {
+  const payload = { 
     ...req.body,
     status: "pending",
     updatedAt: new Date().toISOString(),

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import { toast } from "sonner";
-import { Calendar, Edit, Mail, Phone, Shield, User, UserCog } from "lucide-react";
+import { Building2, Calendar, Edit, Mail, Phone, Shield, User, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/App";
 import { useUpdateUserMutation } from "@/store/api/admin/userApi";
+import { validatePhoneNumber } from "@/lib/phoneValidation";
 
 const roleLabels = {
   admin: "Platform Administrator",
@@ -47,7 +50,9 @@ export const AdminProfile = () => {
     name: "",
     email: "",
     phone: "",
+    company: "",
   });
+  const [profileErrors, setProfileErrors] = useState({});
   const [editProfileDialog, setEditProfileDialog] = useState(false);
 
   useEffect(() => {
@@ -55,6 +60,7 @@ export const AdminProfile = () => {
       name: currentUser?.name || "",
       email: currentUser?.email || "",
       phone: currentUser?.phone || "",
+      company: currentUser?.company || "",
     });
   }, [currentUser]);
 
@@ -65,6 +71,7 @@ export const AdminProfile = () => {
       { label: "Full Name", value: currentUser?.name || "N/A", icon: User },
       { label: "Email", value: currentUser?.email || "N/A", icon: Mail },
       { label: "Phone", value: currentUser?.phone || "N/A", icon: Phone },
+      { label: "Organization", value: currentUser?.company || "N/A", icon: Building2 },
       { label: "Role", value: roleLabel, icon: Shield },
       { label: "User ID", value: currentUser?.id || "N/A", icon: UserCog },
       { label: "Member Since", value: formatDate(joinedDate), icon: Calendar },
@@ -77,29 +84,63 @@ export const AdminProfile = () => {
       name: currentUser?.name || "",
       email: currentUser?.email || "",
       phone: currentUser?.phone || "",
+      company: currentUser?.company || "",
     });
+    setProfileErrors({});
     setEditProfileDialog(true);
+  };
+
+  const validateProfileForm = () => {
+    const errors = {};
+    const name = profileForm.name.trim();
+    const email = profileForm.email.trim();
+    const phone = profileForm.phone.trim();
+    const company = profileForm.company.trim();
+
+    if (!name) {
+      errors.name = "Full name is required";
+    } else if (name.length < 2) {
+      errors.name = "Full name must be at least 2 characters";
+    } else if (name.length > 60) {
+      errors.name = "Full name cannot exceed 60 characters";
+    }
+
+    if (!email) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Enter a valid email address";
+    }
+
+    const phoneError = validatePhoneNumber(phone);
+    if (phoneError) {
+      errors.phone = phoneError;
+    }
+
+    if (company.length > 80) {
+      errors.company = "Organization cannot exceed 80 characters";
+    }
+
+    setProfileErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSaveProfile = async () => {
     const name = profileForm.name.trim();
     const email = profileForm.email.trim();
     const phone = profileForm.phone.trim();
+    const company = profileForm.company.trim();
 
-    if (!name || !email) {
-      toast.error("Name and email are required");
-      return;
-    }
+    if (!validateProfileForm()) return;
 
     try {
-      let savedUser = { ...currentUser, name, email, phone };
+      let savedUser = { ...currentUser, name, email, phone, company };
 
       if (currentUser?.id) {
         const updated = await updateUser({
           id: currentUser.id,
-          payload: { name, email },
+          payload: { name, email, phone, company },
         }).unwrap();
-        savedUser = { ...savedUser, ...updated, phone };
+        savedUser = { ...savedUser, ...updated };
       }
 
       updateCurrentUser(savedUser);
@@ -175,29 +216,58 @@ export const AdminProfile = () => {
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Full Name</Label>
               <Input
                 value={profileForm.name}
-                onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })}
+                onChange={(event) => {
+                  setProfileForm({ ...profileForm, name: event.target.value });
+                  setProfileErrors({ ...profileErrors, name: "" });
+                }}
                 className="bg-black/20 mt-1"
                 data-testid="edit-admin-name"
               />
+              <FieldError error={profileErrors.name} />
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
               <Input
                 type="email"
                 value={profileForm.email}
-                onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })}
+                onChange={(event) => {
+                  setProfileForm({ ...profileForm, email: event.target.value });
+                  setProfileErrors({ ...profileErrors, email: "" });
+                }}
                 className="bg-black/20 mt-1"
                 data-testid="edit-admin-email"
               />
+              <FieldError error={profileErrors.email} />
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
-              <Input
-                value={profileForm.phone}
-                onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })}
-                className="bg-black/20 mt-1"
+              <PhoneInput
+                country={"us"}
+                value={profileForm.phone || ""}
+                onChange={(value) => {
+                  setProfileForm({ ...profileForm, phone: value });
+                  setProfileErrors({ ...profileErrors, phone: "" });
+                }}
+                inputClass="!w-full !h-[40px] !bg-black/20 !text-white !border-[#2a2a2a]"
+                buttonClass="!bg-black/20 !border-[#2a2a2a]"
+                dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"
+                containerClass="mt-1 phone-input-container"
                 data-testid="edit-admin-phone"
               />
+              <FieldError error={profileErrors.phone} />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Organization</Label>
+              <Input
+                value={profileForm.company}
+                onChange={(event) => {
+                  setProfileForm({ ...profileForm, company: event.target.value });
+                  setProfileErrors({ ...profileErrors, company: "" });
+                }}
+                className="bg-black/20 mt-1"
+                data-testid="edit-admin-company"
+              />
+              <FieldError error={profileErrors.company} />
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Role</Label>
@@ -211,7 +281,7 @@ export const AdminProfile = () => {
             </Button>
             <Button
               onClick={handleSaveProfile}
-              disabled={isSaving || !profileForm.name.trim() || !profileForm.email.trim()}
+              disabled={isSaving || !profileForm.name.trim() || !profileForm.email.trim() || !profileForm.phone.trim()}
               data-testid="save-admin-profile-btn"
             >
               {isSaving ? "Saving..." : "Save Changes"}
@@ -222,3 +292,8 @@ export const AdminProfile = () => {
     </>
   );
 };
+
+const FieldError = ({ error }) =>
+  error ? (
+    <p className="text-red-400 text-xs mt-1">{error}</p>
+  ) : null;

@@ -8,6 +8,7 @@ import { env } from "../../config/env.js";
 import { AuthUserModel } from "../auth/auth.model.js";
 import { hashPassword } from "../auth/auth.service.js";
 import { sendSmtpEmail } from "../../utils/smtpEmail.js";
+import { createAdminNotification } from "../admin/notifications/notification.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
@@ -60,6 +61,16 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
       enquiriesSent: 0,
       ratingsSubmitted: 0,
     });
+    try {
+      await createAdminNotification({
+        type: "buyer",
+        title: "New Buyer Created",
+        message: `${req.body.fullName} (${email}) was created from a supplier enquiry.`,
+        link: "buyermanagement",
+      });
+    } catch (err) {
+      console.error("Failed to create admin notification for contact-supplier buyer creation", err);
+    }
   }
 
   if (!existingUser) {

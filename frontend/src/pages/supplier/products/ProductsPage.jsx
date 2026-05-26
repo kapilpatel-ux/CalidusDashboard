@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, CalendarDays, Edit, Eye, ImagePlus, Package, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Edit, Eye, FileText, ImagePlus, Package, Plus, Trash2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,6 +51,7 @@ const emptyEditForm = {
   operatingTemperature: "",
   operationalRange: "",
   applicationUseCase: "",
+  datasheet: null,
 };
 
 const emptyAddForm = {
@@ -73,6 +74,7 @@ const emptyAddForm = {
   operatingTemperature: "",
   operationalRange: "",
   applicationUseCase: "",
+  datasheet: null,
 };
 
 const productCategories = ["Electronics", "Aerospace", "Defense", "PCB", "Mechanical", "Communication", "General"];
@@ -203,6 +205,95 @@ const ProductImageField = ({ label, value, onChange, testId }) => {
   );
 };
 
+const ProductDatasheetField = ({ value, onChange, testId }) => {
+  const fieldId = `${testId}-file`;
+  const hasFile = Boolean(value?.fileName);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PDF, DOC, and DOCX datasheets are allowed");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Datasheet must be 10MB or smaller");
+      event.target.value = "";
+      return;
+    }
+
+    onChange({
+      fileName: file.name,
+      mimeType: file.type,
+      size: file.size,
+      uploadedAt: new Date().toISOString(),
+    });
+    event.target.value = "";
+  };
+
+  return (
+    <div className="space-y-3 md:col-span-2">
+      <Label htmlFor={fieldId} className="text-[13px] font-medium uppercase tracking-normal text-[#A1A1AA] sm:text-[18px]">
+        Datasheet
+      </Label>
+      <div className="rounded-[5px] border border-[#29292E] bg-[#0E1012] p-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[5px] bg-[#3C83F6]/10">
+              <FileText className="h-5 w-5 text-[#3C83F6]" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white">
+                {hasFile ? value.fileName : "Upload product datasheet"}
+              </p>
+              <p className="text-xs text-[#9D9DA5]">PDF, DOC, or DOCX up to 10MB</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Label
+              htmlFor={fieldId}
+              className="inline-flex h-[42px] cursor-pointer items-center gap-2 rounded-[5px] bg-[#3C83F6] px-4 text-sm font-semibold text-white hover:bg-[#2f72df]"
+              data-testid={`${testId}-upload`}
+            >
+              <Upload className="h-4 w-4" />
+              Upload
+            </Label>
+            {hasFile && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-[42px] border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white"
+                onClick={() => onChange(null)}
+                data-testid={`${testId}-clear`}
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+        <Input
+          id={fieldId}
+          type="file"
+          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          onChange={handleFileChange}
+          className="hidden"
+          data-testid={fieldId}
+        />
+      </div>
+    </div>
+  );
+};
+
 const getProductImage = (product) =>
   product?.image ||
   product?.images?.[product?.primaryImageIndex || 0]?.url ||
@@ -326,6 +417,7 @@ export const SupplierProducts = () => {
       operatingTemperature: technicalDetails.operatingTemperature || "",
       operationalRange: technicalDetails.operationalRange || "",
       applicationUseCase: product.applicationUseCase || "",
+      datasheet: product.datasheet || null,
     });
     setEditDialog({ open: true, product });
   };
@@ -345,7 +437,7 @@ export const SupplierProducts = () => {
       form.applicationUseCase && `Application Areas: ${form.applicationUseCase}`,
     ].filter(Boolean);
 
-    return {
+    const payload = {
       name: form.name.trim(),
       image: image || null,
       images: image ? [{ url: image }] : [],
@@ -374,6 +466,13 @@ export const SupplierProducts = () => {
         operationalRange: form.operationalRange,
       },
     };
+
+    if (Object.prototype.hasOwnProperty.call(form, "datasheet")) {
+      payload.datasheet = form.datasheet || null;
+      payload.technicalDocs = form.datasheet ? [form.datasheet] : [];
+    }
+
+    return payload;
   };
 
   const saveProduct = async () => {
@@ -595,6 +694,7 @@ export const SupplierProducts = () => {
               </div>
               <ProductSelectField label="Country" value={addForm.countryOfOrigin} onChange={(value) => setAddField("countryOfOrigin", value)} placeholder="Select country" options={countryOptions} />
               <ProductTextField label="Key Features" value={addForm.keyFeatures} onChange={(value) => setAddField("keyFeatures", value)} placeholder="Enter key features" />
+              <ProductDatasheetField value={addForm.datasheet} onChange={(value) => setAddField("datasheet", value)} testId="add-product-datasheet" />
             </FormSection>
 
             <FormSection title="Supplier Snapshot">
@@ -731,6 +831,15 @@ export const SupplierProducts = () => {
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">Technical Specs</p>
                   <p className="mt-1 text-sm leading-6">{detailProduct.technicalSpecs}</p>
+                </div>
+              )}
+
+              {detailProduct.datasheet?.fileName && (
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Datasheet</p>
+                  <p className="mt-1 rounded-sm border border-border bg-black/20 px-3 py-2 text-sm">
+                    {detailProduct.datasheet.fileName}
+                  </p>
                 </div>
               )}
             </div>

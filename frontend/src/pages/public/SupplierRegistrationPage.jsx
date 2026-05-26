@@ -15,10 +15,12 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Loader2, Building2, MapPin, FileText, CheckCircle, Upload } from "lucide-react";
+import { Loader2, Building2, MapPin, FileText, CheckCircle, Upload, ImagePlus } from "lucide-react";
+import { Country, State, City } from "country-state-city";
+import postalCodes from "postal-codes-js";
 import { useCreateSupplierMutation } from "@/store/api/admin/supplierApi";
 import logo from "@/assets/images/calidusheader.png";
-import { COUNTRIES } from "@/data/countries";
+import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
 
 const steps = [
   { id: "company", label: "Company Info", icon: Building2 },
@@ -26,8 +28,6 @@ const steps = [
   { id: "docs", label: "Documents", icon: FileText },
   { id: "review", label: "Review", icon: CheckCircle },
 ];
-
-const countryOptions = COUNTRIES;
 
 const fallbackCurrencyOptions = [
   { value: "USD", label: "USD" },
@@ -98,9 +98,14 @@ const productAndServicesOptions = [
 	const normalizeRefId = (value, maxLen) =>
 	  String(value || "")
 	    .toUpperCase()
-	    .replace(/[^A-Z0-9/_-]/g, "")
+	    .replace(/[^A-Z0-9/-]/g, "")
 	    .slice(0, maxLen);
-	const PHONE_MIN_DIGITS = 8;
+	const normalizeVatNumberInput = (value) =>
+	  String(value || "")
+	    .toUpperCase()
+	    .replace(/[^A-Z0-9-]/g, "")
+	    .slice(0, VAT_NUMBER_MAX_LEN);
+	const PHONE_MIN_DIGITS = 7;
 	const PHONE_MAX_DIGITS = 15;
 	const PHONE_NATIONAL_MIN_DIGITS = 7;
 	const PHONE_NATIONAL_MAX_DIGITS = 12;
@@ -109,6 +114,66 @@ const productAndServicesOptions = [
 	const LICENSE_NUMBER_MAX_LEN = 30;
 	const VAT_NUMBER_MAX_LEN = 20;
 	const BUSINESS_DESCRIPTION_MAX_LEN = 700;
+	const SUPPLIER_IMAGE_MAX_MB = 5;
+
+const vatCountryByCallingCode = {
+  "+971": "AE",
+  "+966": "SA",
+  "+974": "QA",
+  "+965": "KW",
+  "+973": "BH",
+  "+968": "OM",
+  "+91": "IN",
+  "+92": "PK",
+  "+1": "US",
+  "+44": "GB",
+  "+49": "DE",
+  "+33": "FR",
+};
+
+const vatValidationRules = {
+  AE: {
+    label: "UAE VAT/TRN",
+    pattern: /^\d{15}$/,
+    message: "UAE VAT/TRN must be exactly 15 digits",
+  },
+  IN: {
+    label: "India GSTIN",
+    pattern: /^[0-3][0-9][A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/,
+    message: "India GSTIN must be 15 characters, e.g. 27ABCDE1234F1Z5",
+  },
+  GB: {
+    label: "UK VAT",
+    pattern: /^(GB)?(\d{9}|\d{12})$/,
+    message: "UK VAT must be 9 or 12 digits, optionally prefixed with GB",
+  },
+};
+
+const getVatCountryCode = (countryCode, phoneCountryCode) =>
+  countryCode || vatCountryByCallingCode[String(phoneCountryCode || "").trim()] || "";
+
+const validateLicenseNumber = (value) => {
+  const license = String(value || "").trim().toUpperCase();
+  if (!license) return "License number is required";
+  if (license.length < LICENSE_NUMBER_MIN_LEN) return `License number must be at least ${LICENSE_NUMBER_MIN_LEN} characters`;
+  if (license.length > LICENSE_NUMBER_MAX_LEN) return `License number must be at most ${LICENSE_NUMBER_MAX_LEN} characters`;
+  if (!/^[A-Z0-9/-]+$/.test(license)) return "License number can contain only letters, numbers, slash, and hyphen";
+  return "";
+};
+
+const validateVatNumber = (value, countryCode, phoneCountryCode) => {
+  const vat = String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+  if (!vat) return "VAT / Tax number is required";
+  if (vat.length < VAT_NUMBER_MIN_LEN) return `VAT / Tax number must be at least ${VAT_NUMBER_MIN_LEN} characters`;
+  if (vat.length > VAT_NUMBER_MAX_LEN) return `VAT / Tax number must be at most ${VAT_NUMBER_MAX_LEN} characters`;
+  if (!/^[A-Z0-9-]+$/.test(vat)) return "VAT / Tax number can contain only letters, numbers, and hyphen";
+
+  const resolvedCountryCode = getVatCountryCode(countryCode, phoneCountryCode);
+  const rule = vatValidationRules[resolvedCountryCode];
+  if (rule && !rule.pattern.test(vat)) return rule.message;
+
+  return "";
+};
 
 const callingCodeOptions = [
   { label: "UAE (+971)", value: "+971" },
@@ -178,6 +243,9 @@ export const SupplierRegistrationPage = () => {
     phoneNumber: "",
     currency: "",
     country: "",
+    countryCode: "",
+    state: "",
+    stateCode: "",
     addressLine1: "",
     addressLine2: "",
     cityState: "",
@@ -185,19 +253,117 @@ export const SupplierRegistrationPage = () => {
     licenseNumber: "",
     vatNumber: "",
     linkedIn: "",
+    supplierImage: "",
+    supplierImageFile: null,
     certifications: [],
     otherCertifications: "",
     tradeLicenseFile: null,
     tradeLicenseExpiry: "",
     vatCertificateFile: null,
     vatCertificateExpiry: "",
-    datasheetFile: null,
-    productCatalogueFile: null,
   });
   const [errors, setErrors] = useState({});
   const [dragOverTarget, setDragOverTarget] = useState(null);
 
-  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const countryOptions = useMemo(
+    () => Country.getAllCountries().slice().sort((a, b) => a.name.localeCompare(b.name)),
+    []
+  );
+  const stateOptions = useMemo(
+    () => form.countryCode ? State.getStatesOfCountry(form.countryCode) : [],
+    [form.countryCode]
+  );
+  const cityOptions = useMemo(
+    () => {
+      if (!form.countryCode || !form.stateCode) return [];
+      const seen = new Set();
+      return City.getCitiesOfState(form.countryCode, form.stateCode).filter((city) => {
+        const key = String(city.name || "").toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    },
+    [form.countryCode, form.stateCode]
+  );
+
+  const setField = (key, value) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "country") {
+        next.countryCode = "";
+        next.state = "";
+        next.stateCode = "";
+        next.cityState = "";
+        next.postalCode = "";
+      }
+      if (key === "state") {
+        next.stateCode = "";
+        next.cityState = "";
+        next.postalCode = "";
+      }
+      if (key === "cityState") {
+        next.postalCode = "";
+      }
+      return next;
+    });
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      if (key === "country") {
+        delete next.state;
+        delete next.cityState;
+        delete next.postalCode;
+      }
+      if (key === "state") {
+        delete next.cityState;
+        delete next.postalCode;
+      }
+      if (key === "cityState") {
+        delete next.postalCode;
+      }
+      return next;
+    });
+  };
+
+  const setAddressCountry = (countryCode) => {
+    const country = countryOptions.find((option) => option.isoCode === countryCode);
+    setForm((prev) => ({
+      ...prev,
+      country: country?.name || "",
+      countryCode: country?.isoCode || "",
+      state: "",
+      stateCode: "",
+      cityState: "",
+      postalCode: "",
+    }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.country;
+      delete next.state;
+      delete next.cityState;
+      delete next.postalCode;
+      return next;
+    });
+  };
+
+  const setAddressState = (stateCode) => {
+    const state = stateOptions.find((option) => option.isoCode === stateCode);
+    setForm((prev) => ({
+      ...prev,
+      state: state?.name || "",
+      stateCode: state?.isoCode || "",
+      cityState: "",
+      postalCode: "",
+    }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.state;
+      delete next.cityState;
+      delete next.postalCode;
+      return next;
+    });
+  };
 
   const setFileField = (key, file, maxSizeMb = 10) => {
     if (!file) {
@@ -216,6 +382,80 @@ export const SupplierRegistrationPage = () => {
     });
     setField(key, file);
   };
+
+  const setSupplierImageFile = (file) => {
+    if (!file) {
+      setForm((prev) => ({ ...prev, supplierImage: "", supplierImageFile: null }));
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setErrors((prev) => ({ ...prev, supplierImage: "Please select a valid image file" }));
+      return;
+    }
+
+    if (file.size > SUPPLIER_IMAGE_MAX_MB * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, supplierImage: `Image must be ${SUPPLIER_IMAGE_MAX_MB}MB or smaller` }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        supplierImage: String(reader.result || ""),
+        supplierImageFile: file,
+      }));
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.supplierImage;
+        return next;
+      });
+    };
+    reader.onerror = () => {
+      setErrors((prev) => ({ ...prev, supplierImage: "Unable to read selected image" }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const SupplierImageField = () => (
+    <div className="space-y-2">
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+        Supplier Image *
+      </Label>
+      <div
+        className={`grid gap-4 rounded-sm border bg-black/20 p-3 md:grid-cols-[160px_1fr] ${
+          errors.supplierImage ? "border-red-500/50" : "border-border"
+        }`}
+      >
+        <div className="h-32 overflow-hidden rounded-sm border border-border bg-muted/20">
+          {form.supplierImage ? (
+            <img src={form.supplierImage} alt="Supplier preview" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ImagePlus className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col justify-center gap-3">
+          <Input
+            type="file"
+            accept="image/*"
+            onChange={(event) => setSupplierImageFile(event.target.files?.[0] || null)}
+            className="bg-black/20 file:mr-3 file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
+            data-testid="supplier-reg-image"
+          />
+          <p className="text-xs text-muted-foreground">
+            Upload company logo or supplier image. JPG, PNG, WEBP up to {SUPPLIER_IMAGE_MAX_MB}MB.
+          </p>
+          {form.supplierImageFile?.name && (
+            <p className="text-xs text-muted-foreground truncate">Selected: {form.supplierImageFile.name}</p>
+          )}
+        </div>
+      </div>
+      {errors.supplierImage && <p className="text-xs text-red-400">{errors.supplierImage}</p>}
+    </div>
+  );
 
   const Dropzone = ({
     id,
@@ -319,6 +559,7 @@ export const SupplierRegistrationPage = () => {
       requireField("calidusCluster", "Calidus cluster is required");
       requireField("productAndServices", "Product and Services is required");
       requireField("businessDescription", "Business description is required");
+      if (!form.supplierImage) nextErrors.supplierImage = "Supplier image is required";
       if (String(form.businessDescription || "").trim().length > BUSINESS_DESCRIPTION_MAX_LEN) {
         nextErrors.businessDescription = `Business description must be at most ${BUSINESS_DESCRIPTION_MAX_LEN} characters`;
       }
@@ -326,39 +567,52 @@ export const SupplierRegistrationPage = () => {
       if (String(form.email || "").trim() && !emailRegex.test(String(form.email).trim())) {
         nextErrors.email = "Enter a valid email address";
       }
-	      requireField("licenseNumber", "License number is required");
+	      const licenseError = validateLicenseNumber(form.licenseNumber);
+	      if (licenseError) nextErrors.licenseNumber = licenseError;
+
+	      const vatError = validateVatNumber(form.vatNumber, form.countryCode, form.phoneCountryCode);
+	      if (vatError) nextErrors.vatNumber = vatError;
+
 	      requireField("currency", "Supplier currency is required");
 	      requireField("phoneNumber", "Phone is required");
-	      const countryDigits = phoneDigits(form.phoneCountryCode);
 	      const nationalDigits = phoneDigits(form.phoneNumber);
-	      const totalDigits = countryDigits.length + nationalDigits.length;
-	      if (String(form.phoneNumber || "").trim() && (nationalDigits.length < PHONE_NATIONAL_MIN_DIGITS || nationalDigits.length > PHONE_NATIONAL_MAX_DIGITS)) {
-	        nextErrors.phoneNumber = `Enter a valid phone number (${PHONE_NATIONAL_MIN_DIGITS}–${PHONE_NATIONAL_MAX_DIGITS} digits)`;
-	      } else if (String(form.phoneNumber || "").trim() && (totalDigits < PHONE_MIN_DIGITS || totalDigits > PHONE_MAX_DIGITS)) {
-	        nextErrors.phoneNumber = `Enter a valid phone number (${PHONE_MIN_DIGITS}–${PHONE_MAX_DIGITS} digits including country code)`;
+	      const phoneCountry = form.country || getCountryNameFromDialCode(form.phoneCountryCode);
+	      if (String(form.phoneNumber || "").trim()) {
+	        const phoneError = validatePhoneNumber(`${String(form.phoneCountryCode || "").trim()}${nationalDigits}`, phoneCountry);
+	        if (phoneError) nextErrors.phoneNumber = phoneError;
 	      }
 
-	      const license = String(form.licenseNumber || "").trim();
-	      if (license) {
-	        if (license.length < LICENSE_NUMBER_MIN_LEN) nextErrors.licenseNumber = `License number must be at least ${LICENSE_NUMBER_MIN_LEN} characters`;
-	        else if (license.length > LICENSE_NUMBER_MAX_LEN) nextErrors.licenseNumber = `License number must be at most ${LICENSE_NUMBER_MAX_LEN} characters`;
-	        else if (!/^[A-Z0-9/_-]+$/i.test(license)) nextErrors.licenseNumber = "License number can contain only letters, numbers, /, _ and -";
-	      }
-
-	      const vat = String(form.vatNumber || "").trim();
-	      if (vat) {
-	        if (vat.length < VAT_NUMBER_MIN_LEN) nextErrors.vatNumber = `VAT number must be at least ${VAT_NUMBER_MIN_LEN} characters`;
-	        else if (vat.length > VAT_NUMBER_MAX_LEN) nextErrors.vatNumber = `VAT number must be at most ${VAT_NUMBER_MAX_LEN} characters`;
-	        else if (!/^[A-Z0-9/_-]+$/i.test(vat)) nextErrors.vatNumber = "VAT number can contain only letters, numbers, /, _ and -";
-	      }
 	    }
 
     if (!stepId || stepId === "address") {
-      requireField("country", "Country is required");
+      const country = String(form.country || "").trim();
+      const countryCode = String(form.countryCode || "").trim();
+      const state = String(form.state || "").trim();
+      const city = String(form.cityState || "").trim();
+      const postalCode = String(form.postalCode || "").trim();
+
       requireField("addressLine1", "Address line 1 is required");
       requireField("addressLine2", "Address line 2 is required");
-      requireField("cityState", "City / State is required");
-      requireField("postalCode", "Postal code is required");
+      if (!country) {
+        nextErrors.country = "Country is required";
+      }
+      if (!state) {
+        nextErrors.state = "State is required";
+      }
+      if (!city) {
+        nextErrors.cityState = "City is required";
+      }
+      if (countryCode && form.stateCode && city && cityOptions.length && !cityOptions.some((option) => option.name === city)) {
+        nextErrors.cityState = `Select a city available for ${state}`;
+      }
+      if (!postalCode) {
+        nextErrors.postalCode = "Postal code is required";
+      } else if (countryCode) {
+        const postalValidation = postalCodes.validate(countryCode, postalCode);
+        if (postalValidation !== true) {
+          nextErrors.postalCode = `Enter a valid postal code for ${country}`;
+        }
+      }
     }
 
 	    if (!stepId || stepId === "docs") {
@@ -368,10 +622,9 @@ export const SupplierRegistrationPage = () => {
 	      if (!form.vatCertificateFile) nextErrors.vatCertificateFile = "VAT certificate is required";
 	      requireField("vatCertificateExpiry", "VAT certificate expiry date is required");
 	      requireFutureDate("vatCertificateExpiry", "VAT certificate expiry date must be a future date");
-	      if (!form.productCatalogueFile) nextErrors.productCatalogueFile = "Product catalogue is required";
 
 	      const selectedCerts = Array.isArray(form.certifications) ? form.certifications : [];
-	      if (selectedCerts.includes("Other") && !String(form.otherCertifications || "").trim()) {
+	      if (selectedCerts.includes("others") && !String(form.otherCertifications || "").trim()) {
 	        nextErrors.otherCertifications = "Please specify your other certification(s)";
 	      }
 	    }
@@ -426,13 +679,8 @@ export const SupplierRegistrationPage = () => {
     }
 
     const joinDate = new Date().toISOString().slice(0, 10);
-    const cityState = String(form.cityState || "").trim();
-    const [city, state] = cityState
-      .split(/[,/]/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .concat(["", ""])
-      .slice(0, 2);
+    const city = String(form.cityState || "").trim();
+    const state = String(form.state || "").trim();
 
     const documents = [
       form.tradeLicenseFile
@@ -453,22 +701,6 @@ export const SupplierRegistrationPage = () => {
             expiryDate: form.vatCertificateExpiry,
           }
         : null,
-      form.productCatalogueFile
-        ? {
-            type: "product_catalogue",
-            fileName: form.productCatalogueFile.name,
-            mimeType: form.productCatalogueFile.type,
-            size: form.productCatalogueFile.size,
-          }
-        : null,
-      form.datasheetFile
-        ? {
-            type: "datasheet",
-            fileName: form.datasheetFile.name,
-            mimeType: form.datasheetFile.type,
-            size: form.datasheetFile.size,
-          }
-        : null,
     ].filter(Boolean);
 
 	    const selectedCerts = Array.isArray(form.certifications) ? form.certifications : [];
@@ -477,7 +709,7 @@ export const SupplierRegistrationPage = () => {
 	      .map((s) => s.trim())
 	      .filter(Boolean);
 	    const certificationsForPayload = selectedCerts
-	      .filter((c) => c !== "Other")
+	      .filter((c) => c !== "others")
 	      .concat(otherCerts);
 
 	    const payload = {
@@ -486,6 +718,7 @@ export const SupplierRegistrationPage = () => {
       country: form.country.trim(),
       email: form.email.trim(),
       phone: `${String(form.phoneCountryCode || "").trim()}${phoneDigits(form.phoneNumber)}`,
+      image: form.supplierImage,
       joinDate,
       status: "pending",
       documentStatus: "active",
@@ -503,8 +736,10 @@ export const SupplierRegistrationPage = () => {
         addressLine2: form.addressLine2,
         city,
         state,
+        stateCode: form.stateCode,
         postalCode: form.postalCode,
         country: form.country,
+        countryCode: form.countryCode,
       },
       licenseNumber: form.licenseNumber,
       vatNumber: form.vatNumber,
@@ -585,51 +820,7 @@ export const SupplierRegistrationPage = () => {
                 </button>
               );
 	                      })}
-	                      {(() => {
-	                        const prev = Array.isArray(form.certifications) ? form.certifications : [];
-	                        const selected = prev.includes("Other");
-	                        return (
-	                          <button
-	                            key="Other"
-	                            type="button"
-	                            className={`h-8 px-3 rounded-sm text-xs border transition-colors ${
-	                              selected
-	                                ? "bg-foreground text-background border-foreground"
-	                                : "bg-muted/20 text-muted-foreground border-border hover:bg-muted/30"
-	                            }`}
-	                            onClick={() => {
-	                              const next = selected
-	                                ? prev.filter((x) => x !== "Other")
-	                                : [...prev, "Other"];
-	                              setField("certifications", next);
-	                              if (selected) setField("otherCertifications", "");
-	                            }}
-	                            data-testid="supplier-reg-cert-other"
-	                            disabled={isSubmitting}
-	                          >
-	                            Other
-	                          </button>
-	                        );
-	                      })()}
 	                    </div>
-	                    {Array.isArray(form.certifications) && form.certifications.includes("Other") && (
-	                      <div className="mt-3">
-	                        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-	                          Other Certifications (comma-separated)
-	                        </Label>
-	                        <Input
-	                          value={form.otherCertifications}
-	                          onChange={(e) => setField("otherCertifications", e.target.value)}
-	                          placeholder="e.g. ISO 27001, NADCAP"
-	                          className={`bg-muted/20 mt-1 ${errors.otherCertifications ? "border-red-500/50" : ""}`}
-	                          disabled={isSubmitting}
-	                          data-testid="supplier-reg-cert-other-input"
-	                        />
-	                        {errors.otherCertifications && (
-	                          <p className="text-xs text-red-400 mt-1">{errors.otherCertifications}</p>
-	                        )}
-	                      </div>
-	                    )}
           <div className="mt-4">
             <Progress value={progress} />
           </div>
@@ -652,6 +843,7 @@ export const SupplierRegistrationPage = () => {
                       Supplier Information
                     </p>
                   </div>
+                  <SupplierImageField />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -844,18 +1036,21 @@ export const SupplierRegistrationPage = () => {
                     </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        VAT Number
+                        VAT / Tax Number *
                       </Label>
 	                      <Input
 	                        value={form.vatNumber}
-	                        onChange={(e) => setField("vatNumber", normalizeRefId(e.target.value, VAT_NUMBER_MAX_LEN))}
+	                        onChange={(e) => setField("vatNumber", normalizeVatNumberInput(e.target.value))}
 	                        className={`bg-black/20 mt-1 ${errors.vatNumber ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-	                        placeholder="Enter VAT number"
+	                        placeholder="e.g. 100123456789012"
 	                        minLength={VAT_NUMBER_MIN_LEN}
 	                        maxLength={VAT_NUMBER_MAX_LEN}
-	                        pattern="[A-Za-z0-9/_-]+"
+	                        pattern="[A-Za-z0-9-]+"
 	                        data-testid="supplier-reg-vat"
 	                      />
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        Format is checked by selected country, or by phone country code before country is selected.
+                      </p>
                       {errors.vatNumber && <p className="text-xs text-red-400 mt-1">{errors.vatNumber}</p>}
                     </div>
                   </div>
@@ -940,42 +1135,11 @@ export const SupplierRegistrationPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        ZIP / Postal Code
-                      </Label>
-                      <Input
-                        value={form.postalCode}
-                        onChange={(e) => setField("postalCode", e.target.value)}
-                        className={`bg-black/20 mt-1 ${errors.postalCode ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                        data-testid="supplier-reg-postal"
-                      />
-                      {errors.postalCode && (
-                        <p className="text-xs text-red-400 mt-1">{errors.postalCode}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        City / State
-                      </Label>
-                      <Input
-                        value={form.cityState}
-                        onChange={(e) => setField("cityState", e.target.value)}
-                        className={`bg-black/20 mt-1 ${errors.cityState ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                        data-testid="supplier-reg-city-state"
-                      />
-                      {errors.cityState && (
-                        <p className="text-xs text-red-400 mt-1">{errors.cityState}</p>
-                      )}
-                    </div>
-                  </div>
-
                   <div>
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                       Country *
                     </Label>
-                    <Select value={form.country} onValueChange={(v) => setField("country", v)}>
+                    <Select value={form.countryCode} onValueChange={setAddressCountry}>
                       <SelectTrigger
                         className={`bg-black/20 mt-1 ${errors.country ? "border-red-500/50" : ""}`}
                         data-testid="supplier-reg-country"
@@ -985,14 +1149,82 @@ export const SupplierRegistrationPage = () => {
                     <SelectContent>
                         <ScrollArea className="h-72">
                           {countryOptions.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
+                            <SelectItem key={c.isoCode} value={c.isoCode}>
+                              {c.name}
                             </SelectItem>
                           ))}
                         </ScrollArea>
                       </SelectContent>
                     </Select>
                     {errors.country && <p className="text-xs text-red-400 mt-1">{errors.country}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        State *
+                      </Label>
+                      <Select value={form.stateCode} onValueChange={setAddressState} disabled={!form.countryCode}>
+                        <SelectTrigger
+                          className={`bg-black/20 mt-1 ${errors.state ? "border-red-500/50" : ""}`}
+                          data-testid="supplier-reg-state"
+                        >
+                          <SelectValue placeholder={form.countryCode ? "Select state" : "Select country first"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <ScrollArea className="h-72">
+                            {stateOptions.map((state) => (
+                              <SelectItem key={state.isoCode} value={state.isoCode}>
+                                {state.name}
+                              </SelectItem>
+                            ))}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+                      {errors.state && (
+                        <p className="text-xs text-red-400 mt-1">{errors.state}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        City *
+                      </Label>
+                      <Select value={form.cityState} onValueChange={(v) => setField("cityState", v)} disabled={!form.stateCode}>
+                        <SelectTrigger
+                          className={`bg-black/20 mt-1 ${errors.cityState ? "border-red-500/50" : ""}`}
+                          data-testid="supplier-reg-city-state"
+                        >
+                          <SelectValue placeholder={form.stateCode ? "Select city" : "Select state first"} />
+                        </SelectTrigger>
+                          <SelectContent>
+                            <ScrollArea className="h-72">
+                              {cityOptions.map((city) => (
+                                <SelectItem key={`${city.name}-${city.latitude}-${city.longitude}`} value={city.name}>
+                                  {city.name}
+                                </SelectItem>
+                              ))}
+                            </ScrollArea>
+                          </SelectContent>
+                      </Select>
+                      {errors.cityState && (
+                        <p className="text-xs text-red-400 mt-1">{errors.cityState}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        ZIP / Postal Code *
+                      </Label>
+                      <Input
+                        value={form.postalCode}
+                        onChange={(e) => setField("postalCode", e.target.value)}
+                        className={`bg-black/20 mt-1 ${errors.postalCode ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+                        placeholder={form.cityState ? "Enter postal code" : "Select city first"}
+                        data-testid="supplier-reg-postal"
+                      />
+                      {errors.postalCode && (
+                        <p className="text-xs text-red-400 mt-1">{errors.postalCode}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1047,23 +1279,6 @@ export const SupplierRegistrationPage = () => {
                     )}
                   </div>
 
-                  <Dropzone
-                    id="product-catalogue-file"
-                    label="Product Catalogue *"
-                    fileKey="productCatalogueFile"
-                    testId="supplier-reg-product-catalogue"
-                    accept="image/*,video/*"
-                    helper="Image or video up to 50MB"
-                    maxSizeMb={50}
-                  />
-
-                  <Dropzone
-                    id="datasheet-file"
-                    label="Datasheet *"
-                    fileKey="datasheetFile"
-                    testId="supplier-reg-datasheet"
-                  />
-
                   <div>
                     <Label className="text-sm font-medium">Select Your Certifications</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -1088,14 +1303,33 @@ export const SupplierRegistrationPage = () => {
                                 ? prev.filter((x) => x !== c)
                                 : [...prev, c];
                               setField("certifications", next);
+                              if (selected && c === "others") setField("otherCertifications", "");
                             }}
                             data-testid={`supplier-reg-cert-${c.replace(/\s+/g, "-").toLowerCase()}`}
                           >
-                            {c}
+                            {c === "others" ? "Others" : c}
                           </button>
                         );
                       })}
                     </div>
+                    {Array.isArray(form.certifications) && form.certifications.includes("others") && (
+                      <div className="mt-3">
+                        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Other Certifications (comma-separated)
+                        </Label>
+                        <Input
+                          value={form.otherCertifications}
+                          onChange={(e) => setField("otherCertifications", e.target.value)}
+                          placeholder="e.g. ISO 27001, NADCAP"
+                          className={`bg-muted/20 mt-1 ${errors.otherCertifications ? "border-red-500/50" : ""}`}
+                          disabled={isSubmitting}
+                          data-testid="supplier-reg-cert-other-input"
+                        />
+                        {errors.otherCertifications && (
+                          <p className="text-xs text-red-400 mt-1">{errors.otherCertifications}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1111,6 +1345,18 @@ export const SupplierRegistrationPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="rounded-sm bg-muted/15 border border-border p-5">
                       <p className="text-base font-semibold">Company Information</p>
+                      <div className="mt-4">
+                        <p className="text-xs text-muted-foreground">Supplier Image</p>
+                        {form.supplierImage ? (
+                          <img
+                            src={form.supplierImage}
+                            alt="Supplier preview"
+                            className="mt-2 h-28 w-40 rounded-sm border border-border object-cover"
+                          />
+                        ) : (
+                          <p className="font-medium mt-1">-</p>
+                        )}
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground">Company Name</p>
@@ -1185,7 +1431,7 @@ export const SupplierRegistrationPage = () => {
                   <div className="rounded-sm bg-muted/15 border border-border p-5">
                     <p className="text-base font-semibold">Certifications</p>
                     <div className="mt-4 flex flex-wrap gap-3">
-                      {[form.tradeLicenseFile, form.vatCertificateFile, form.productCatalogueFile, form.datasheetFile]
+                      {[form.tradeLicenseFile, form.vatCertificateFile]
                         .filter(Boolean)
                         .map((file) => (
                           <div

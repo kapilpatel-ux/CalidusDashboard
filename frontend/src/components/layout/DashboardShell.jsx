@@ -50,6 +50,8 @@ import {
 	} from "lucide-react";
 import { messages, supplierNotifications } from "@/data/mockData";
 import { useGetNotificationsQuery, useUpdateNotificationReadMutation } from "@/store/api/admin/notificationApi";
+import { useGetBuyerProfileQuery } from "@/store/api/buyer/buyerProfileApi";
+import { useGetSupplierProfileQuery } from "@/store/api/supplier/supplierProfileApi";
 
 // Navigation items for each role
 const navigationConfig = {
@@ -159,8 +161,8 @@ const roleLabels = {
   admin: "Platform Administrator",
   sub_admin: "Sub Administrator",
   content_manager: "Content Manager",
-  supplier: "Orion Defense Systems",
-  buyer: "James Mitchell",
+  supplier: "Supplier",
+  buyer: "Buyer",
 };
 
 const roleIcons = {
@@ -207,8 +209,38 @@ export const DashboardShell = ({ children }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [messagesList] = useState(messages);
-  const displayName = currentUser?.name || roleLabels[currentRole];
-  const displayCompany = currentUser?.company || roleLabels[currentRole];
+  const buyerProfileId = currentRole === "buyer" ? currentUser?.profileId : "";
+  const supplierProfileId = currentRole === "supplier" ? currentUser?.profileId : "";
+  const { data: buyerProfile = {} } = useGetBuyerProfileQuery(buyerProfileId, {
+    skip: !buyerProfileId,
+  });
+  const { data: supplierProfile = {} } = useGetSupplierProfileQuery(supplierProfileId, {
+    skip: !supplierProfileId,
+  });
+  const displayName =
+    currentUser?.name ||
+    currentUser?.email ||
+    roleLabels[currentRole] ||
+    currentRole ||
+    "User";
+  const displayCompany = useMemo(() => {
+    const userName = String(currentUser?.name || "").trim();
+    const userCompany = String(currentUser?.company || "").trim();
+
+    if (isAdminRole) {
+      return userName || userCompany || roleLabels[currentRole] || currentRole;
+    }
+
+    if (currentRole === "supplier") {
+      return supplierProfile?.name || userCompany || userName || roleLabels.supplier;
+    }
+
+    if (currentRole === "buyer") {
+      return buyerProfile?.company || userCompany || buyerProfile?.name || userName || roleLabels.buyer;
+    }
+
+    return userCompany || userName || roleLabels[currentRole] || "User";
+  }, [buyerProfile, currentRole, currentUser, isAdminRole, supplierProfile]);
   const notificationsList = useMemo(() => {
     if (currentRole === "supplier") return supplierNotifications;
     if (isAdminRole) return adminNotifications;
@@ -224,7 +256,7 @@ export const DashboardShell = ({ children }) => {
     }
     return navigationConfig[currentRole] || [];
   }, [currentRole, hasPermission, isAdminRole]);
-  const RoleIcon = roleIcons[currentRole];
+  const RoleIcon = roleIcons[currentRole] || Shield;
   const adminPathSection = location.pathname.split("/")[2] || "overview";
   const buyerPathSection = location.pathname.split("/")[2] || "overview";
   const supplierPathSection = location.pathname.split("/")[2] || "overview";
@@ -240,7 +272,8 @@ export const DashboardShell = ({ children }) => {
   const unreadNotifications = notificationsList.filter(n => !n.read).length;
   const unreadMessages = messagesList.reduce((acc, m) => acc + m.unread, 0);
   const showHeaderNotifications = currentRole !== "buyer";
-  const showHeaderMessages = currentRole !== "buyer" && currentRole !== "supplier";
+  // const showHeaderMessages = currentRole !== "buyer" && currentRole !== "supplier";
+  const showHeaderMessages = false;
 
   const handleNotificationClick = async (notification) => {
     if (isAdminRole && notification?.id) {
