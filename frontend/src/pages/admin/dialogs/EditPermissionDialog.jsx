@@ -18,7 +18,6 @@ export const EditPermissionDialog = ({
   isSaving = false,
 }) => {
   const isOpen = editDialog.open && editDialog.type === "permission";
-  const isSystem = Boolean(editForm?.isSystem);
 
   return (
     <Dialog
@@ -53,7 +52,7 @@ export const EditPermissionDialog = ({
               value={editForm.label || ""}
               onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
               className="bg-black/20 mt-1"
-              disabled={isSaving || isSystem}
+              disabled={isSaving}
               data-testid="edit-permission-label"
             />
           </div>
@@ -66,7 +65,7 @@ export const EditPermissionDialog = ({
               value={editForm.group || ""}
               onChange={(e) => setEditForm({ ...editForm, group: e.target.value })}
               className="bg-black/20 mt-1"
-              disabled={isSaving || isSystem}
+              disabled={isSaving}
               data-testid="edit-permission-group"
             />
           </div>
@@ -82,7 +81,7 @@ export const EditPermissionDialog = ({
           </Button>
           <Button
             onClick={onSave}
-            disabled={isSaving || isSystem || !String(editForm.label || "").trim()}
+            disabled={isSaving || !String(editForm.label || "").trim()}
             data-testid="edit-permission-save-btn"
           >
             {isSaving ? "Saving..." : "Save Changes"}
@@ -92,4 +91,3 @@ export const EditPermissionDialog = ({
     </Dialog>
   );
 };
-

@@ -48,11 +48,7 @@ export const PermissionManagement = () => {
         </div>
       ),
     },
-    {
-      key: "group",
-      label: "Group",
-      render: (value) => <Badge variant="outline">{value || "Admin"}</Badge>,
-    },
+   
     {
       key: "__assigned_roles",
       label: "Assigned Roles",
@@ -77,12 +73,6 @@ export const PermissionManagement = () => {
       },
     },
     {
-      key: "isSystem",
-      label: "Type",
-      render: (value) =>
-        value ? <Badge variant="secondary">System</Badge> : <Badge variant="outline">Custom</Badge>,
-    },
-    {
       key: "actions",
       label: "Actions",
       render: (_, row) => (
@@ -101,13 +91,13 @@ export const PermissionManagement = () => {
             label="Edit"
             testId={`edit-permission-${row.key}`}
             onClick={() => openEditDialog("permission", row)}
-            disabled={Boolean(row.isSystem)}
           />
           <ActionButton
             icon={Trash2}
             label="Delete"
             className="text-red-400 hover:text-red-300"
             testId={`delete-permission-${row.key}`}
+            disabled={Boolean(row?.isSystem)}
             onClick={() =>
               openConfirmDialog(
                 "delete-permission",
@@ -115,7 +105,6 @@ export const PermissionManagement = () => {
                 `Delete permission "${row.label}"? This cannot be undone.`
               )
             }
-            disabled={Boolean(row.isSystem)}
           />
         </ActionButtonGroup>
       ),

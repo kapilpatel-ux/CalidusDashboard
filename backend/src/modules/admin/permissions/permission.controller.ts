@@ -35,7 +35,6 @@ export const updateAdminPermission = asyncHandler(async (req: Request, res: Resp
 
   const existing = await AdminPermissionModel.findOne({ key: permissionKey }).lean();
   if (!existing) throw new HttpError(404, "Permission not found");
-  if (existing.isSystem) throw new HttpError(400, "System permissions cannot be edited");
 
   const label = String(req.body.label || "").trim();
   const group = String(req.body.group || existing.group || "Admin").trim() || "Admin";
@@ -65,4 +64,3 @@ export const deleteAdminPermission = asyncHandler(async (req: Request, res: Resp
   await AdminPermissionModel.deleteOne({ key: permissionKey });
   res.json({ ok: true });
 });
-

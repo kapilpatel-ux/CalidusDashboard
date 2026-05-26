@@ -5,25 +5,28 @@ import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
 import { KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { useAdminActions } from "../AdminContext";
-import { useGetAdminRolesQuery } from "@/store/api/admin/roleApi";
+import { useGetAdminRolesQuery, useUpdateAdminRolePermissionsMutation } from "@/store/api/admin/roleApi";
 import { EditRolePermissionsDialog } from "../dialogs/EditRolePermissionsDialog";
-import { useUpdateAdminRolePermissionsMutation } from "@/store/api/admin/roleApi";
 import { toast } from "sonner";
+import { useGetAdminPermissionsQuery } from "@/store/api/admin/permissionApi";
 
 export const RoleManagement = () => {
   const { openAddRoleDialog, openEditDialog, openConfirmDialog } = useAdminActions();
   const { data: roles = [], isLoading } = useGetAdminRolesQuery();
-  const [updateRolePermissions, { isLoading: isSavingPermissions }] = useUpdateAdminRolePermissionsMutation();
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const { data: permissions = [], isLoading: isPermissionsLoading } = useGetAdminPermissionsQuery();
+  const rolesList = useMemo(() => (Array.isArray(roles) ? roles : []), [roles]);
+  const permissionList = useMemo(() => (Array.isArray(permissions) ? permissions : []), [permissions]);
+  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [activeRole, setActiveRole] = useState(null);
+  const [updateRolePermissions, { isLoading: isSavingPermissions }] = useUpdateAdminRolePermissionsMutation();
 
-  const filteredRoles = useMemo(() => {
-    const list = Array.isArray(roles) ? roles : [];
-    if (typeFilter === "system") return list.filter((r) => r.isSystem);
-    if (typeFilter === "custom") return list.filter((r) => !r.isSystem);
-    return list;
-  }, [roles, typeFilter]);
+  const permissionLabelByKey = useMemo(() => {
+    const map = new Map();
+    for (const perm of permissionList) {
+      if (perm?.key) map.set(perm.key, perm.label || perm.key);
+    }
+    return map;
+  }, [permissionList]);
 
   const columns = [
     {
@@ -35,6 +38,30 @@ export const RoleManagement = () => {
           <p className="text-xs text-muted-foreground">{row.key}</p>
         </div>
       ),
+    },
+    {
+      key: "__permissions",
+      label: "Permissions",
+      render: (_, row) => {
+        if (isPermissionsLoading) return <span className="text-xs text-muted-foreground">Loading...</span>;
+        const perms = Array.isArray(row?.permissions) ? row.permissions : [];
+        if (perms.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+        const labels = perms
+          .map((k) => permissionLabelByKey.get(k) || k)
+          .sort((a, b) => String(a).localeCompare(String(b)));
+        const visible = labels.slice(0, 3);
+        const remaining = labels.length - visible.length;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {visible.map((label) => (
+              <Badge key={label} variant="secondary">
+                {label}
+              </Badge>
+            ))}
+            {remaining > 0 ? <Badge variant="outline">+{remaining}</Badge> : null}
+          </div>
+        );
+      },
     },
     // {
     //   key: "isSystem",
@@ -53,7 +80,7 @@ export const RoleManagement = () => {
             testId={`role-permissions-${row.key}`}
             onClick={() => {
               setActiveRole(row);
-              setPermissionsDialogOpen(true);
+              setPermissionDialogOpen(true);
             }}
           />
           <ActionButton
@@ -61,7 +88,6 @@ export const RoleManagement = () => {
             label="Edit"
             testId={`edit-role-${row.key}`}
             onClick={() => openEditDialog("role", row)}
-            disabled={Boolean(row.isSystem)}
           />
           <ActionButton
             icon={Trash2}
@@ -75,7 +101,6 @@ export const RoleManagement = () => {
                 `Delete role "${row.label}"? This cannot be undone.`
               )
             }
-            disabled={Boolean(row.isSystem)}
           />
         </ActionButtonGroup>
       ),
@@ -131,7 +156,7 @@ export const RoleManagement = () => {
 
       <DataTable
         columns={columns}
-        data={filteredRoles}
+        data={rolesList}
         searchPlaceholder="Search roles..."
         searchKey="label"
         pageSize={10}
@@ -139,18 +164,22 @@ export const RoleManagement = () => {
       />
 
       <EditRolePermissionsDialog
-        open={permissionsDialogOpen}
-        setOpen={setPermissionsDialogOpen}
+        open={permissionDialogOpen}
+        setOpen={(open) => {
+          setPermissionDialogOpen(open);
+          if (!open) setActiveRole(null);
+        }}
         role={activeRole}
         isSaving={isSavingPermissions}
         onSave={async (permissions) => {
           if (!activeRole?.key) return;
           try {
             await updateRolePermissions({ key: activeRole.key, permissions }).unwrap();
-            toast.success(`Permissions updated for "${activeRole.label}"`);
-            setPermissionsDialogOpen(false);
+            toast.success(`Permissions updated for "${activeRole.label || activeRole.key}"`);
+            setPermissionDialogOpen(false);
+            setActiveRole(null);
           } catch (error) {
-            toast.error(error?.data?.message || error?.message || "Failed to update permissions");
+            toast.error(error?.data?.message || error?.message || "Failed to update role permissions");
           }
         }}
       />

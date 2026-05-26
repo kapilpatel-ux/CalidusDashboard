@@ -104,7 +104,7 @@ export const DataTable = ({
             ) : (
               paginatedData.map((row, rowIndex) => (
                 <TableRow
-                  key={row.id || rowIndex}
+                  key={row?.id ?? row?.key ?? rowIndex}
                   className="border-b border-border/50 hover:bg-muted/20 transition-colors"
                   data-testid={`${testId}-row-${rowIndex}`}
                 >

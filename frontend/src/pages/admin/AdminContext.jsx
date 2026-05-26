@@ -431,7 +431,7 @@ export const AdminProvider = () => {
       case "permission":
         try {
           setIsUpdatingPermission(true);
-          await store
+          const updatedPermission = await store
             .dispatch(
               permissionApi.endpoints.updateAdminPermission.initiate({
                 key: editForm.key,
@@ -439,6 +439,15 @@ export const AdminProvider = () => {
               })
             )
             .unwrap();
+          store.dispatch(
+            permissionApi.util.updateQueryData("getAdminPermissions", undefined, (draft) => {
+              if (!Array.isArray(draft)) return;
+              const idx = draft.findIndex((p) => p?.key === editForm.key);
+              if (idx >= 0) {
+                draft[idx] = { ...draft[idx], ...updatedPermission };
+              }
+            })
+          );
           toast.success(`Permission "${editForm.label}" updated`);
         } catch (error) {
           toast.error(error?.data?.message || error?.message || "Failed to update permission");
