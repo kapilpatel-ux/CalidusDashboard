@@ -126,7 +126,7 @@ const productAndServicesOptions = [
 	const MANUFACTURING_DESCRIPTION_MAX_LEN = 300;
 	const SUPPLIER_IMAGE_MAX_MB = 5;
 
-const ChipInputField = ({ label, values = [], onChange, placeholder, error, testId }) => {
+const ChipInputField = ({ label, required = false, values = [], onChange, placeholder, error, testId }) => {
   const [draft, setDraft] = useState("");
   const fieldId = `${testId}-input`;
 
@@ -146,7 +146,7 @@ const ChipInputField = ({ label, values = [], onChange, placeholder, error, test
   return (
     <div className="space-y-2">
       <Label htmlFor={fieldId} className="text-xs uppercase tracking-wider text-muted-foreground">
-        {label} *
+        {label}{required ? " *" : ""}
       </Label>
       <Input
         id={fieldId}
@@ -239,6 +239,170 @@ const validateVatNumber = (value, countryCode, phoneCountryCode) => {
   return "";
 };
 
+const ManufacturingSectionsField = ({
+  sections,
+  maxDescriptionLen,
+  maxImageMb,
+  onAddSection,
+  onRemoveSection,
+  onUpdateSection,
+  onSetSectionImage,
+  getSectionError,
+}) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between gap-4">
+      <p className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
+        Manufacturing Capabilities
+      </p>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={onAddSection}
+        className="h-8"
+        data-testid="supplier-reg-manufacturing-add-section"
+      >
+        Add Section
+      </Button>
+    </div>
+
+    {sections.length === 0 ? (
+      <p className="text-sm text-muted-foreground">
+        Optional: add one or more manufacturing capability sections (title, description, image).
+      </p>
+    ) : (
+      <div className="space-y-4">
+        {sections.map((section, index) => (
+          <div
+            key={section?.id || `manufacturing-section-${index}`}
+            className="space-y-3 rounded-sm border border-border bg-black/10 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-semibold">Section {index + 1}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => onRemoveSection(index)}
+                className="h-8 w-8"
+                aria-label={`Remove manufacturing section ${index + 1}`}
+                data-testid={`supplier-reg-manufacturing-remove-${index}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                Title *
+              </Label>
+              <Input
+                value={section?.title || ""}
+                onChange={(e) => onUpdateSection(index, { title: e.target.value })}
+                className={`bg-black/20 mt-1 ${
+                  getSectionError(index, "title")
+                    ? "border-red-500/50 focus-visible:ring-red-500/30"
+                    : ""
+                }`}
+                placeholder="e.g. CNC Machining"
+                data-testid={`supplier-reg-manufacturing-title-${index}`}
+              />
+              {getSectionError(index, "title") && (
+                <p className="text-xs text-red-400 mt-1">
+                  {getSectionError(index, "title")}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Description *
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  {String(section?.description || "").length}/{maxDescriptionLen}
+                </span>
+              </div>
+              <Textarea
+                value={section?.description || ""}
+                onChange={(e) =>
+                  onUpdateSection(index, {
+                    description: e.target.value.slice(0, maxDescriptionLen),
+                  })
+                }
+                className={`bg-black/20 mt-1 min-h-28 ${
+                  getSectionError(index, "description")
+                    ? "border-red-500/50 focus-visible:ring-red-500/30"
+                    : ""
+                }`}
+                placeholder="Describe this manufacturing capability section"
+                maxLength={maxDescriptionLen}
+                data-testid={`supplier-reg-manufacturing-description-${index}`}
+              />
+              {getSectionError(index, "description") && (
+                <p className="text-xs text-red-400 mt-1">
+                  {getSectionError(index, "description")}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                Upload Image *
+              </Label>
+              <div
+                className={`grid gap-4 rounded-sm border bg-black/20 p-3 md:grid-cols-[160px_1fr] ${
+                  getSectionError(index, "image")
+                    ? "border-red-500/50"
+                    : "border-border"
+                }`}
+              >
+                <div className="h-32 overflow-hidden rounded-sm border border-border bg-muted/20">
+                  {section?.image ? (
+                    <img
+                      src={section.image}
+                      alt={`Manufacturing section ${index + 1} preview`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col justify-center gap-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      onSetSectionImage(index, event.target.files?.[0] || null)
+                    }
+                    className="bg-black/20 file:mr-3 file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
+                    data-testid={`supplier-reg-manufacturing-image-${index}`}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload manufacturing or capability related image. JPG, PNG, WEBP up to {maxImageMb}MB.
+                  </p>
+                  {section?.imageFile?.name && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      Selected: {section.imageFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {getSectionError(index, "image") && (
+                <p className="text-xs text-red-400">
+                  {getSectionError(index, "image")}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 const callingCodeOptions = [
   { label: "UAE (+971)", value: "+971" },
   { label: "Saudi Arabia (+966)", value: "+966" },
@@ -326,10 +490,12 @@ export const SupplierRegistrationPage = () => {
     supplierImage: "",
     supplierImageFile: null,
     capabilities: [],
+    complianceRegistration: [],
     manufacturingCapabilities: [],
     manufacturingDescription: "",
     manufacturingImage: "",
     manufacturingImageFile: null,
+    manufacturingCapabilitySections: [],
     certifications: [],
     otherCertifications: "",
     tradeLicenseFile: null,
@@ -497,37 +663,122 @@ export const SupplierRegistrationPage = () => {
     reader.readAsDataURL(file);
   };
 
-  const setManufacturingImageFile = (file) => {
+  const getManufacturingSectionError = (index, field) =>
+    errors[`manufacturingCapabilitySections.${index}.${field}`];
+
+  const updateManufacturingSection = (index, patch) => {
+    setForm((prev) => {
+      const sections = Array.isArray(prev.manufacturingCapabilitySections)
+        ? prev.manufacturingCapabilitySections
+        : [];
+      const next = sections.map((section, idx) =>
+        idx === index ? { ...section, ...patch } : section
+      );
+      return { ...prev, manufacturingCapabilitySections: next };
+    });
+    const patchKeys = Object.keys(patch || {});
+    if (patchKeys.length) {
+      setErrors((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        patchKeys.forEach((key) => {
+          const errorKey = `manufacturingCapabilitySections.${index}.${key}`;
+          if (Object.prototype.hasOwnProperty.call(next, errorKey)) {
+            delete next[errorKey];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  };
+
+  const addManufacturingSection = () => {
+    const id = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `mcs_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    setForm((prev) => {
+      const sections = Array.isArray(prev.manufacturingCapabilitySections)
+        ? prev.manufacturingCapabilitySections
+        : [];
+      return {
+        ...prev,
+        manufacturingCapabilitySections: [
+          ...sections,
+          { id, title: "", description: "", image: "", imageFile: null },
+        ],
+      };
+    });
+  };
+
+  const removeManufacturingSection = (index) => {
+    setForm((prev) => {
+      const sections = Array.isArray(prev.manufacturingCapabilitySections)
+        ? prev.manufacturingCapabilitySections
+        : [];
+      const nextSections = sections.filter((_, idx) => idx !== index);
+      return { ...prev, manufacturingCapabilitySections: nextSections };
+    });
+    setErrors((prev) => {
+      const next = { ...prev };
+      const keys = Object.keys(next);
+      keys.forEach((key) => {
+        if (!key.startsWith("manufacturingCapabilitySections.")) return;
+        const match = key.match(/^manufacturingCapabilitySections\.(\d+)\.(.+)$/);
+        if (!match) return;
+        const keyIndex = Number(match[1]);
+        const field = match[2];
+        if (Number.isNaN(keyIndex)) return;
+        if (keyIndex === index) {
+          delete next[key];
+        } else if (keyIndex > index) {
+          delete next[key];
+          next[`manufacturingCapabilitySections.${keyIndex - 1}.${field}`] = prev[key];
+        }
+      });
+      return next;
+    });
+  };
+
+  const setManufacturingSectionImage = (index, file) => {
     if (!file) {
-      setForm((prev) => ({ ...prev, manufacturingImage: "", manufacturingImageFile: null }));
+      updateManufacturingSection(index, { image: "", imageFile: null });
       return;
     }
 
     if (!file.type.startsWith("image/")) {
-      setErrors((prev) => ({ ...prev, manufacturingImage: "Please select a valid image file" }));
+      setErrors((prev) => ({
+        ...prev,
+        [`manufacturingCapabilitySections.${index}.image`]: "Please select a valid image file",
+      }));
       return;
     }
 
     if (file.size > SUPPLIER_IMAGE_MAX_MB * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, manufacturingImage: `Image must be ${SUPPLIER_IMAGE_MAX_MB}MB or smaller` }));
+      setErrors((prev) => ({
+        ...prev,
+        [`manufacturingCapabilitySections.${index}.image`]: `Image must be ${SUPPLIER_IMAGE_MAX_MB}MB or smaller`,
+      }));
       return;
     }
 
     const reader = new FileReader();
     reader.onload = () => {
-      setForm((prev) => ({
-        ...prev,
-        manufacturingImage: String(reader.result || ""),
-        manufacturingImageFile: file,
-      }));
+      updateManufacturingSection(index, {
+        image: String(reader.result || ""),
+        imageFile: file,
+      });
       setErrors((prev) => {
         const next = { ...prev };
-        delete next.manufacturingImage;
+        delete next[`manufacturingCapabilitySections.${index}.image`];
         return next;
       });
     };
     reader.onerror = () => {
-      setErrors((prev) => ({ ...prev, manufacturingImage: "Unable to read selected image" }));
+      setErrors((prev) => ({
+        ...prev,
+        [`manufacturingCapabilitySections.${index}.image`]: "Unable to read selected image",
+      }));
     };
     reader.readAsDataURL(file);
   };
@@ -571,44 +822,9 @@ export const SupplierRegistrationPage = () => {
     </div>
   );
 
-  const ManufacturingImageField = () => (
-    <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-        Upload Image *
-      </Label>
-      <div
-        className={`grid gap-4 rounded-sm border bg-black/20 p-3 md:grid-cols-[160px_1fr] ${
-          errors.manufacturingImage ? "border-red-500/50" : "border-border"
-        }`}
-      >
-        <div className="h-32 overflow-hidden rounded-sm border border-border bg-muted/20">
-          {form.manufacturingImage ? (
-            <img src={form.manufacturingImage} alt="Manufacturing preview" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <ImagePlus className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col justify-center gap-3">
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={(event) => setManufacturingImageFile(event.target.files?.[0] || null)}
-            className="bg-black/20 file:mr-3 file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
-            data-testid="supplier-reg-manufacturing-image"
-          />
-          <p className="text-xs text-muted-foreground">
-            Upload manufacturing or capability related image. JPG, PNG, WEBP up to {SUPPLIER_IMAGE_MAX_MB}MB.
-          </p>
-          {form.manufacturingImageFile?.name && (
-            <p className="text-xs text-muted-foreground truncate">Selected: {form.manufacturingImageFile.name}</p>
-          )}
-        </div>
-      </div>
-      {errors.manufacturingImage && <p className="text-xs text-red-400">{errors.manufacturingImage}</p>}
-    </div>
-  );
+  const manufacturingSections = Array.isArray(form.manufacturingCapabilitySections)
+    ? form.manufacturingCapabilitySections
+    : [];
 
   const Dropzone = ({
     id,
@@ -716,17 +932,26 @@ export const SupplierRegistrationPage = () => {
       if (String(form.businessDescription || "").trim().length > BUSINESS_DESCRIPTION_MAX_LEN) {
         nextErrors.businessDescription = `Business description must be at most ${BUSINESS_DESCRIPTION_MAX_LEN} characters`;
       }
-      if (!Array.isArray(form.capabilities) || form.capabilities.length === 0) {
-        nextErrors.capabilities = "Add at least one capability";
-      }
-      if (!Array.isArray(form.manufacturingCapabilities) || form.manufacturingCapabilities.length === 0) {
-        nextErrors.manufacturingCapabilities = "Add at least one manufacturing capability";
-      }
-      requireField("manufacturingDescription", "Manufacturing description is required");
       if (String(form.manufacturingDescription || "").trim().length > MANUFACTURING_DESCRIPTION_MAX_LEN) {
         nextErrors.manufacturingDescription = `Manufacturing description must be at most ${MANUFACTURING_DESCRIPTION_MAX_LEN} characters`;
       }
-      if (!form.manufacturingImage) nextErrors.manufacturingImage = "Manufacturing image is required";
+
+      const sections = Array.isArray(form.manufacturingCapabilitySections)
+        ? form.manufacturingCapabilitySections
+        : [];
+      sections.forEach((section, index) => {
+        const title = String(section?.title || "").trim();
+        const description = String(section?.description || "").trim();
+        const image = String(section?.image || "").trim();
+
+        if (!title) nextErrors[`manufacturingCapabilitySections.${index}.title`] = "Title is required";
+        if (!description) nextErrors[`manufacturingCapabilitySections.${index}.description`] = "Description is required";
+        if (description.length > MANUFACTURING_DESCRIPTION_MAX_LEN) {
+          nextErrors[`manufacturingCapabilitySections.${index}.description`] =
+            `Description must be at most ${MANUFACTURING_DESCRIPTION_MAX_LEN} characters`;
+        }
+        if (!image) nextErrors[`manufacturingCapabilitySections.${index}.image`] = "Image is required";
+      });
       requireField("email", "Email is required");
       if (String(form.email || "").trim() && !emailRegex.test(String(form.email).trim())) {
         nextErrors.email = "Enter a valid email address";
@@ -893,9 +1118,25 @@ export const SupplierRegistrationPage = () => {
       productAndServices: form.productAndServices,
       businessDescription: form.businessDescription.trim(),
       capabilities: form.capabilities,
-      manufacturingCapabilities: form.manufacturingCapabilities,
-      manufacturingDescription: form.manufacturingDescription.trim(),
-      manufacturingImage: form.manufacturingImage,
+      complianceRegistration: form.complianceRegistration,
+      manufacturingCapabilitySections: Array.isArray(form.manufacturingCapabilitySections)
+        ? form.manufacturingCapabilitySections.map((section) => ({
+            title: String(section?.title || "").trim(),
+            description: String(section?.description || "").trim(),
+            image: String(section?.image || "").trim(),
+          }))
+        : [],
+      manufacturingCapabilities: Array.isArray(form.manufacturingCapabilitySections)
+        ? form.manufacturingCapabilitySections
+            .map((section) => String(section?.title || "").trim())
+            .filter(Boolean)
+        : form.manufacturingCapabilities,
+      manufacturingDescription: Array.isArray(form.manufacturingCapabilitySections) && form.manufacturingCapabilitySections.length > 0
+        ? String(form.manufacturingCapabilitySections[0]?.description || "").trim()
+        : form.manufacturingDescription.trim(),
+      manufacturingImage: Array.isArray(form.manufacturingCapabilitySections) && form.manufacturingCapabilitySections.length > 0
+        ? String(form.manufacturingCapabilitySections[0]?.image || "").trim()
+        : form.manufacturingImage,
       supplierCurrency: form.currency,
       address: {
         addressLine1: form.addressLine1,
@@ -1195,49 +1436,46 @@ export const SupplierRegistrationPage = () => {
                   </div>
 
                   <div className="space-y-4 rounded-sm border border-border bg-black/10 p-4">
-                    <div>
-                      <p className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
-                        Manufacturing Capabilities
-                      </p>
-                    </div>
+                    <p className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
+                      Capabilities
+                    </p>
                     <ChipInputField
                       label="Capabilities"
+                      required={false}
                       values={form.capabilities}
                       onChange={(value) => setField("capabilities", value)}
                       placeholder="Type a capability and press Enter"
                       error={errors.capabilities}
                       testId="supplier-reg-capabilities"
                     />
-                    <ChipInputField
-                      label="Manufacturing Capabilities"
-                      values={form.manufacturingCapabilities}
-                      onChange={(value) => setField("manufacturingCapabilities", value)}
-                      placeholder="Type a manufacturing capability and press Enter"
-                      error={errors.manufacturingCapabilities}
-                      testId="supplier-reg-manufacturing-capabilities"
+                  </div>
+
+                  <div className="space-y-4 rounded-sm border border-border bg-black/10 p-4">
+                    <ManufacturingSectionsField
+                      sections={manufacturingSections}
+                      maxDescriptionLen={MANUFACTURING_DESCRIPTION_MAX_LEN}
+                      maxImageMb={SUPPLIER_IMAGE_MAX_MB}
+                      onAddSection={addManufacturingSection}
+                      onRemoveSection={removeManufacturingSection}
+                      onUpdateSection={updateManufacturingSection}
+                      onSetSectionImage={setManufacturingSectionImage}
+                      getSectionError={getManufacturingSectionError}
                     />
-                    <div>
-                      <div className="flex items-center justify-between gap-3">
-                        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Description *
-                        </Label>
-                        <span className="text-xs text-muted-foreground">
-                          {form.manufacturingDescription.length}/{MANUFACTURING_DESCRIPTION_MAX_LEN}
-                        </span>
-                      </div>
-                      <Textarea
-                        value={form.manufacturingDescription}
-                        onChange={(e) => setField("manufacturingDescription", e.target.value.slice(0, MANUFACTURING_DESCRIPTION_MAX_LEN))}
-                        className={`bg-black/20 mt-1 min-h-28 ${errors.manufacturingDescription ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                        placeholder="Describe your manufacturing capabilities"
-                        maxLength={MANUFACTURING_DESCRIPTION_MAX_LEN}
-                        data-testid="supplier-reg-manufacturing-description"
-                      />
-                      {errors.manufacturingDescription && (
-                        <p className="text-xs text-red-400 mt-1">{errors.manufacturingDescription}</p>
-                      )}
-                    </div>
-                    <ManufacturingImageField />
+                  </div>
+
+                  <div className="space-y-4 rounded-sm border border-border bg-black/10 p-4">
+                    <p className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
+                      Compliance Registration
+                    </p>
+                    <ChipInputField
+                      label="Compliance Registration"
+                      required={false}
+                      values={form.complianceRegistration}
+                      onChange={(value) => setField("complianceRegistration", value)}
+                      placeholder="Type a compliance and press Enter"
+                      error={errors.complianceRegistration}
+                      testId="supplier-reg-compliance-registration"
+                    />
                   </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

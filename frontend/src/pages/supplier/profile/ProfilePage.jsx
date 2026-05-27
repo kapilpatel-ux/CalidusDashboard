@@ -145,6 +145,159 @@ const ChipInputField = ({ label, values = [], onChange, placeholder, error, disa
   );
 };
 
+const ManufacturingSectionsField = ({
+  sections,
+  maxDescriptionLen,
+  maxImageMb,
+  disabled = false,
+  onAddSection,
+  onRemoveSection,
+  onUpdateSection,
+  onSetSectionImage,
+  getSectionError,
+}) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between gap-4">
+      <p className="font-['Barlow_Condensed'] text-lg font-bold uppercase tracking-wide">
+        Manufacturing Capabilities
+      </p>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={onAddSection}
+        className="h-8"
+        disabled={disabled}
+        data-testid="profile-manufacturing-add-section"
+      >
+        Add Section
+      </Button>
+    </div>
+
+    {sections.length === 0 ? (
+      <p className="text-sm text-muted-foreground">
+        Optional: add one or more manufacturing capability sections (title, description, image).
+      </p>
+    ) : (
+      <div className="space-y-4">
+        {sections.map((section, index) => (
+          <div
+            key={section?.id || `profile-manufacturing-section-${index}`}
+            className="space-y-3 rounded-sm border border-border bg-black/10 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-semibold">Section {index + 1}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => onRemoveSection(index)}
+                className="h-8 w-8"
+                aria-label={`Remove manufacturing section ${index + 1}`}
+                disabled={disabled}
+                data-testid={`profile-manufacturing-remove-${index}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Title *</Label>
+              <Input
+                value={section?.title || ""}
+                onChange={(e) => onUpdateSection(index, { title: e.target.value })}
+                className={`bg-black/20 mt-1 ${
+                  getSectionError(index, "title")
+                    ? "border-red-500/50 focus-visible:ring-red-500/30"
+                    : ""
+                }`}
+                placeholder="e.g. CNC Machining"
+                disabled={disabled}
+                data-testid={`profile-manufacturing-title-${index}`}
+              />
+              <FieldError error={getSectionError(index, "title")} />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Description *
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  {String(section?.description || "").length}/{maxDescriptionLen}
+                </span>
+              </div>
+              <Textarea
+                value={section?.description || ""}
+                onChange={(e) =>
+                  onUpdateSection(index, {
+                    description: e.target.value.slice(0, maxDescriptionLen),
+                  })
+                }
+                maxLength={maxDescriptionLen}
+                placeholder="Describe this manufacturing capability section"
+                className={`bg-black/20 mt-1 min-h-28 ${
+                  getSectionError(index, "description")
+                    ? "border-red-500/50 focus-visible:ring-red-500/30"
+                    : ""
+                }`}
+                disabled={disabled}
+                data-testid={`profile-manufacturing-description-${index}`}
+              />
+              <FieldError error={getSectionError(index, "description")} />
+            </div>
+
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Upload Image *</Label>
+              <div
+                className={`mt-1 grid gap-4 rounded-sm border bg-black/10 p-3 md:grid-cols-[140px_1fr] ${
+                  getSectionError(index, "image") ? "border-red-500/50" : "border-border"
+                }`}
+              >
+                <div className="h-28 overflow-hidden rounded-sm border border-border bg-muted/20">
+                  {section?.image ? (
+                    <img
+                      src={section.image}
+                      alt={`Manufacturing section ${index + 1} preview`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImagePlus className="h-7 w-7 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col justify-center gap-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      onSetSectionImage(index, event.target.files?.[0] || null);
+                      event.target.value = "";
+                    }}
+                    className="bg-black/20 file:mr-3 file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
+                    disabled={disabled}
+                    data-testid={`profile-manufacturing-image-${index}`}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload manufacturing or capability related image. JPG, PNG, WEBP up to {maxImageMb}MB.
+                  </p>
+                  {section?.imageFileName && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      Selected: {section.imageFileName}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <FieldError error={getSectionError(index, "image")} />
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 export const SupplierProfile = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId || currentSupplier.id;
@@ -180,13 +333,47 @@ export const SupplierProfile = () => {
   }, [uploadDocDialog.open, uploadDocDialog.document]);
 
   const openEdit = () => {
+    const ensureSectionId = (section) => {
+      const id = section?.id
+        ? String(section.id)
+        : (typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `mcs_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+      return { id, ...section };
+    };
+
+    const existingSections = Array.isArray(supplier.manufacturingCapabilitySections)
+      ? supplier.manufacturingCapabilitySections
+      : [];
+
+    const derivedSections =
+      existingSections.length > 0
+        ? existingSections
+        : (
+            (Array.isArray(supplier.manufacturingCapabilities) && supplier.manufacturingCapabilities.length > 0) ||
+            supplier.manufacturingDescription ||
+            supplier.manufacturingImage
+          )
+          ? [
+              {
+                title: Array.isArray(supplier.manufacturingCapabilities)
+                  ? String(supplier.manufacturingCapabilities[0] || "")
+                  : "",
+                description: supplier.manufacturingDescription || "",
+                image: supplier.manufacturingImage || "",
+              },
+            ]
+          : [];
+
     setProfileForm({
       ...supplier,
       country: supplier.country || getCountryNameFromDialCode(supplier.phone),
       capabilities: Array.isArray(supplier.capabilities) ? supplier.capabilities : [],
+      complianceRegistration: Array.isArray(supplier.complianceRegistration) ? supplier.complianceRegistration : [],
       manufacturingCapabilities: Array.isArray(supplier.manufacturingCapabilities) ? supplier.manufacturingCapabilities : [],
       manufacturingDescription: supplier.manufacturingDescription || "",
       manufacturingImage: supplier.manufacturingImage || "",
+      manufacturingCapabilitySections: derivedSections.map((s) => ensureSectionId({ ...s, imageFileName: "" })),
       documents: normalizeDocuments(supplier.documents || []),
     });
     setEditProfileDialog(true);
@@ -294,38 +481,6 @@ export const SupplierProfile = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleManufacturingImageFile = (file) => {
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setProfileErrors((current) => ({ ...current, manufacturingImage: "Please select a valid image file" }));
-      return;
-    }
-
-    if (file.size > SUPPLIER_IMAGE_MAX_MB * 1024 * 1024) {
-      setProfileErrors((current) => ({ ...current, manufacturingImage: `Image must be ${SUPPLIER_IMAGE_MAX_MB}MB or smaller` }));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setProfileForm((current) => ({
-        ...current,
-        manufacturingImage: String(reader.result || ""),
-        manufacturingImageFileName: file.name,
-      }));
-      setProfileErrors((current) => {
-        const next = { ...current };
-        delete next.manufacturingImage;
-        return next;
-      });
-    };
-    reader.onerror = () => {
-      setProfileErrors((current) => ({ ...current, manufacturingImage: "Unable to read selected image" }));
-    };
-    reader.readAsDataURL(file);
-  };
-
   const validateProfileForm = () => {
     const errors = {};
 
@@ -357,23 +512,149 @@ export const SupplierProfile = () => {
       errors.phone = errors.phone || "Please select a valid mobile country code";
     }
 
-    if (!Array.isArray(profileForm.capabilities) || profileForm.capabilities.length === 0) {
-      errors.capabilities = "Add at least one capability";
-    }
-    if (!Array.isArray(profileForm.manufacturingCapabilities) || profileForm.manufacturingCapabilities.length === 0) {
-      errors.manufacturingCapabilities = "Add at least one manufacturing capability";
-    }
-    if (!String(profileForm.manufacturingDescription || "").trim()) {
-      errors.manufacturingDescription = "Manufacturing description is required";
-    } else if (String(profileForm.manufacturingDescription || "").length > MANUFACTURING_DESCRIPTION_MAX_LEN) {
-      errors.manufacturingDescription = `Manufacturing description must be at most ${MANUFACTURING_DESCRIPTION_MAX_LEN} characters`;
-    }
-    if (!String(profileForm.manufacturingImage || "").trim()) {
-      errors.manufacturingImage = "Manufacturing image is required";
-    }
+    const manufacturingSections = Array.isArray(profileForm.manufacturingCapabilitySections)
+      ? profileForm.manufacturingCapabilitySections
+      : [];
+    manufacturingSections.forEach((section, index) => {
+      const title = String(section?.title || "").trim();
+      const description = String(section?.description || "").trim();
+      const image = String(section?.image || "").trim();
+
+      if (!title) errors[`manufacturingCapabilitySections.${index}.title`] = "Title is required";
+      if (!description) errors[`manufacturingCapabilitySections.${index}.description`] = "Description is required";
+      if (description.length > MANUFACTURING_DESCRIPTION_MAX_LEN) {
+        errors[`manufacturingCapabilitySections.${index}.description`] =
+          `Description must be at most ${MANUFACTURING_DESCRIPTION_MAX_LEN} characters`;
+      }
+      if (!image) errors[`manufacturingCapabilitySections.${index}.image`] = "Image is required";
+    });
 
     setProfileErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const getManufacturingSectionError = (index, field) =>
+    profileErrors[`manufacturingCapabilitySections.${index}.${field}`];
+
+  const updateManufacturingSection = (index, patch) => {
+    setProfileForm((current) => {
+      const sections = Array.isArray(current.manufacturingCapabilitySections)
+        ? current.manufacturingCapabilitySections
+        : [];
+      const next = sections.map((section, idx) =>
+        idx === index ? { ...section, ...patch } : section
+      );
+      return { ...current, manufacturingCapabilitySections: next };
+    });
+
+    const patchKeys = Object.keys(patch || {});
+    if (patchKeys.length) {
+      setProfileErrors((current) => {
+        let changed = false;
+        const next = { ...current };
+        patchKeys.forEach((key) => {
+          const errorKey = `manufacturingCapabilitySections.${index}.${key}`;
+          if (Object.prototype.hasOwnProperty.call(next, errorKey)) {
+            delete next[errorKey];
+            changed = true;
+          }
+        });
+        return changed ? next : current;
+      });
+    }
+  };
+
+  const addManufacturingSection = () => {
+    const id = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `mcs_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    setProfileForm((current) => {
+      const sections = Array.isArray(current.manufacturingCapabilitySections)
+        ? current.manufacturingCapabilitySections
+        : [];
+      return {
+        ...current,
+        manufacturingCapabilitySections: [
+          ...sections,
+          { id, title: "", description: "", image: "", imageFileName: "" },
+        ],
+      };
+    });
+  };
+
+  const removeManufacturingSection = (index) => {
+    setProfileForm((current) => {
+      const sections = Array.isArray(current.manufacturingCapabilitySections)
+        ? current.manufacturingCapabilitySections
+        : [];
+      return {
+        ...current,
+        manufacturingCapabilitySections: sections.filter((_, idx) => idx !== index),
+      };
+    });
+
+    setProfileErrors((current) => {
+      const next = { ...current };
+      const keys = Object.keys(next);
+      keys.forEach((key) => {
+        if (!key.startsWith("manufacturingCapabilitySections.")) return;
+        const match = key.match(/^manufacturingCapabilitySections\.(\d+)\.(.+)$/);
+        if (!match) return;
+        const keyIndex = Number(match[1]);
+        const field = match[2];
+        if (Number.isNaN(keyIndex)) return;
+        if (keyIndex === index) {
+          delete next[key];
+        } else if (keyIndex > index) {
+          delete next[key];
+          next[`manufacturingCapabilitySections.${keyIndex - 1}.${field}`] = current[key];
+        }
+      });
+      return next;
+    });
+  };
+
+  const setManufacturingSectionImage = (index, file) => {
+    if (!file) {
+      updateManufacturingSection(index, { image: "", imageFileName: "" });
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setProfileErrors((current) => ({
+        ...current,
+        [`manufacturingCapabilitySections.${index}.image`]: "Please select a valid image file",
+      }));
+      return;
+    }
+
+    if (file.size > SUPPLIER_IMAGE_MAX_MB * 1024 * 1024) {
+      setProfileErrors((current) => ({
+        ...current,
+        [`manufacturingCapabilitySections.${index}.image`]: `Image must be ${SUPPLIER_IMAGE_MAX_MB}MB or smaller`,
+      }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateManufacturingSection(index, {
+        image: String(reader.result || ""),
+        imageFileName: file.name,
+      });
+      setProfileErrors((current) => {
+        const next = { ...current };
+        delete next[`manufacturingCapabilitySections.${index}.image`];
+        return next;
+      });
+    };
+    reader.onerror = () => {
+      setProfileErrors((current) => ({
+        ...current,
+        [`manufacturingCapabilitySections.${index}.image`]: "Unable to read selected image",
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveProfile = async () => {
@@ -401,9 +682,28 @@ export const SupplierProfile = () => {
           phone: profileForm.phone,
           image: profileForm.image || null,
           capabilities: profileForm.capabilities || [],
-          manufacturingCapabilities: profileForm.manufacturingCapabilities || [],
-          manufacturingDescription: String(profileForm.manufacturingDescription || "").trim(),
-          manufacturingImage: profileForm.manufacturingImage || null,
+          complianceRegistration: profileForm.complianceRegistration || [],
+          manufacturingCapabilitySections: Array.isArray(profileForm.manufacturingCapabilitySections)
+            ? profileForm.manufacturingCapabilitySections.map((section) => ({
+                id: section?.id,
+                title: String(section?.title || "").trim(),
+                description: String(section?.description || "").trim(),
+                image: String(section?.image || "").trim(),
+              }))
+            : [],
+          manufacturingCapabilities: Array.isArray(profileForm.manufacturingCapabilitySections)
+            ? profileForm.manufacturingCapabilitySections
+                .map((section) => String(section?.title || "").trim())
+                .filter(Boolean)
+            : (profileForm.manufacturingCapabilities || []),
+          manufacturingDescription:
+            Array.isArray(profileForm.manufacturingCapabilitySections) && profileForm.manufacturingCapabilitySections.length > 0
+              ? String(profileForm.manufacturingCapabilitySections[0]?.description || "").trim()
+              : String(profileForm.manufacturingDescription || "").trim(),
+          manufacturingImage:
+            Array.isArray(profileForm.manufacturingCapabilitySections) && profileForm.manufacturingCapabilitySections.length > 0
+              ? (profileForm.manufacturingCapabilitySections[0]?.image || null)
+              : (profileForm.manufacturingImage || null),
           documents,
           documentStatus: getDocumentStatus(documents),
         },
@@ -420,6 +720,28 @@ export const SupplierProfile = () => {
   if (error) return <p>Failed to load company profile.</p>;
   const profileDocuments = normalizeDocuments(supplier.documents || []);
   const displayCountry = getCountryNameFromDialCode(supplier.phone) || supplier.country;
+  const supplierManufacturingSections = (() => {
+    const sections = Array.isArray(supplier.manufacturingCapabilitySections)
+      ? supplier.manufacturingCapabilitySections
+      : [];
+    if (sections.length > 0) return sections;
+    if (
+      (Array.isArray(supplier.manufacturingCapabilities) && supplier.manufacturingCapabilities.length > 0) ||
+      supplier.manufacturingDescription ||
+      supplier.manufacturingImage
+    ) {
+      return [
+        {
+          title: Array.isArray(supplier.manufacturingCapabilities)
+            ? String(supplier.manufacturingCapabilities[0] || "")
+            : "",
+          description: supplier.manufacturingDescription || "",
+          image: supplier.manufacturingImage || "",
+        },
+      ];
+    }
+    return [];
+  })();
 
   const handleUploadDocument = async () => {
     if (!validateDocumentFile(selectedDocumentFile)) return;
@@ -528,18 +850,50 @@ export const SupplierProfile = () => {
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Manufacturing Capabilities</p>
+                  {supplierManufacturingSections.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        {supplierManufacturingSections
+                          .map((section) => String(section?.title || "").trim())
+                          .filter(Boolean)
+                          .map((title) => (
+                            <span key={title} className="rounded-sm border border-border bg-black/20 px-3 py-1 text-sm">{title}</span>
+                          ))}
+                      </div>
+                      <div className="space-y-4">
+                        {supplierManufacturingSections.map((section, idx) => (
+                          <div key={section?.id || `supplier-manufacturing-section-${idx}`} className="rounded-sm border border-border bg-black/10 p-4">
+                            <p className="text-sm font-semibold">{section?.title || `Section ${idx + 1}`}</p>
+                            {section?.description ? (
+                              <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{section.description}</p>
+                            ) : (
+                              <p className="mt-2 text-sm text-muted-foreground">N/A</p>
+                            )}
+                            {section?.image && (
+                              <img
+                                src={section.image}
+                                alt={section?.title ? String(section.title) : "Manufacturing capability"}
+                                className="mt-3 h-40 w-full rounded-sm border border-border object-cover"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">N/A</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Compliance Registration</p>
                   <div className="flex flex-wrap gap-2">
-                    {(supplier.manufacturingCapabilities || []).length > 0
-                      ? supplier.manufacturingCapabilities.map((item) => (
+                    {(supplier.complianceRegistration || []).length > 0
+                      ? supplier.complianceRegistration.map((item) => (
                           <span key={item} className="rounded-sm border border-border bg-black/20 px-3 py-1 text-sm">{item}</span>
                         ))
                       : <p className="text-sm text-muted-foreground">N/A</p>}
                   </div>
                 </div>
-                <Info label="Description" value={supplier.manufacturingDescription} />
-                {supplier.manufacturingImage && (
-                  <img src={supplier.manufacturingImage} alt="Manufacturing capability" className="h-40 w-full rounded-sm border border-border object-cover" />
-                )}
               </div>
             </div>
 
@@ -657,89 +1011,45 @@ export const SupplierProfile = () => {
             </div>
 
             <div className="space-y-4 rounded-sm border border-border bg-black/10 p-4">
-              <div>
-                <p className="font-['Barlow_Condensed'] text-lg font-bold uppercase tracking-wide">
-                  Manufacturing Capabilities
-                </p>
-              </div>
+              <p className="font-['Barlow_Condensed'] text-lg font-bold uppercase tracking-wide">
+                Capabilities
+              </p>
               <ChipInputField
                 label="Capabilities"
                 values={profileForm.capabilities || []}
-                onChange={(value) => {
-                  setProfileForm({ ...profileForm, capabilities: value });
-                  setProfileErrors((current) => ({ ...current, capabilities: "" }));
-                }}
+                onChange={(value) => setProfileForm({ ...profileForm, capabilities: value })}
                 placeholder="Type a capability and press Enter"
                 error={profileErrors.capabilities}
                 disabled={isSaving}
               />
+            </div>
+
+            <div className="space-y-4 rounded-sm border border-border bg-black/10 p-4">
+              <ManufacturingSectionsField
+                sections={Array.isArray(profileForm.manufacturingCapabilitySections) ? profileForm.manufacturingCapabilitySections : []}
+                maxDescriptionLen={MANUFACTURING_DESCRIPTION_MAX_LEN}
+                maxImageMb={SUPPLIER_IMAGE_MAX_MB}
+                disabled={isSaving}
+                onAddSection={addManufacturingSection}
+                onRemoveSection={removeManufacturingSection}
+                onUpdateSection={updateManufacturingSection}
+                onSetSectionImage={setManufacturingSectionImage}
+                getSectionError={getManufacturingSectionError}
+              />
+            </div>
+
+            <div className="space-y-4 rounded-sm border border-border bg-black/10 p-4">
+              <p className="font-['Barlow_Condensed'] text-lg font-bold uppercase tracking-wide">
+                Compliance Registration
+              </p>
               <ChipInputField
-                label="Manufacturing Capabilities"
-                values={profileForm.manufacturingCapabilities || []}
-                onChange={(value) => {
-                  setProfileForm({ ...profileForm, manufacturingCapabilities: value });
-                  setProfileErrors((current) => ({ ...current, manufacturingCapabilities: "" }));
-                }}
-                placeholder="Type a manufacturing capability and press Enter"
-                error={profileErrors.manufacturingCapabilities}
+                label="Compliance Registration"
+                values={profileForm.complianceRegistration || []}
+                onChange={(value) => setProfileForm({ ...profileForm, complianceRegistration: value })}
+                placeholder="Type a compliance and press Enter"
+                error={profileErrors.complianceRegistration}
                 disabled={isSaving}
               />
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
-                  <span className="text-xs text-muted-foreground">
-                    {String(profileForm.manufacturingDescription || "").length}/{MANUFACTURING_DESCRIPTION_MAX_LEN}
-                  </span>
-                </div>
-                <Textarea
-                  value={profileForm.manufacturingDescription || ""}
-                  onChange={(event) => {
-                    setProfileForm({
-                      ...profileForm,
-                      manufacturingDescription: event.target.value.slice(0, MANUFACTURING_DESCRIPTION_MAX_LEN),
-                    });
-                    setProfileErrors((current) => ({ ...current, manufacturingDescription: "" }));
-                  }}
-                  maxLength={MANUFACTURING_DESCRIPTION_MAX_LEN}
-                  placeholder="Describe manufacturing capabilities"
-                  className={`bg-black/20 mt-1 min-h-28 ${profileErrors.manufacturingDescription ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
-                  disabled={isSaving}
-                />
-                <FieldError error={profileErrors.manufacturingDescription} />
-              </div>
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Upload Image</Label>
-                <div className={`mt-1 grid gap-4 rounded-sm border bg-black/10 p-3 md:grid-cols-[140px_1fr] ${profileErrors.manufacturingImage ? "border-red-500/50" : "border-border"}`}>
-                  <div className="h-28 overflow-hidden rounded-sm border border-border bg-muted/20">
-                    {profileForm.manufacturingImage ? (
-                      <img src={profileForm.manufacturingImage} alt="Manufacturing preview" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <ImagePlus className="h-7 w-7 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center gap-3">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => {
-                        handleManufacturingImageFile(event.target.files?.[0] || null);
-                        event.target.value = "";
-                      }}
-                      className="bg-black/20 file:mr-3 file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
-                      disabled={isSaving}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Upload manufacturing or capability related image. JPG, PNG, WEBP up to {SUPPLIER_IMAGE_MAX_MB}MB.
-                    </p>
-                    {profileForm.manufacturingImageFileName && (
-                      <p className="text-xs text-muted-foreground truncate">Selected: {profileForm.manufacturingImageFileName}</p>
-                    )}
-                  </div>
-                </div>
-                <FieldError error={profileErrors.manufacturingImage} />
-              </div>
             </div>
 
             <div className="pt-2 border-t border-border">
