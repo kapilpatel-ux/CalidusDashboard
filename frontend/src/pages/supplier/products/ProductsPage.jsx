@@ -710,6 +710,7 @@ export const SupplierProducts = () => {
           searchPlaceholder="Search products..."
           searchKey="name"
           pageSize={10}
+          autoSortByCreatedAt={false}
           testId="supplier-products-table"
           toolbarRight={
             <Select value={statusFilter} onValueChange={setStatusFilter}>

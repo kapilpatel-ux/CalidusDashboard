@@ -51,6 +51,7 @@ export const DataTable = ({
   searchKey,
   searchKeys,
   pageSize = 10,
+  autoSortByCreatedAt = true,
   className,
   testId,
   toolbarRight,
@@ -97,9 +98,12 @@ export const DataTable = ({
     return [...columns, createdAtColumn];
   })();
 
-  const sortedData = hasCreatedAt
-    ? [...filteredData].sort((a, b) => (getCreatedAtMillis(b) || 0) - (getCreatedAtMillis(a) || 0))
-    : filteredData;
+  const sortedData =
+    autoSortByCreatedAt && hasCreatedAt
+      ? [...filteredData].sort(
+          (a, b) => (getCreatedAtMillis(b) || 0) - (getCreatedAtMillis(a) || 0)
+        )
+      : filteredData;
 
   // Pagination
   const totalPages = Math.ceil(sortedData.length / pageSize);
