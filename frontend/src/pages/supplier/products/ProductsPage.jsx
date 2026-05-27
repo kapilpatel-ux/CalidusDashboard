@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ActionButton, ActionButtonGroup } from "@/components/shared/ActionButton";
@@ -52,10 +51,6 @@ const emptyEditForm = {
   operatingTemperature: "",
   operationalRange: "",
   applicationUseCase: "",
-  capabilities: [],
-  manufacturingCapabilities: [],
-  manufacturingDescription: "",
-  manufacturingImage: "",
   datasheet: null,
 };
 
@@ -80,10 +75,6 @@ const emptyAddForm = {
   operatingTemperature: "",
   operationalRange: "",
   applicationUseCase: "",
-  capabilities: [],
-  manufacturingCapabilities: [],
-  manufacturingDescription: "",
-  manufacturingImage: "",
   datasheet: null,
 };
 
@@ -110,9 +101,6 @@ const validateProductForm = (form, categoryOptions = []) => {
     errors.category = "Category is required";
   } else if (categoryOptions.length > 0 && !categoryOptions.includes(form.category)) {
     errors.category = "Select an approved category";
-  }
-  if (form.manufacturingDescription.length > 300) {
-    errors.manufacturingDescription = "Description must be 300 characters or less";
   }
   return errors;
 };
@@ -174,89 +162,6 @@ const ProductSelectField = ({ label, value, onChange, placeholder, options, requ
         </SelectContent>
       </Select>
       {error && <p className="text-sm font-medium text-red-400">{error}</p>}
-    </div>
-  );
-};
-
-const ProductChipField = ({ label, values = [], onChange, placeholder }) => {
-  const [draft, setDraft] = useState("");
-  const fieldId = `add-product-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-
-  const addChip = () => {
-    const value = draft.trim();
-    if (!value || values.includes(value)) return;
-    onChange([...values, value]);
-    setDraft("");
-  };
-
-  const removeChip = (value) => onChange(values.filter((item) => item !== value));
-
-  const handleKeyDown = (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    addChip();
-  };
-
-  return (
-    <div className="space-y-3 md:col-span-2">
-      <Label htmlFor={fieldId} className="text-[13px] font-medium uppercase tracking-normal text-[#A1A1AA] sm:text-[18px]">
-        {label}
-      </Label>
-      <Input
-        id={fieldId}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={addChip}
-        placeholder={placeholder}
-        className="h-[51px] rounded-[5px] border-[#29292E] bg-[#0E1012] px-[15px] text-base text-white placeholder:text-[#9D9DA5]"
-      />
-      {values.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {values.map((value) => (
-            <span
-              key={value}
-              className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-[5px] border border-[#29292E] bg-[#0E1012] px-3 py-1 text-sm text-white"
-            >
-              <span className="break-all">{value}</span>
-              <button
-                type="button"
-                className="shrink-0 rounded-sm text-[#A1A1AA] hover:text-red-300"
-                onClick={() => removeChip(value)}
-                aria-label={`Remove ${value}`}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ProductTextareaField = ({ label, value, onChange, placeholder, maxLength, error = "" }) => {
-  const fieldId = `add-product-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-  const length = value.length;
-
-  return (
-    <div className="space-y-3 md:col-span-2">
-      <Label htmlFor={fieldId} className="text-[13px] font-medium uppercase tracking-normal text-[#A1A1AA] sm:text-[18px]">
-        {label}
-      </Label>
-      <Textarea
-        id={fieldId}
-        value={value}
-        onChange={(event) => onChange(event.target.value.slice(0, maxLength))}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        aria-invalid={Boolean(error)}
-        className={`min-h-[120px] rounded-[5px] bg-[#0E1012] px-[15px] py-3 text-base text-white placeholder:text-[#9D9DA5] ${error ? "border-red-500 focus-visible:ring-red-500" : "border-[#29292E]"}`}
-      />
-      <div className="flex items-center justify-between gap-3">
-        {error ? <p className="text-sm font-medium text-red-400">{error}</p> : <span />}
-        <p className="shrink-0 text-xs text-[#9D9DA5]">{length}/{maxLength}</p>
-      </div>
     </div>
   );
 };
@@ -560,10 +465,6 @@ export const SupplierProducts = () => {
       operatingTemperature: technicalDetails.operatingTemperature || "",
       operationalRange: technicalDetails.operationalRange || "",
       applicationUseCase: product.applicationUseCase || "",
-      capabilities: Array.isArray(product.capabilities) ? product.capabilities : [],
-      manufacturingCapabilities: Array.isArray(product.manufacturingCapabilities) ? product.manufacturingCapabilities : [],
-      manufacturingDescription: product.manufacturingDescription || "",
-      manufacturingImage: product.manufacturingImage || "",
       datasheet: product.datasheet || null,
     });
     setEditErrors({});
@@ -595,10 +496,6 @@ export const SupplierProducts = () => {
       countryOfOrigin: form.countryOfOrigin,
       shortDescription: form.keyFeatures,
       description: form.keyFeatures,
-      capabilities: form.capabilities,
-      manufacturingCapabilities: form.manufacturingCapabilities,
-      manufacturingDescription: form.manufacturingDescription.trim(),
-      manufacturingImage: form.manufacturingImage.trim() || null,
       specifications,
       technicalSpecs: specifications.join("\n"),
       applicationUseCase: form.applicationUseCase,
@@ -892,29 +789,6 @@ export const SupplierProducts = () => {
               <ProductSelectField label="Application Areas" value={addForm.applicationUseCase} onChange={(value) => setAddField("applicationUseCase", value)} placeholder="Select application areas" options={applicationAreas} />
             </FormSection>
 
-            <FormSection title="Manufacturing Capabilities">
-              <ProductChipField
-                label="Capabilities"
-                values={addForm.capabilities}
-                onChange={(value) => setAddField("capabilities", value)}
-                placeholder="Type a capability and press Enter"
-              />
-              <ProductChipField
-                label="Manufacturing Capabilities"
-                values={addForm.manufacturingCapabilities}
-                onChange={(value) => setAddField("manufacturingCapabilities", value)}
-                placeholder="Type a manufacturing capability and press Enter"
-              />
-              <ProductTextareaField
-                label="Description"
-                value={addForm.manufacturingDescription}
-                onChange={(value) => setAddField("manufacturingDescription", value)}
-                placeholder="Describe manufacturing capabilities"
-                maxLength={300}
-                error={addErrors.manufacturingDescription}
-              />
-              <ProductImageField label="Upload Image" value={addForm.manufacturingImage} onChange={(value) => setAddField("manufacturingImage", value)} testId="add-manufacturing-image" />
-            </FormSection>
           </div>
 
           <DialogFooter className="border-t border-[#29292E] px-6 py-5 sm:px-8">
@@ -1013,46 +887,6 @@ export const SupplierProducts = () => {
                 </div>
               )}
 
-              {(Array.isArray(detailProduct.capabilities) && detailProduct.capabilities.length > 0) && (
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Capabilities</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {detailProduct.capabilities.map((capability) => (
-                      <span key={capability} className="rounded-sm border border-border bg-black/20 px-3 py-2 text-sm">
-                        {capability}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(Array.isArray(detailProduct.manufacturingCapabilities) && detailProduct.manufacturingCapabilities.length > 0) && (
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Manufacturing Capabilities</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {detailProduct.manufacturingCapabilities.map((capability) => (
-                      <span key={capability} className="rounded-sm border border-border bg-black/20 px-3 py-2 text-sm">
-                        {capability}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {detailProduct.manufacturingDescription && (
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Manufacturing Description</p>
-                  <p className="mt-1 text-sm leading-6">{detailProduct.manufacturingDescription}</p>
-                </div>
-              )}
-
-              {detailProduct.manufacturingImage && (
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Manufacturing Image</p>
-                  <img src={detailProduct.manufacturingImage} alt="Manufacturing capability" className="mt-2 h-40 w-full rounded-md bg-muted object-cover" />
-                </div>
-              )}
-
               {Array.isArray(detailProduct.specifications) && detailProduct.specifications.length > 0 && (
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">Specifications</p>
@@ -1147,29 +981,6 @@ export const SupplierProducts = () => {
               <ProductSelectField label="Application Areas" value={editForm.applicationUseCase} onChange={(value) => setEditField("applicationUseCase", value)} placeholder="Select application areas" options={applicationAreas} />
             </FormSection>
 
-            <FormSection title="Manufacturing Capabilities">
-              <ProductChipField
-                label="Capabilities"
-                values={editForm.capabilities}
-                onChange={(value) => setEditField("capabilities", value)}
-                placeholder="Type a capability and press Enter"
-              />
-              <ProductChipField
-                label="Manufacturing Capabilities"
-                values={editForm.manufacturingCapabilities}
-                onChange={(value) => setEditField("manufacturingCapabilities", value)}
-                placeholder="Type a manufacturing capability and press Enter"
-              />
-              <ProductTextareaField
-                label="Description"
-                value={editForm.manufacturingDescription}
-                onChange={(value) => setEditField("manufacturingDescription", value)}
-                placeholder="Describe manufacturing capabilities"
-                maxLength={300}
-                error={editErrors.manufacturingDescription}
-              />
-              <ProductImageField label="Upload Image" value={editForm.manufacturingImage} onChange={(value) => setEditField("manufacturingImage", value)} testId="edit-manufacturing-image" />
-            </FormSection>
           </div>
 
           <DialogFooter className="shrink-0 border-t border-[#29292E] px-6 py-5 sm:px-8">

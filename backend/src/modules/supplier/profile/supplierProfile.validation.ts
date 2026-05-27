@@ -7,6 +7,10 @@ export const updateSupplierProfileSchema = z.object({
   country: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().min(1).optional(),
+  capabilities: z.array(z.string()).optional(),
+  manufacturingCapabilities: z.array(z.string()).optional(),
+  manufacturingDescription: z.string().max(300, "Manufacturing description must be 300 characters or less").optional(),
+  manufacturingImage: z.string().nullable().optional(),
   certifications: z.array(z.string()).optional(),
   documents: z.array(z.record(z.unknown())).optional(),
 }).passthrough().superRefine((data, ctx) => {

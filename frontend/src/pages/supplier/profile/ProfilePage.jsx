@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { toast } from "sonner";
-import { Award, Building2, Calendar, Edit, FileCheck, FileWarning, FileX, ImagePlus, Mail, MapPin, Phone, RefreshCw, Upload } from "lucide-react";
+import { Award, Building2, Calendar, Edit, FileCheck, FileWarning, FileX, ImagePlus, Mail, MapPin, Phone, RefreshCw, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import { useGetSupplierProfileQuery, useUpdateSupplierProfileMutation } from "@/store/api/supplier/supplierProfileApi";
@@ -20,6 +21,7 @@ const defaultProfileDocuments = [
 ];
 
 const SUPPLIER_IMAGE_MAX_MB = 5;
+const MANUFACTURING_DESCRIPTION_MAX_LEN = 300;
 
 const pad2 = (n) => String(n).padStart(2, "0");
 const toLocalISODate = (date) =>
@@ -88,6 +90,61 @@ const normalizeDocuments = (documents = []) => {
   }));
 };
 
+const ChipInputField = ({ label, values = [], onChange, placeholder, error, disabled = false }) => {
+  const [draft, setDraft] = useState("");
+  const fieldId = `profile-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+  const addChip = () => {
+    const value = draft.trim();
+    if (!value || values.includes(value)) return;
+    onChange([...values, value]);
+    setDraft("");
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addChip();
+  };
+
+  return (
+    <div>
+      <Label htmlFor={fieldId} className="text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
+      <Input
+        id={fieldId}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={addChip}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`bg-black/20 mt-1 ${error ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+      />
+      {values.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {values.map((value) => (
+            <span key={value} className="inline-flex max-w-full items-center gap-2 rounded-sm border border-border bg-black/20 px-3 py-1 text-sm">
+              <span className="break-all">{value}</span>
+              <button
+                type="button"
+                className="shrink-0 text-muted-foreground hover:text-red-400"
+                onClick={() => onChange(values.filter((item) => item !== value))}
+                disabled={disabled}
+                aria-label={`Remove ${value}`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <FieldError error={error} />
+    </div>
+  );
+};
+
 export const SupplierProfile = () => {
   const { currentUser } = useAuth();
   const supplierId = currentUser?.profileId || currentSupplier.id;
@@ -126,6 +183,10 @@ export const SupplierProfile = () => {
     setProfileForm({
       ...supplier,
       country: supplier.country || getCountryNameFromDialCode(supplier.phone),
+      capabilities: Array.isArray(supplier.capabilities) ? supplier.capabilities : [],
+      manufacturingCapabilities: Array.isArray(supplier.manufacturingCapabilities) ? supplier.manufacturingCapabilities : [],
+      manufacturingDescription: supplier.manufacturingDescription || "",
+      manufacturingImage: supplier.manufacturingImage || "",
       documents: normalizeDocuments(supplier.documents || []),
     });
     setEditProfileDialog(true);
@@ -233,6 +294,38 @@ export const SupplierProfile = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleManufacturingImageFile = (file) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setProfileErrors((current) => ({ ...current, manufacturingImage: "Please select a valid image file" }));
+      return;
+    }
+
+    if (file.size > SUPPLIER_IMAGE_MAX_MB * 1024 * 1024) {
+      setProfileErrors((current) => ({ ...current, manufacturingImage: `Image must be ${SUPPLIER_IMAGE_MAX_MB}MB or smaller` }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfileForm((current) => ({
+        ...current,
+        manufacturingImage: String(reader.result || ""),
+        manufacturingImageFileName: file.name,
+      }));
+      setProfileErrors((current) => {
+        const next = { ...current };
+        delete next.manufacturingImage;
+        return next;
+      });
+    };
+    reader.onerror = () => {
+      setProfileErrors((current) => ({ ...current, manufacturingImage: "Unable to read selected image" }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const validateProfileForm = () => {
     const errors = {};
 
@@ -264,6 +357,21 @@ export const SupplierProfile = () => {
       errors.phone = errors.phone || "Please select a valid mobile country code";
     }
 
+    if (!Array.isArray(profileForm.capabilities) || profileForm.capabilities.length === 0) {
+      errors.capabilities = "Add at least one capability";
+    }
+    if (!Array.isArray(profileForm.manufacturingCapabilities) || profileForm.manufacturingCapabilities.length === 0) {
+      errors.manufacturingCapabilities = "Add at least one manufacturing capability";
+    }
+    if (!String(profileForm.manufacturingDescription || "").trim()) {
+      errors.manufacturingDescription = "Manufacturing description is required";
+    } else if (String(profileForm.manufacturingDescription || "").length > MANUFACTURING_DESCRIPTION_MAX_LEN) {
+      errors.manufacturingDescription = `Manufacturing description must be at most ${MANUFACTURING_DESCRIPTION_MAX_LEN} characters`;
+    }
+    if (!String(profileForm.manufacturingImage || "").trim()) {
+      errors.manufacturingImage = "Manufacturing image is required";
+    }
+
     setProfileErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -292,6 +400,10 @@ export const SupplierProfile = () => {
           email: profileForm.email,
           phone: profileForm.phone,
           image: profileForm.image || null,
+          capabilities: profileForm.capabilities || [],
+          manufacturingCapabilities: profileForm.manufacturingCapabilities || [],
+          manufacturingDescription: String(profileForm.manufacturingDescription || "").trim(),
+          manufacturingImage: profileForm.manufacturingImage || null,
           documents,
           documentStatus: getDocumentStatus(documents),
         },
@@ -398,6 +510,36 @@ export const SupplierProfile = () => {
                     onUpload={() => setUploadDocDialog({ open: true, document: doc })}
                   />
                 ))}
+              </div>
+            </div>
+
+            <div className="dashboard-card">
+              <div className="dashboard-card-header"><h3 className="dashboard-card-title">Manufacturing Capabilities</h3></div>
+              <div className="dashboard-card-content space-y-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Capabilities</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(supplier.capabilities || []).length > 0
+                      ? supplier.capabilities.map((item) => (
+                          <span key={item} className="rounded-sm border border-border bg-black/20 px-3 py-1 text-sm">{item}</span>
+                        ))
+                      : <p className="text-sm text-muted-foreground">N/A</p>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Manufacturing Capabilities</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(supplier.manufacturingCapabilities || []).length > 0
+                      ? supplier.manufacturingCapabilities.map((item) => (
+                          <span key={item} className="rounded-sm border border-border bg-black/20 px-3 py-1 text-sm">{item}</span>
+                        ))
+                      : <p className="text-sm text-muted-foreground">N/A</p>}
+                  </div>
+                </div>
+                <Info label="Description" value={supplier.manufacturingDescription} />
+                {supplier.manufacturingImage && (
+                  <img src={supplier.manufacturingImage} alt="Manufacturing capability" className="h-40 w-full rounded-sm border border-border object-cover" />
+                )}
               </div>
             </div>
 
@@ -513,6 +655,93 @@ export const SupplierProfile = () => {
               />
               <FieldError error={profileErrors.phone} />
             </div>
+
+            <div className="space-y-4 rounded-sm border border-border bg-black/10 p-4">
+              <div>
+                <p className="font-['Barlow_Condensed'] text-lg font-bold uppercase tracking-wide">
+                  Manufacturing Capabilities
+                </p>
+              </div>
+              <ChipInputField
+                label="Capabilities"
+                values={profileForm.capabilities || []}
+                onChange={(value) => {
+                  setProfileForm({ ...profileForm, capabilities: value });
+                  setProfileErrors((current) => ({ ...current, capabilities: "" }));
+                }}
+                placeholder="Type a capability and press Enter"
+                error={profileErrors.capabilities}
+                disabled={isSaving}
+              />
+              <ChipInputField
+                label="Manufacturing Capabilities"
+                values={profileForm.manufacturingCapabilities || []}
+                onChange={(value) => {
+                  setProfileForm({ ...profileForm, manufacturingCapabilities: value });
+                  setProfileErrors((current) => ({ ...current, manufacturingCapabilities: "" }));
+                }}
+                placeholder="Type a manufacturing capability and press Enter"
+                error={profileErrors.manufacturingCapabilities}
+                disabled={isSaving}
+              />
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {String(profileForm.manufacturingDescription || "").length}/{MANUFACTURING_DESCRIPTION_MAX_LEN}
+                  </span>
+                </div>
+                <Textarea
+                  value={profileForm.manufacturingDescription || ""}
+                  onChange={(event) => {
+                    setProfileForm({
+                      ...profileForm,
+                      manufacturingDescription: event.target.value.slice(0, MANUFACTURING_DESCRIPTION_MAX_LEN),
+                    });
+                    setProfileErrors((current) => ({ ...current, manufacturingDescription: "" }));
+                  }}
+                  maxLength={MANUFACTURING_DESCRIPTION_MAX_LEN}
+                  placeholder="Describe manufacturing capabilities"
+                  className={`bg-black/20 mt-1 min-h-28 ${profileErrors.manufacturingDescription ? "border-red-500/50 focus-visible:ring-red-500/30" : ""}`}
+                  disabled={isSaving}
+                />
+                <FieldError error={profileErrors.manufacturingDescription} />
+              </div>
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Upload Image</Label>
+                <div className={`mt-1 grid gap-4 rounded-sm border bg-black/10 p-3 md:grid-cols-[140px_1fr] ${profileErrors.manufacturingImage ? "border-red-500/50" : "border-border"}`}>
+                  <div className="h-28 overflow-hidden rounded-sm border border-border bg-muted/20">
+                    {profileForm.manufacturingImage ? (
+                      <img src={profileForm.manufacturingImage} alt="Manufacturing preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <ImagePlus className="h-7 w-7 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center gap-3">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        handleManufacturingImageFile(event.target.files?.[0] || null);
+                        event.target.value = "";
+                      }}
+                      className="bg-black/20 file:mr-3 file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-primary-foreground"
+                      disabled={isSaving}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Upload manufacturing or capability related image. JPG, PNG, WEBP up to {SUPPLIER_IMAGE_MAX_MB}MB.
+                    </p>
+                    {profileForm.manufacturingImageFileName && (
+                      <p className="text-xs text-muted-foreground truncate">Selected: {profileForm.manufacturingImageFileName}</p>
+                    )}
+                  </div>
+                </div>
+                <FieldError error={profileErrors.manufacturingImage} />
+              </div>
+            </div>
+
             <div className="pt-2 border-t border-border">
               <div className="mb-3">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Documents</Label>
