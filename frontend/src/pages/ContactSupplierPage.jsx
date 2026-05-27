@@ -28,12 +28,8 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { COUNTRIES } from "@/data/countries";
-<<<<<<< Updated upstream
 import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
-=======
 import { copyCredentialsText, downloadCredentialsJson } from "@/lib/credentialDownload";
-import { validatePhoneNumber } from "@/lib/phoneValidation";
->>>>>>> Stashed changes
 
 const initialForm = {
   fullName: "",
