@@ -7,6 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -20,6 +28,7 @@ import { Country, State, City } from "country-state-city";
 import postalCodes from "postal-codes-js";
 import { useCreateSupplierMutation } from "@/store/api/admin/supplierApi";
 import logo from "@/assets/images/calidusheader.png";
+import { copyCredentialsText, downloadCredentialsJson } from "@/lib/credentialDownload";
 import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
 
 const steps = [
@@ -198,6 +207,7 @@ const localIsoDate = (date) =>
 export const SupplierRegistrationPage = () => {
   const navigate = useNavigate();
   const [createSupplier, { isLoading: isSubmitting }] = useCreateSupplierMutation();
+  const [credentialDialog, setCredentialDialog] = useState({ open: false, credentials: null });
   const todayIso = localIsoDate(new Date());
   const tomorrowDate = new Date();
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
@@ -745,9 +755,13 @@ export const SupplierRegistrationPage = () => {
     };
 
     try {
-      await createSupplier(payload).unwrap();
+      const created = await createSupplier(payload).unwrap();
       toast.success("Registration submitted. Your account is pending approval.");
-      navigate("/login");
+      if (created?.credentials?.email && created?.credentials?.password) {
+        setCredentialDialog({ open: true, credentials: created.credentials });
+      } else {
+        navigate("/login");
+      }
     } catch (error) {
       toast.error(error?.data?.message || error?.message || "Registration failed");
     }
@@ -755,6 +769,63 @@ export const SupplierRegistrationPage = () => {
 
   return (
     <div className="min-h-screen bg-background tactical-grid noise-overlay dashboard-bg-background">
+      <Dialog
+        open={credentialDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCredentialDialog({ open: false, credentials: null });
+            navigate("/login");
+          }
+        }}
+      >
+        <DialogContent className="border-border bg-card text-card-foreground">
+          <DialogHeader>
+            <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">
+              Save Your Login Details
+            </DialogTitle>
+            <DialogDescription>
+              Please copy these credentials now. They will disappear when you close this popup.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 rounded-sm border border-border bg-black/20 p-4 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Email</p>
+              <p className="mt-1 font-mono break-all">{credentialDialog.credentials?.email}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Password</p>
+              <p className="mt-1 font-mono break-all">{credentialDialog.credentials?.password}</p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                downloadCredentialsJson(
+                  credentialDialog.credentials,
+                  "calidus-supplier-credentials.json",
+                )
+              }
+            >
+              Download JSON
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                try {
+                  await copyCredentialsText(credentialDialog.credentials);
+                  toast.success("Credentials copied");
+                } catch (_) {
+                  toast.error("Unable to copy credentials");
+                }
+              }}
+            >
+              Copy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <header className="fixed left-0 top-0 z-40 h-16 w-full border-b border-border bg-background/90 backdrop-blur-md dashboard-bg-background">
         <div className="h-full max-w-6xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

@@ -10,6 +10,7 @@ import { hashPassword } from "../../auth/auth.service.js";
 import { objectsToCsv } from "../../../utils/csv.js";
 import { parseCsv } from "../../../utils/csvParse.js";
 import { createAdminNotification } from "../notifications/notification.service.js";
+import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 import { SupplierModel } from "./supplier.model.js";
 
 const WORDPRESS_DEFAULT_LIMIT = 20;
@@ -79,6 +80,32 @@ export const getSupplier = asyncHandler(async (req: Request, res: Response) => {
 export const createSupplier = asyncHandler(async (req: Request, res: Response) => {
   const payload = { ...req.body, id: req.body.id || createReadableId("SUP") };
   const created = await SupplierModel.create(payload);
+  let credentials: { email: string; password: string } | null = null;
+
+  const supplierEmail = String(payload.email || "").toLowerCase().trim();
+  if (supplierEmail) {
+    const existingSupplierUser = await AuthUserModel.findOne(
+      { role: "supplier", $or: [{ profileId: payload.id }, { email: supplierEmail }] },
+      { _id: 0, id: 1 },
+    ).lean();
+
+    if (!existingSupplierUser) {
+      const tempPassword = crypto.randomBytes(10).toString("base64url");
+      await AuthUserModel.create({
+        id: createReadableId("USR"),
+        name: payload.name || "Supplier",
+        email: supplierEmail,
+        phone: payload.phone || "",
+        passwordHash: hashPassword(tempPassword),
+        role: "supplier",
+        profileId: payload.id,
+        company: payload.name || "",
+        status: "pending",
+      });
+      credentials = { email: supplierEmail, password: tempPassword };
+    }
+  }
+
   try {
     await createAdminNotification({
       type: "supplier",
@@ -89,7 +116,18 @@ export const createSupplier = asyncHandler(async (req: Request, res: Response) =
   } catch (err) {
     console.error("Failed to create admin notification for supplier creation", err);
   }
-  res.status(201).json(created.toJSON());
+  try {
+    await createSupplierNotification({
+      supplierId: payload.id,
+      type: "supplier",
+      title: "Supplier Profile Created",
+      message: `Your supplier profile "${payload.name || payload.id}" was created.`,
+      link: "profile",
+    });
+  } catch (err) {
+    console.error("Failed to create supplier notification for supplier creation", err);
+  }
+  res.status(201).json({ ...created.toJSON(), credentials });
 });
 
 export const updateSupplier = asyncHandler(async (req: Request, res: Response) => {
@@ -100,6 +138,17 @@ export const updateSupplier = asyncHandler(async (req: Request, res: Response) =
   ).lean();
 
   if (!updated) throw new HttpError(404, "Supplier not found");
+  try {
+    await createSupplierNotification({
+      supplierId: String(updated.id),
+      type: "supplier",
+      title: "Supplier Profile Updated",
+      message: `Your supplier profile "${updated.name || updated.id}" was updated by admin.`,
+      link: "profile",
+    });
+  } catch (err) {
+    console.error("Failed to create supplier notification for supplier update", err);
+  }
   res.json(updated);
 });
 
@@ -113,6 +162,17 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
   ).lean();
 
   if (!updated) throw new HttpError(404, "Supplier not found");
+  try {
+    await createSupplierNotification({
+      supplierId: String(updated.id),
+      type: "supplier",
+      title: "Supplier Status Updated",
+      message: `Your supplier status has been changed to ${req.body.status}.`,
+      link: "profile",
+    });
+  } catch (err) {
+    console.error("Failed to create supplier notification for supplier status", err);
+  }
 
   await AuthUserModel.updateMany(
     {
@@ -131,7 +191,7 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
         { _id: 0, id: 1 },
       ).lean();
 
-      const tempPassword = crypto.randomBytes(10).toString("base64url");
+      let tempPassword = "";
       if (existingSupplierUser) {
         await AuthUserModel.updateOne(
           { id: existingSupplierUser.id },
@@ -140,7 +200,6 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
               name: (updated as { name?: string }).name || "Supplier",
               email: supplierEmail,
               phone: (updated as { phone?: string }).phone || "",
-              passwordHash: hashPassword(tempPassword),
               profileId: updated.id,
               company: (updated as { name?: string }).name || "",
               status: "active",
@@ -148,6 +207,7 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
           },
         );
       } else {
+        tempPassword = crypto.randomBytes(10).toString("base64url");
         await AuthUserModel.create({
           id: createReadableId("USR"),
           name: (updated as { name?: string }).name || "Supplier",
@@ -170,7 +230,7 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
         "",
         `Login URL: ${appUrl}`,
         `Email: ${supplierEmail}`,
-        `Password: ${tempPassword}`,
+        tempPassword ? `Password: ${tempPassword}` : "Password: Use the password shown when you registered.",
         "",
         "For security, please change your password after logging in.",
       ].join("\n");
@@ -181,7 +241,7 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
           <p>Welcome to Calidus Dashboard. Your supplier account has been approved.</p>
           <p><strong>Login URL:</strong> <a href="${appUrl}">${appUrl}</a><br/>
           <strong>Email:</strong> ${supplierEmail}<br/>
-          <strong>Password:</strong> ${tempPassword}</p>
+          <strong>Password:</strong> ${tempPassword || "Use the password shown when you registered."}</p>
           <p>For security, please change your password after logging in.</p>
         </div>
       `;
@@ -198,8 +258,22 @@ export const updateSupplierStatus = asyncHandler(async (req: Request, res: Respo
 });
 
 export const deleteSupplier = asyncHandler(async (req: Request, res: Response) => {
+  const supplier = await SupplierModel.findOne({ id: req.params.supplierId }, { _id: 0, id: 1, name: 1 }).lean();
   const result = await SupplierModel.deleteOne({ id: req.params.supplierId });
   if (!result.deletedCount) throw new HttpError(404, "Supplier not found");
+  if (supplier) {
+    try {
+      await createSupplierNotification({
+        supplierId: String(supplier.id),
+        type: "supplier",
+        title: "Supplier Profile Deleted",
+        message: `Your supplier profile "${supplier.name || supplier.id}" was deleted by admin.`,
+        link: "profile",
+      });
+    } catch (err) {
+      console.error("Failed to create supplier notification for supplier delete", err);
+    }
+  }
   res.json({ success: true, message: "Supplier deleted" });
 });
 

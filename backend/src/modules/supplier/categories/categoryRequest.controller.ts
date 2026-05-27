@@ -3,6 +3,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { createReadableId } from "../../../utils/id.js";
 import { CategoryModel } from "../../admin/categories/category.model.js";
+import { createAdminNotification } from "../../admin/notifications/notification.service.js";
 
 export const listSupplierCategoryRequests = asyncHandler(async (req: Request, res: Response) => {
   const supplierId = req.params.supplierId;
@@ -38,6 +39,16 @@ export const createSupplierCategoryRequest = asyncHandler(async (req: Request, r
     requestedBy: req.params.supplierId,
     requestedAt: new Date().toISOString(),
   });
+  try {
+    await createAdminNotification({
+      type: "category",
+      title: "New Category Request",
+      message: `Supplier requested category "${name}".`,
+      link: "categorymanagement",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for category request", err);
+  }
 
   res.status(201).json(created.toJSON());
 });

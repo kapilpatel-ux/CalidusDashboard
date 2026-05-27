@@ -5,6 +5,25 @@ import { createReadableId } from "../../../utils/id.js";
 import { CategoryModel } from "./category.model.js";
 import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 
+const getCategorySupplierId = (category: { supplierId?: string; requestedBy?: string } = {}) =>
+  category.supplierId || category.requestedBy || "";
+
+async function notifyCategorySupplier(
+  category: { supplierId?: string; requestedBy?: string; name?: string },
+  title: string,
+  message: string,
+) {
+  const supplierId = getCategorySupplierId(category);
+  if (!supplierId) return;
+  await createSupplierNotification({
+    supplierId,
+    type: "category",
+    title,
+    message,
+    link: "categorymanagement",
+  });
+}
+
 export const listCategories = asyncHandler(async (_req: Request, res: Response) => {
   const includePending = String(_req.query.includePending || "").toLowerCase() === "true";
   const filter = includePending
@@ -35,6 +54,15 @@ export const createCategory = asyncHandler(async (req: Request, res: Response) =
   if (existing) throw new HttpError(409, "Category already exists");
 
   const created = await CategoryModel.create(payload);
+  try {
+    await notifyCategorySupplier(
+      created.toJSON(),
+      "Category Created",
+      `Category "${payload.name}" was created by admin.`,
+    );
+  } catch (err) {
+    console.error("Failed to create supplier notification for category creation", err);
+  }
   res.status(201).json(created.toJSON());
 });
 
@@ -53,17 +81,7 @@ export const approveCategory = asyncHandler(async (req: Request, res: Response) 
     name?: string;
   };
 
-  const supplierId = category.supplierId || category.requestedBy;
-
-  if (supplierId) {
-    await createSupplierNotification({
-      supplierId,
-      type: "category",
-      title: "Category Approved",
-      message: `Your category "${category.name}" has been approved.`,
-      link: "categorymanagement",
-    });
-  }
+  await notifyCategorySupplier(category, "Category Approved", `Your category "${category.name}" has been approved.`);
   res.json(updated);
 });
 
@@ -89,17 +107,7 @@ export const rejectCategory = asyncHandler(async (req: Request, res: Response) =
     name?: string;
   };
 
-  const supplierId = category.supplierId || category.requestedBy;
-
-  if (supplierId) {
-    await createSupplierNotification({
-      supplierId,
-      type: "category",
-      title: "Category Rejected",
-      message: `Your category "${category.name}" has been rejected.`,
-      link: "categorymanagement",
-    });
-  }
+  await notifyCategorySupplier(category, "Category Rejected", `Your category "${category.name}" has been rejected.`);
 
   res.json(updated);
 });
@@ -128,6 +136,15 @@ export const updateCategory = asyncHandler(async (req: Request, res: Response) =
   ).lean();
 
   if (!updated) throw new HttpError(404, "Category not found");
+  try {
+    await notifyCategorySupplier(
+      updated as { supplierId?: string; requestedBy?: string; name?: string },
+      "Category Updated",
+      `Category "${(updated as { name?: string }).name || "your category"}" was updated by admin.`,
+    );
+  } catch (err) {
+    console.error("Failed to create supplier notification for category update", err);
+  }
 
   res.json(updated);
 });
@@ -155,13 +172,36 @@ export const updateSubcategory = asyncHandler(async (req: Request, res: Response
     { id: req.params.categoryId },
     { _id: 0 },
   ).lean();
+  if (updated) {
+    try {
+      await notifyCategorySupplier(
+        updated as { supplierId?: string; requestedBy?: string; name?: string },
+        "Subcategory Updated",
+        `A subcategory in "${(updated as { name?: string }).name || "your category"}" was updated by admin.`,
+      );
+    } catch (err) {
+      console.error("Failed to create supplier notification for subcategory update", err);
+    }
+  }
 
   res.json(updated);
 });
 
 export const deleteCategory = asyncHandler(async (req: Request, res: Response) => {
+  const category = await CategoryModel.findOne({ id: req.params.categoryId }, { _id: 0 }).lean();
   const result = await CategoryModel.deleteOne({ id: req.params.categoryId });
   if (!result.deletedCount) throw new HttpError(404, "Category not found");
+  if (category) {
+    try {
+      await notifyCategorySupplier(
+        category as { supplierId?: string; requestedBy?: string; name?: string },
+        "Category Deleted",
+        `Category "${(category as { name?: string }).name || "your category"}" was deleted by admin.`,
+      );
+    } catch (err) {
+      console.error("Failed to create supplier notification for category delete", err);
+    }
+  }
   res.json({ success: true, message: "Category deleted" });
 });
 
@@ -176,5 +216,16 @@ export const deleteSubcategory = asyncHandler(async (req: Request, res: Response
   await category.save();
 
   const updated = await CategoryModel.findOne({ id: req.params.categoryId }, { _id: 0 }).lean();
+  if (updated) {
+    try {
+      await notifyCategorySupplier(
+        updated as { supplierId?: string; requestedBy?: string; name?: string },
+        "Subcategory Deleted",
+        `A subcategory in "${(updated as { name?: string }).name || "your category"}" was deleted by admin.`,
+      );
+    } catch (err) {
+      console.error("Failed to create supplier notification for subcategory delete", err);
+    }
+  }
   res.json(updated);
 });

@@ -10,6 +10,9 @@ import { hashPassword } from "../../auth/auth.service.js";
 import { objectsToCsv } from "../../../utils/csv.js";
 import { parseCsv } from "../../../utils/csvParse.js";
 import { createAdminNotification } from "../notifications/notification.service.js";
+import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
+import { EnquiryModel } from "../enquiries/enquiry.model.js";
+import { RatingModel } from "../ratings/rating.model.js";
 import { BuyerModel } from "./buyer.model.js";
 
 type BuyerRecord = {
@@ -19,6 +22,34 @@ type BuyerRecord = {
   phone?: string;
   company?: string;
 };
+
+async function notifyConnectedSuppliersForBuyer(
+  buyerId: string,
+  title: string,
+  message: string,
+  type = "buyer",
+) {
+  const [enquiries, ratings] = await Promise.all([
+    EnquiryModel.find({ buyerId }, { _id: 0, supplierId: 1 }).lean(),
+    RatingModel.find({ buyerId }, { _id: 0, supplierId: 1 }).lean(),
+  ]);
+
+  const supplierIds = Array.from(new Set(
+    [...enquiries, ...ratings]
+      .map((item) => String((item as { supplierId?: string }).supplierId || "").trim())
+      .filter(Boolean),
+  ));
+
+  await Promise.all(supplierIds.map((supplierId) =>
+    createSupplierNotification({
+      supplierId,
+      type,
+      title,
+      message,
+      link: "notificationmanagement",
+    }),
+  ));
+}
 
 export const listBuyers = asyncHandler(async (_req: Request, res: Response) => {
   const buyers = await BuyerModel.find({}, { _id: 0 }).lean();
@@ -113,6 +144,16 @@ export const updateBuyerStatus = asyncHandler(async (req: Request, res: Response
     }
   }
 
+  try {
+    await notifyConnectedSuppliersForBuyer(
+      buyer.id,
+      "Buyer Status Updated",
+      `${buyer.name || "A buyer"} status has been changed to ${req.body.status}.`,
+    );
+  } catch (err) {
+    console.error("Failed to create supplier notifications for buyer status", err);
+  }
+
   res.json(updated);
 });
 
@@ -127,6 +168,16 @@ export const deleteBuyer = asyncHandler(async (req: Request, res: Response) => {
       $or: [{ profileId: buyer.id }, ...(buyer.email ? [{ email: buyer.email }] : [])],
     }),
   ]);
+
+  try {
+    await notifyConnectedSuppliersForBuyer(
+      buyer.id,
+      "Buyer Deleted",
+      `${buyer.name || "A buyer"} was deleted by admin.`,
+    );
+  } catch (err) {
+    console.error("Failed to create supplier notifications for buyer delete", err);
+  }
 
   res.json({ success: true, message: "Buyer deleted" });
 });

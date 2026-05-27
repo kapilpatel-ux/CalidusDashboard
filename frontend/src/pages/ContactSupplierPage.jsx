@@ -5,6 +5,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import logo from "@/assets/images/calidusheader.png";
 import { useGetProductsQuery } from "@/store/api/admin/productApi";
 import { useGetSuppliersQuery } from "@/store/api/admin/supplierApi";
@@ -20,7 +28,12 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { COUNTRIES } from "@/data/countries";
+<<<<<<< Updated upstream
 import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
+=======
+import { copyCredentialsText, downloadCredentialsJson } from "@/lib/credentialDownload";
+import { validatePhoneNumber } from "@/lib/phoneValidation";
+>>>>>>> Stashed changes
 
 const initialForm = {
   fullName: "",
@@ -34,9 +47,14 @@ const initialForm = {
   productId: "",
 };
 
+const compactSelectTriggerClass =
+  "h-[51px] border-[#29292E] bg-[#070709] text-sm text-[#9D9DA5] [&>span]:truncate [&>span]:text-sm";
+  // "h-[44px] border-[#29292E] bg-[#070709] text-[11px] text-[#9D9DA5] [&>span]:truncate [&>span]:text-[11px]";
+  
 export default function ContactSupplierPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
+  const [credentialDialog, setCredentialDialog] = useState({ open: false, credentials: null });
   const [createContactSupplier, { isLoading }] = useCreateContactSupplierMutation();
   const {
     data: suppliers = [],
@@ -111,6 +129,9 @@ export default function ContactSupplierPage() {
         toast.warning("User already existed with this email");
       } else if (created.userCreated) {
         toast.success("User created and enquiry sent successfully");
+        if (created?.credentials?.email && created?.credentials?.password) {
+          setCredentialDialog({ open: true, credentials: created.credentials });
+        }
       } else {
         toast.success("Enquiry sent successfully");
       }
@@ -123,6 +144,61 @@ export default function ContactSupplierPage() {
   return (
 
     <div className="min-h-screen bg-background tactical-grid noise-overlay p-4">
+      <Dialog
+        open={credentialDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setCredentialDialog({ open: false, credentials: null });
+        }}
+      >
+        <DialogContent className="border-[#29292E] bg-[#101214] text-white">
+          <DialogHeader>
+            <DialogTitle className="font-['Barlow_Condensed'] uppercase tracking-wide">
+              Save Your Login Details
+            </DialogTitle>
+            <DialogDescription>
+              Please copy these credentials now. They will disappear when you close this popup.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 rounded-sm border border-[#29292E] bg-black/20 p-4 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#9D9DA5]">Email</p>
+              <p className="mt-1 font-mono break-all">{credentialDialog.credentials?.email}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#9D9DA5]">Password</p>
+              <p className="mt-1 font-mono break-all">{credentialDialog.credentials?.password}</p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white"
+              onClick={() =>
+                downloadCredentialsJson(
+                  credentialDialog.credentials,
+                  "calidus-buyer-credentials.json",
+                )
+              }
+            >
+              Download
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                try {
+                  await copyCredentialsText(credentialDialog.credentials);
+                  toast.success("Credentials copied");
+                } catch (_) {
+                  toast.error("Unable to copy credentials");
+                }
+              }}
+            >
+              Copy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <header className="fixed left-0 top-0 z-40 flex w-full items-center border-b border-[#26262B] bg-[#111417]/95 px-4 py-3 shadow-sm shadow-black/20 backdrop-blur sm:px-8">
         <img src={logo} alt="Calidus" className="h-10 w-36 object-contain" />
       </header>
@@ -214,14 +290,14 @@ export default function ContactSupplierPage() {
 	                    updateField("productId", "");
 	                  }}
                 >
-                  <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+                  <SelectTrigger className={compactSelectTriggerClass}>
                     <SelectValue placeholder="Select supplier country" />
                   </SelectTrigger>
                   <SelectContent>
                     <ScrollArea className="h-72">
                       <SelectItem value="all">All Countries</SelectItem>
                       {supplierCountryOptions.map((c) => (
-                        <SelectItem key={c} value={c}>
+                        <SelectItem key={c} value={c} className="text-sm">
                           {c}
                         </SelectItem>
                       ))}
@@ -240,7 +316,7 @@ export default function ContactSupplierPage() {
 	                  disabled={isSuppliersLoading || isSuppliersError}
                   required
                 >
-                  <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+                  <SelectTrigger className={compactSelectTriggerClass}>
                     <SelectValue
                       placeholder={
                         isSuppliersLoading
@@ -256,7 +332,7 @@ export default function ContactSupplierPage() {
                   <SelectContent>
                     <ScrollArea className="h-72">
                       {availableSuppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
+                        <SelectItem key={supplier.id} value={supplier.id} className="text-sm">
                           {supplier.name}
                         </SelectItem>
                       ))}
@@ -273,7 +349,7 @@ export default function ContactSupplierPage() {
 	                disabled={!selectedSupplier || isProductsLoading || isProductsError || supplierProducts.length === 0}
 	                required
 	              >
-	                <SelectTrigger className="h-[51px] border-[#29292E] bg-[#070709] text-[#9D9DA5]">
+	                <SelectTrigger className={compactSelectTriggerClass}>
 	                  <SelectValue
 	                    placeholder={
 	                      !selectedSupplier
@@ -291,7 +367,7 @@ export default function ContactSupplierPage() {
 	                <SelectContent>
 	                  <ScrollArea className="h-72">
 	                    {supplierProducts.map((product) => (
-	                      <SelectItem key={product.id} value={product.id}>
+	                      <SelectItem key={product.id} value={product.id} className="text-sm">
 	                        {product.name}
                       </SelectItem>
                     ))}
@@ -319,7 +395,7 @@ export default function ContactSupplierPage() {
 function Field({ label, children }) {
   return (
     <div className="space-y-[15px]">
-      <Label className="text-[18px] font-medium uppercase leading-[110.6%] text-[#A1A1AA]">
+      <Label className="text-[15px] font-medium uppercase leading-[110.6%] text-[#A1A1AA]">
         {label}
       </Label>
       {children}

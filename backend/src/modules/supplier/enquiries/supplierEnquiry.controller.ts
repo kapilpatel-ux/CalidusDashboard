@@ -3,6 +3,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
 import { EnquiryModel } from "../../admin/enquiries/enquiry.model.js";
 import { SupplierModel } from "../../admin/suppliers/supplier.model.js";
+import { createAdminNotification } from "../../admin/notifications/notification.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
@@ -48,6 +49,16 @@ export const replyToSupplierEnquiry = asyncHandler(async (req: Request, res: Res
   ).lean();
 
   if (!updated) throw new HttpError(404, "Enquiry not found");
+  try {
+    await createAdminNotification({
+      type: "enquiry",
+      title: "Supplier Replied To Enquiry",
+      message: `${updated.supplierName || "Supplier"} replied to enquiry for ${updated.productName || "a product"}.`,
+      link: "enquirymanagement",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for supplier enquiry reply", err);
+  }
   res.json(updated);
 });
 
@@ -63,5 +74,15 @@ export const updateSupplierEnquiryStatus = asyncHandler(async (req: Request, res
   ).lean();
 
   if (!updated) throw new HttpError(404, "Enquiry not found");
+  try {
+    await createAdminNotification({
+      type: "enquiry",
+      title: "Supplier Updated Enquiry",
+      message: `${updated.supplierName || "Supplier"} marked enquiry for ${updated.productName || "a product"} as ${req.body.status}.`,
+      link: "enquirymanagement",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for supplier enquiry status", err);
+  }
   res.json(updated);
 });

@@ -9,6 +9,7 @@ import { AuthUserModel } from "../auth/auth.model.js";
 import { hashPassword } from "../auth/auth.service.js";
 import { sendSmtpEmail } from "../../utils/smtpEmail.js";
 import { createAdminNotification } from "../admin/notifications/notification.service.js";
+import { createSupplierNotification } from "../supplier/notifications/supplierNotification.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
 
@@ -73,6 +74,8 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
     }
   }
 
+  let credentials: { email: string; password: string } | null = null;
+
   if (!existingUser) {
     const tempPassword = crypto.randomBytes(10).toString("base64url");
     await AuthUserModel.create({
@@ -86,6 +89,7 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
       company: buyerCompany,
       status: "pending",
     });
+    credentials = { email, password: tempPassword };
 
     const appUrl = env.appUrl || env.corsOrigins[0] || "http://localhost:3000";
     const buyerName = req.body.fullName || "Buyer";
@@ -150,11 +154,25 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
   };
 
   const created = await EnquiryModel.create(payload);
+  if (payload.supplierId) {
+    try {
+      await createSupplierNotification({
+        supplierId: payload.supplierId,
+        type: "enquiry",
+        title: "New Supplier Enquiry",
+        message: `${req.body.fullName} sent an enquiry for ${productName}.`,
+        link: "enquiries",
+      });
+    } catch (err) {
+      console.error("Failed to create supplier notification for contact-supplier enquiry", err);
+    }
+  }
 
   res.status(201).json({
     ...created.toJSON(),
     userAlreadyExisted: Boolean(existingUser && existingBuyer),
     userCreated: !existingUser,
     buyerProfileRecreated: Boolean(existingUser && !existingBuyer),
+    credentials,
   });
 });

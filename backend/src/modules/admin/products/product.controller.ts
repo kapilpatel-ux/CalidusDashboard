@@ -85,6 +85,19 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
   } catch (err) {
     console.error("Failed to create admin notification for product creation", err);
   }
+  if (payload.supplierId) {
+    try {
+      await createSupplierNotification({
+        supplierId: payload.supplierId,
+        type: "product",
+        title: "Product Created",
+        message: `Product "${payload.name || created.toJSON().name}" was created by admin.`,
+        link: "products",
+      });
+    } catch (err) {
+      console.error("Failed to create supplier notification for product creation", err);
+    }
+  }
   res.status(201).json(created.toJSON());
 });
 
@@ -104,6 +117,19 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
   ).lean();
 
   if (!updated) throw new HttpError(404, "Product not found");
+  if (updated.supplierId) {
+    try {
+      await createSupplierNotification({
+        supplierId: updated.supplierId,
+        type: "product",
+        title: "Product Updated",
+        message: `Your product "${updated.name}" was updated by admin and moved to pending review.`,
+        link: "products",
+      });
+    } catch (err) {
+      console.error("Failed to create supplier notification for product update", err);
+    }
+  }
   res.json(updated);
 });
 
@@ -117,11 +143,11 @@ export const updateProductStatus = asyncHandler(async (req: Request, res: Respon
 
   if (!updated) throw new HttpError(404, "Product not found");
 
-  if (updated.supplierId && ["approved", "rejected"].includes(status)) {
+  if (updated.supplierId) {
     await createSupplierNotification({
       supplierId: updated.supplierId,
       type: "product",
-      title: status === "approved" ? "Product Approved" : "Product Rejected",
+      title: status === "approved" ? "Product Approved" : status === "rejected" ? "Product Rejected" : "Product Status Updated",
       message: `Your product "${updated.name}" has been ${status}.`,
       link: "productmanagement",
     });
@@ -130,8 +156,22 @@ export const updateProductStatus = asyncHandler(async (req: Request, res: Respon
 });
 
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
+  const product = await ProductModel.findOne({ id: req.params.productId }, { _id: 0, id: 1, name: 1, supplierId: 1 }).lean();
   const result = await ProductModel.deleteOne({ id: req.params.productId });
   if (!result.deletedCount) throw new HttpError(404, "Product not found");
+  if (product?.supplierId) {
+    try {
+      await createSupplierNotification({
+        supplierId: product.supplierId,
+        type: "product",
+        title: "Product Deleted",
+        message: `Your product "${product.name || product.id}" was deleted by admin.`,
+        link: "productmanagement",
+      });
+    } catch (err) {
+      console.error("Failed to create supplier notification for product delete", err);
+    }
+  }
   res.json({ success: true, message: "Product deleted" });
 });
 

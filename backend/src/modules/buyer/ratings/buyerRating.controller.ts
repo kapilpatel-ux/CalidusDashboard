@@ -6,6 +6,7 @@ import { ProductModel } from "../../admin/products/product.model.js";
 import { RatingModel } from "../../admin/ratings/rating.model.js";
 import { BuyerModel } from "../../admin/buyers/buyer.model.js";
 import { refreshRatingAggregates } from "../../admin/ratings/rating.service.js";
+import { createAdminNotification } from "../../admin/notifications/notification.service.js";
 import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 
 const dateOnly = () => new Date().toISOString().split("T")[0];
@@ -61,6 +62,17 @@ export const createBuyerRating = asyncHandler(async (req: Request, res: Response
 
   const created = await RatingModel.create(payload);
   await syncBuyerRatingCount(buyerId);
+  try {
+    await createAdminNotification({
+      type: "rating",
+      title: "New Rating Submitted",
+      message: `${buyerRecord.name || buyerId} rated ${product.name} ${req.body.rating}/5.`,
+      link: "ratingsmoderation",
+    });
+  } catch (err) {
+    console.error("Failed to create admin notification for buyer rating", err);
+  }
+
   try {
     await createSupplierNotification({
       supplierId: product.supplierId,
