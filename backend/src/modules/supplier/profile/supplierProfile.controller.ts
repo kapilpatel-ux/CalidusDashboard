@@ -10,9 +10,10 @@ export const getSupplierProfile = asyncHandler(async (req: Request, res: Respons
 });
 
 export const updateSupplierProfile = asyncHandler(async (req: Request, res: Response) => {
+  const { id: _id, ...payload } = req.body;
   const updated = await SupplierModel.findOneAndUpdate(
     { id: req.params.supplierId },
-    { $set: req.body },
+    { $set: payload },
     { new: true, projection: { _id: 0 } },
   ).lean();
 

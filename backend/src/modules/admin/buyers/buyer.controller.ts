@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { env } from "../../../config/env.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
-import { createReadableId } from "../../../utils/id.js";
+import { createReadableId, createSequentialId } from "../../../utils/id.js";
 import { sendSmtpEmail } from "../../../utils/smtpEmail.js";
 import { AuthUserModel } from "../../auth/auth.model.js";
 import { hashPassword } from "../../auth/auth.service.js";
@@ -312,7 +312,7 @@ export const importBuyersCsv = asyncHandler(async (req: Request, res: Response) 
       await BuyerModel.updateOne({ id: existingByEmail.id }, { $set: payload });
       updated += 1;
     } else {
-      const newId = createReadableId("BUY");
+      const newId = await createSequentialId(BuyerModel, "buy");
       await BuyerModel.create({ id: newId, ...payload });
       created += 1;
     }

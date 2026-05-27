@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler.js";
-import { createReadableId } from "../../utils/id.js";
+import { createReadableId, createSequentialId } from "../../utils/id.js";
 import { BuyerModel } from "../admin/buyers/buyer.model.js";
 import { EnquiryModel } from "../admin/enquiries/enquiry.model.js";
 import { env } from "../../config/env.js";
@@ -45,7 +45,7 @@ export const createContactSupplier = asyncHandler(async (req: Request, res: Resp
   let buyerId = existingBuyer?.id || (existingUser?.role === "buyer" ? existingUser.profileId || "" : "");
   let buyerCompany = existingBuyer?.company || existingUser?.company || "";
 
-  if (!buyerId) buyerId = createReadableId("BUY");
+  if (!buyerId) buyerId = await createSequentialId(BuyerModel, "buy");
 
   if (!existingBuyer) {
     buyerCompany = String(req.body.company || "").trim() || "Independent Buyer";

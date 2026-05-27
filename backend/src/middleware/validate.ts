@@ -9,6 +9,10 @@ export const validateBody =
       return next({
         statusCode: 400,
         message: result.error.errors.map((error) => error.message).join(", "),
+        errors: result.error.errors.map((error) => ({
+          field: error.path.join("."),
+          message: error.message,
+        })),
       });
     }
 

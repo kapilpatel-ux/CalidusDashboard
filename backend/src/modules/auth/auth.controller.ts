@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { HttpError } from "../../utils/httpError.js";
-import { createReadableId } from "../../utils/id.js";
+import { createReadableId, createSequentialId } from "../../utils/id.js";
 import { BuyerModel } from "../admin/buyers/buyer.model.js";
 import { SupplierModel } from "../admin/suppliers/supplier.model.js";
 import { createAdminNotification } from "../admin/notifications/notification.service.js";
@@ -59,7 +59,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
   let company = req.body.company || "";
 
   if (role === "buyer") {
-    profileId = createReadableId("BUY");
+    profileId = await createSequentialId(BuyerModel, "buy");
     const buyer = await BuyerModel.create({
       id: profileId,
       name: req.body.name,
@@ -86,7 +86,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (role === "supplier") {
-    profileId = createReadableId("SUP");
+    profileId = await createSequentialId(SupplierModel, "sup");
     const supplier = await SupplierModel.create({
       id: profileId,
       name: company || req.body.name,

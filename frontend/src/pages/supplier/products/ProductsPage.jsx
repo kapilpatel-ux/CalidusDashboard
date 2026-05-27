@@ -83,6 +83,29 @@ const productCategories = ["Electronics", "Aerospace", "Defense", "PCB", "Mechan
 const countryOptions = COUNTRIES;
 const applicationAreas = ["Aerospace", "Defense", "Industrial", "Naval", "Avionics", "Communication", "Automotive"];
 
+const extractApiFieldErrors = (error) => {
+  const errors = Array.isArray(error?.data?.errors) ? error.data.errors : [];
+  return errors.reduce((fieldErrors, item) => {
+    const field = String(item?.field || "").split(".").pop();
+    if (field && item?.message) fieldErrors[field] = item.message;
+    return fieldErrors;
+  }, {});
+};
+
+const getApiErrorMessage = (error, fallback) =>
+  error?.data?.detail || error?.data?.message || error?.error || fallback;
+
+const validateProductForm = (form, categoryOptions = []) => {
+  const errors = {};
+  if (!form.name.trim()) errors.name = "Product name is required";
+  if (!form.category.trim()) {
+    errors.category = "Category is required";
+  } else if (categoryOptions.length > 0 && !categoryOptions.includes(form.category)) {
+    errors.category = "Select an approved category";
+  }
+  return errors;
+};
+
 const FormSection = ({ title, children }) => (
   <section className="bg-[#101214]">
     <div className="border-b border-[#29292E] px-5 py-5">
@@ -92,7 +115,7 @@ const FormSection = ({ title, children }) => (
   </section>
 );
 
-const ProductTextField = ({ label, value, onChange, placeholder, required = false }) => {
+const ProductTextField = ({ label, value, onChange, placeholder, required = false, error = "" }) => {
   const fieldId = `add-product-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
@@ -106,13 +129,15 @@ const ProductTextField = ({ label, value, onChange, placeholder, required = fals
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-[51px] rounded-[5px] border-[#29292E] bg-[#0E1012] px-[15px] text-base text-white placeholder:text-[#9D9DA5]"
+        aria-invalid={Boolean(error)}
+        className={`h-[51px] rounded-[5px] bg-[#0E1012] px-[15px] text-base text-white placeholder:text-[#9D9DA5] ${error ? "border-red-500 focus-visible:ring-red-500" : "border-[#29292E]"}`}
       />
+      {error && <p className="text-sm font-medium text-red-400">{error}</p>}
     </div>
   );
 };
 
-const ProductSelectField = ({ label, value, onChange, placeholder, options, required = false }) => {
+const ProductSelectField = ({ label, value, onChange, placeholder, options, required = false, error = "" }) => {
   const fieldId = `add-product-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
@@ -122,7 +147,11 @@ const ProductSelectField = ({ label, value, onChange, placeholder, options, requ
         {required && <span className="ml-1 text-[#3C83F6]">*</span>}
       </Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={fieldId} className="h-[51px] rounded-[5px] border-[#29292E] bg-[#0E1012] px-[15px] text-base text-[#9D9DA5]">
+        <SelectTrigger
+          id={fieldId}
+          aria-invalid={Boolean(error)}
+          className={`h-[51px] rounded-[5px] bg-[#0E1012] px-[15px] text-base text-[#9D9DA5] ${error ? "border-red-500 focus:ring-red-500" : "border-[#29292E]"}`}
+        >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -133,6 +162,7 @@ const ProductSelectField = ({ label, value, onChange, placeholder, options, requ
           ))}
         </SelectContent>
       </Select>
+      {error && <p className="text-sm font-medium text-red-400">{error}</p>}
     </div>
   );
 };
@@ -355,6 +385,10 @@ export const SupplierProducts = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null });
   const [addForm, setAddForm] = useState(emptyAddForm);
   const [editForm, setEditForm] = useState(emptyEditForm);
+  const [addErrors, setAddErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
+  const [addFormError, setAddFormError] = useState("");
+  const [editFormError, setEditFormError] = useState("");
   const [categoryRequestDialog, setCategoryRequestDialog] = useState({ open: false, initialValue: "" });
   const [requestedCategoryName, setRequestedCategoryName] = useState("");
   const [dateSortDirection, setDateSortDirection] = useState("desc");
@@ -365,8 +399,16 @@ export const SupplierProducts = () => {
     .sort((a, b) => a.localeCompare(b));
 
   const getProductId = (product) => product?.id || product?._id;
-  const setAddField = (field, value) => setAddForm((current) => ({ ...current, [field]: value }));
-  const setEditField = (field, value) => setEditForm((current) => ({ ...current, [field]: value }));
+  const setAddField = (field, value) => {
+    setAddForm((current) => ({ ...current, [field]: value }));
+    setAddErrors((current) => ({ ...current, [field]: "" }));
+    setAddFormError("");
+  };
+  const setEditField = (field, value) => {
+    setEditForm((current) => ({ ...current, [field]: value }));
+    setEditErrors((current) => ({ ...current, [field]: "" }));
+    setEditFormError("");
+  };
 
   const openCategoryRequestDialog = (prefill = "") => {
     setRequestedCategoryName(String(prefill || "").trim());
@@ -392,7 +434,11 @@ export const SupplierProducts = () => {
 
   const resetAddDialog = (open) => {
     setAddDialogOpen(open);
-    if (!open) setAddForm(emptyAddForm);
+    if (!open) {
+      setAddForm(emptyAddForm);
+      setAddErrors({});
+      setAddFormError("");
+    }
   };
 
   const openEditDialog = (product) => {
@@ -422,6 +468,8 @@ export const SupplierProducts = () => {
       applicationUseCase: product.applicationUseCase || "",
       datasheet: product.datasheet || null,
     });
+    setEditErrors({});
+    setEditFormError("");
     setEditDialog({ open: true, product });
   };
 
@@ -486,8 +534,11 @@ export const SupplierProducts = () => {
       return;
     }
 
-    if (!editForm.name.trim() || !editForm.category.trim()) {
-      toast.error("Product name and category are required");
+    const validationErrors = validateProductForm(editForm, categoryOptions);
+    if (Object.keys(validationErrors).length > 0) {
+      setEditErrors(validationErrors);
+      setEditFormError("");
+      toast.error("Please fix the highlighted fields");
       return;
     }
 
@@ -502,13 +553,20 @@ export const SupplierProducts = () => {
       setEditDialog({ open: false, product: null });
       toast.success(`Product "${updatedProduct.name}" updated`);
     } catch (error) {
-      toast.error(error?.data?.message || "Failed to update product");
+      const fieldErrors = extractApiFieldErrors(error);
+      if (Object.keys(fieldErrors).length > 0) setEditErrors(fieldErrors);
+      const message = getApiErrorMessage(error, "Failed to update product");
+      setEditFormError(message);
+      toast.error(message);
     }
   };
 
   const createProduct = async () => {
-    if (!addForm.name.trim() || !addForm.category.trim()) {
-      toast.error("Product name and category are required");
+    const validationErrors = validateProductForm(addForm, categoryOptions);
+    if (Object.keys(validationErrors).length > 0) {
+      setAddErrors(validationErrors);
+      setAddFormError("");
+      toast.error("Please fix the highlighted fields");
       return;
     }
 
@@ -519,7 +577,11 @@ export const SupplierProducts = () => {
       resetAddDialog(false);
       toast.success(`Product "${createdProduct.name}" created for review`);
     } catch (error) {
-      toast.error(error?.data?.message || "Failed to create product");
+      const fieldErrors = extractApiFieldErrors(error);
+      if (Object.keys(fieldErrors).length > 0) setAddErrors(fieldErrors);
+      const message = getApiErrorMessage(error, "Failed to create product");
+      setAddFormError(message);
+      toast.error(message);
     }
   };
 
@@ -674,8 +736,13 @@ export const SupplierProducts = () => {
           </DialogHeader>
 
           <div className="space-y-7 px-6 pb-6 sm:px-8 sm:pb-8">
+            {addFormError && (
+              <div className="rounded-[5px] border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-300">
+                {addFormError}
+              </div>
+            )}
             <FormSection title="Overview">
-              <ProductTextField label="Product Name" value={addForm.name} onChange={(value) => setAddField("name", value)} placeholder="Enter product name" required />
+              <ProductTextField label="Product Name" value={addForm.name} onChange={(value) => setAddField("name", value)} placeholder="Enter product name" required error={addErrors.name} />
               <ProductImageField label="Product Image" value={addForm.image} onChange={(value) => setAddField("image", value)} testId="add-product-image" />
               <div className="space-y-2">
                 <ProductSelectField
@@ -685,6 +752,7 @@ export const SupplierProducts = () => {
                   placeholder={categoryOptions.length ? "Select category" : "No approved categories yet"}
                   options={categoryOptions}
                   required
+                  error={addErrors.category}
                 />
                 <Button
                   type="button"
@@ -725,7 +793,7 @@ export const SupplierProducts = () => {
 
           <DialogFooter className="border-t border-[#29292E] px-6 py-5 sm:px-8">
             <Button variant="outline" className="border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={() => resetAddDialog(false)} disabled={isCreating}>Cancel</Button>
-            <Button onClick={createProduct} disabled={isCreating || !addForm.name.trim() || !addForm.category.trim()} className="bg-[#3C83F6] px-6 text-white hover:bg-[#2f72df]" data-testid="supplier-add-product-submit">
+            <Button onClick={createProduct} disabled={isCreating} className="bg-[#3C83F6] px-6 text-white hover:bg-[#2f72df]" data-testid="supplier-add-product-submit">
               {isCreating ? "Adding..." : "Add Product"}
             </Button>
           </DialogFooter>
@@ -860,8 +928,13 @@ export const SupplierProducts = () => {
           </DialogHeader>
 
           <div className="flex-1 space-y-7 overflow-y-auto px-6 py-6 sm:px-8">
+            {editFormError && (
+              <div className="rounded-[5px] border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-300">
+                {editFormError}
+              </div>
+            )}
             <FormSection title="Overview">
-              <ProductTextField label="Product Name" value={editForm.name} onChange={(value) => setEditField("name", value)} placeholder="Enter product name" required />
+              <ProductTextField label="Product Name" value={editForm.name} onChange={(value) => setEditField("name", value)} placeholder="Enter product name" required error={editErrors.name} />
               <ProductImageField label="Product Image" value={editForm.image} onChange={(value) => setEditField("image", value)} testId="edit-product-image" />
               <div className="space-y-2">
                 <ProductSelectField
@@ -871,6 +944,7 @@ export const SupplierProducts = () => {
                   placeholder={categoryOptions.length ? "Select category" : "No approved categories yet"}
                   options={categoryOptions}
                   required
+                  error={editErrors.category}
                 />
                 <Button
                   type="button"
@@ -910,7 +984,7 @@ export const SupplierProducts = () => {
 
           <DialogFooter className="shrink-0 border-t border-[#29292E] px-6 py-5 sm:px-8">
             <Button variant="outline" className="border-[#29292E] bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={() => setEditDialog({ open: false, product: null })} disabled={isSaving}>Cancel</Button>
-            <Button onClick={saveProduct} disabled={isSaving || !editForm.name.trim() || !editForm.category.trim()} className="bg-[#3C83F6] px-6 text-white hover:bg-[#2f72df]" data-testid="supplier-edit-product-save">
+            <Button onClick={saveProduct} disabled={isSaving} className="bg-[#3C83F6] px-6 text-white hover:bg-[#2f72df]" data-testid="supplier-edit-product-save">
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>

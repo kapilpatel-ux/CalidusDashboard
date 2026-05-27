@@ -2,23 +2,23 @@ export const PHONE_MIN_DIGITS = 7;
 export const PHONE_MAX_DIGITS = 15;
 
 const countryRules = [
-  { names: ["United States", "US", "USA"], dialCode: "1", nationalMin: 10, nationalMax: 10 },
-  { names: ["Canada", "CA"], dialCode: "1", nationalMin: 10, nationalMax: 10 },
-  { names: ["United Arab Emirates", "UAE", "AE"], dialCode: "971", nationalMin: 9, nationalMax: 9 },
-  { names: ["Saudi Arabia", "SA"], dialCode: "966", nationalMin: 9, nationalMax: 9 },
-  { names: ["Qatar", "QA"], dialCode: "974", nationalMin: 8, nationalMax: 8 },
-  { names: ["Kuwait", "KW"], dialCode: "965", nationalMin: 8, nationalMax: 8 },
-  { names: ["Bahrain", "BH"], dialCode: "973", nationalMin: 8, nationalMax: 8 },
-  { names: ["Oman", "OM"], dialCode: "968", nationalMin: 8, nationalMax: 8 },
-  { names: ["India", "IN"], dialCode: "91", nationalMin: 10, nationalMax: 10 },
-  { names: ["Pakistan", "PK"], dialCode: "92", nationalMin: 10, nationalMax: 10 },
-  { names: ["United Kingdom", "UK", "GB"], dialCode: "44", nationalMin: 10, nationalMax: 10 },
-  { names: ["Germany", "DE"], dialCode: "49", nationalMin: 5, nationalMax: 11 },
-  { names: ["France", "FR"], dialCode: "33", nationalMin: 9, nationalMax: 9 },
-  { names: ["Belgium", "BE"], dialCode: "32", nationalMin: 8, nationalMax: 9 },
-  { names: ["South Korea", "KR"], dialCode: "82", nationalMin: 8, nationalMax: 10 },
-  { names: ["Sweden", "SE"], dialCode: "46", nationalMin: 7, nationalMax: 10 },
-  { names: ["Israel", "IL"], dialCode: "972", nationalMin: 8, nationalMax: 9 },
+  { names: ["United States", "US", "USA"], isoCode: "US", dialCode: "1", nationalMin: 10, nationalMax: 10 },
+  { names: ["Canada", "CA"], isoCode: "CA", dialCode: "1", nationalMin: 10, nationalMax: 10 },
+  { names: ["United Arab Emirates", "UAE", "AE"], isoCode: "AE", dialCode: "971", nationalMin: 9, nationalMax: 9 },
+  { names: ["Saudi Arabia", "SA"], isoCode: "SA", dialCode: "966", nationalMin: 9, nationalMax: 9 },
+  { names: ["Qatar", "QA"], isoCode: "QA", dialCode: "974", nationalMin: 8, nationalMax: 8 },
+  { names: ["Kuwait", "KW"], isoCode: "KW", dialCode: "965", nationalMin: 8, nationalMax: 8 },
+  { names: ["Bahrain", "BH"], isoCode: "BH", dialCode: "973", nationalMin: 8, nationalMax: 8 },
+  { names: ["Oman", "OM"], isoCode: "OM", dialCode: "968", nationalMin: 8, nationalMax: 8 },
+  { names: ["India", "IN"], isoCode: "IN", dialCode: "91", nationalMin: 10, nationalMax: 10 },
+  { names: ["Pakistan", "PK"], isoCode: "PK", dialCode: "92", nationalMin: 10, nationalMax: 10 },
+  { names: ["United Kingdom", "UK", "GB"], isoCode: "GB", dialCode: "44", nationalMin: 10, nationalMax: 10 },
+  { names: ["Germany", "DE"], isoCode: "DE", dialCode: "49", nationalMin: 5, nationalMax: 11 },
+  { names: ["France", "FR"], isoCode: "FR", dialCode: "33", nationalMin: 9, nationalMax: 9 },
+  { names: ["Belgium", "BE"], isoCode: "BE", dialCode: "32", nationalMin: 8, nationalMax: 9 },
+  { names: ["South Korea", "KR"], isoCode: "KR", dialCode: "82", nationalMin: 8, nationalMax: 10 },
+  { names: ["Sweden", "SE"], isoCode: "SE", dialCode: "46", nationalMin: 7, nationalMax: 10 },
+  { names: ["Israel", "IL"], isoCode: "IL", dialCode: "972", nationalMin: 8, nationalMax: 9 },
 ];
 
 const normalizeCountry = (value) =>
@@ -32,6 +32,17 @@ const normalizedRules = countryRules.map((rule) => ({
   normalizedNames: rule.names.map(normalizeCountry),
 }));
 
+const getRuleFromPhone = (digits) =>
+  normalizedRules
+    .slice()
+    .sort((a, b) => b.dialCode.length - a.dialCode.length)
+    .find((rule) => digits.startsWith(rule.dialCode));
+
+const getRuleFromDialOrPhone = (value) => {
+  const digits = phoneDigits(value);
+  return normalizedRules.find((item) => item.dialCode === digits) || getRuleFromPhone(digits);
+};
+
 export const phoneDigits = (value) =>
   String(value || "")
     .replace(/^00/, "+")
@@ -44,16 +55,14 @@ export const getPhoneRuleForCountry = (country) => {
 };
 
 export const getCountryNameFromDialCode = (dialCode) => {
-  const digits = phoneDigits(dialCode);
-  const rule = normalizedRules.find((item) => item.dialCode === digits);
+  const rule = getRuleFromDialOrPhone(dialCode);
   return rule?.names?.[0] || "";
 };
 
-const getRuleFromPhone = (digits) =>
-  normalizedRules
-    .slice()
-    .sort((a, b) => b.dialCode.length - a.dialCode.length)
-    .find((rule) => digits.startsWith(rule.dialCode));
+export const getCountryCodeFromDialCode = (dialCode) => {
+  const rule = getRuleFromDialOrPhone(dialCode);
+  return rule?.isoCode || "";
+};
 
 const validateLength = (digits, min, max, label) => {
   if (digits.length < min || digits.length > max) {

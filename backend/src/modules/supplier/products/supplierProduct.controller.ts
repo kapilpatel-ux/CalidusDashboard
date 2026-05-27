@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
-import { createReadableId } from "../../../utils/id.js";
+import { createSequentialId } from "../../../utils/id.js";
 import { ProductModel } from "../../admin/products/product.model.js";
 import { SupplierModel } from "../../admin/suppliers/supplier.model.js";
 import { createAdminNotification } from "../../admin/notifications/notification.service.js";
@@ -57,7 +57,7 @@ export const createSupplierProduct = asyncHandler(async (req: Request, res: Resp
   const supplier = await getSupplierOrThrow(supplierId);
   const payload = {
     ...req.body,
-    id: createReadableId("PRD"),
+    id: await createSequentialId(ProductModel, "CAL"),
     supplierId,
     supplierName: supplier.name,
     countryOfOrigin: req.body.countryOfOrigin || supplier.country || "",
@@ -85,6 +85,7 @@ export const createSupplierProduct = asyncHandler(async (req: Request, res: Resp
 
 export const updateSupplierProduct = asyncHandler(async (req: Request, res: Response) => {
   const supplierId = String(req.params.supplierId);
+  const { id: _id, supplierId: _supplierId, ...payload } = req.body;
   await getSupplierOrThrow(supplierId);
 
   const existing = await ProductModel.findOne(
@@ -99,7 +100,7 @@ export const updateSupplierProduct = asyncHandler(async (req: Request, res: Resp
     { id: req.params.productId, supplierId },
     {
       $set: {
-        ...req.body,
+        ...payload,
         supplierId,
         supplierName: existing.supplierName,
         status: nextStatus,

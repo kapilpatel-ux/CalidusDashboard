@@ -9,7 +9,7 @@ const generateExpiryDate = (daysFromNow) => {
 
 export const suppliers = [
   {
-    id: 'SUP001',
+    id: 'sup001',
     name: 'Orion Defense Systems',
     type: 'OEM',
     country: 'United States',
@@ -31,7 +31,7 @@ export const suppliers = [
     documentStatus: 'expiring'
   },
   {
-    id: 'SUP002',
+    id: 'sup002',
     name: 'Falcon Aerospace Technologies',
     type: 'Tier 1',
     country: 'Germany',
@@ -52,7 +52,7 @@ export const suppliers = [
     documentStatus: 'expired'
   },
   {
-    id: 'SUP003',
+    id: 'sup003',
     name: 'Titan Tactical Manufacturing',
     type: 'OEM',
     country: 'United Kingdom',
@@ -73,7 +73,7 @@ export const suppliers = [
     documentStatus: 'active'
   },
   {
-    id: 'SUP004',
+    id: 'sup004',
     name: 'Vanguard Defense Electronics',
     type: 'Tier 2',
     country: 'Israel',
@@ -94,7 +94,7 @@ export const suppliers = [
     documentStatus: 'expiring'
   },
   {
-    id: 'SUP005',
+    id: 'sup005',
     name: 'Apex Armor Solutions',
     type: 'OEM',
     country: 'France',
@@ -115,7 +115,7 @@ export const suppliers = [
     documentStatus: 'expired'
   },
   {
-    id: 'SUP006',
+    id: 'sup006',
     name: 'Nordic Defense Industries',
     type: 'Tier 1',
     country: 'Sweden',
@@ -139,9 +139,9 @@ export const suppliers = [
 
 export const products = [
   {
-    id: 'PRD001',
+    id: 'CAL001',
     name: 'UAV Propulsion System MK-V',
-    supplierId: 'SUP001',
+    supplierId: 'sup001',
     supplierName: 'Orion Defense Systems',
     category: 'UAV & Aerospace',
     subcategory: 'Propulsion',
@@ -156,9 +156,9 @@ export const products = [
     image: 'https://images.unsplash.com/photo-1607867992871-34951585c280?w=200&h=150&fit=crop'
   },
   {
-    id: 'PRD002',
+    id: 'CAL002',
     name: 'Ballistic Armor Plates Level IV',
-    supplierId: 'SUP003',
+    supplierId: 'sup003',
     supplierName: 'Titan Tactical Manufacturing',
     category: 'Defense Materials',
     subcategory: 'Body Armor',
@@ -173,9 +173,9 @@ export const products = [
     image: 'https://images.unsplash.com/photo-1717749789408-f6f73c9e6aac?w=200&h=150&fit=crop'
   },
   {
-    id: 'PRD003',
+    id: 'CAL003',
     name: 'Tactical Communication Module TCM-200',
-    supplierId: 'SUP004',
+    supplierId: 'sup004',
     supplierName: 'Vanguard Defense Electronics',
     category: 'Tactical Electronics',
     subcategory: 'Communications',
@@ -190,9 +190,9 @@ export const products = [
     image: 'https://images.unsplash.com/photo-1769793153841-bc7c62bc9ac6?w=200&h=150&fit=crop'
   },
   {
-    id: 'PRD004',
+    id: 'CAL004',
     name: 'Radar Signal Processing Unit RSP-500',
-    supplierId: 'SUP002',
+    supplierId: 'sup002',
     supplierName: 'Falcon Aerospace Technologies',
     category: 'Surveillance Systems',
     subcategory: 'Radar',
@@ -207,9 +207,9 @@ export const products = [
     image: 'https://images.unsplash.com/photo-1770411034013-e6cb865ed21a?w=200&h=150&fit=crop'
   },
   {
-    id: 'PRD005',
+    id: 'CAL005',
     name: 'Night Vision Goggles NVG-7X',
-    supplierId: 'SUP004',
+    supplierId: 'sup004',
     supplierName: 'Vanguard Defense Electronics',
     category: 'Surveillance Systems',
     subcategory: 'Night Vision',
@@ -224,9 +224,9 @@ export const products = [
     image: 'https://images.unsplash.com/photo-1771343917024-0b5397850ccd?w=200&h=150&fit=crop'
   },
   {
-    id: 'PRD006',
+    id: 'CAL006',
     name: 'Armored Vehicle Power Pack AVP-800',
-    supplierId: 'SUP006',
+    supplierId: 'sup006',
     supplierName: 'Nordic Defense Industries',
     category: 'Defense Materials',
     subcategory: 'Power Systems',
@@ -241,9 +241,9 @@ export const products = [
     image: 'https://images.unsplash.com/photo-1731363106135-83fb05b5accb?w=200&h=150&fit=crop'
   },
   {
-    id: 'PRD007',
+    id: 'CAL007',
     name: 'Drone Detection System DDS-100',
-    supplierId: 'SUP001',
+    supplierId: 'sup001',
     supplierName: 'Orion Defense Systems',
     category: 'Surveillance Systems',
     subcategory: 'Counter-UAS',
@@ -258,9 +258,9 @@ export const products = [
     image: 'https://images.unsplash.com/photo-1607867992871-34951585c280?w=200&h=150&fit=crop'
   },
   {
-    id: 'PRD008',
+    id: 'CAL008',
     name: 'Composite Armor Panel CAP-III',
-    supplierId: 'SUP005',
+    supplierId: 'sup005',
     supplierName: 'Apex Armor Solutions',
     category: 'Defense Materials',
     subcategory: 'Vehicle Armor',
@@ -278,7 +278,7 @@ export const products = [
 
 export const buyers = [
   {
-    id: 'BUY001',
+    id: 'buy001',
     name: 'James Mitchell',
     company: 'US Army Procurement Division',
     country: 'United States',
@@ -290,7 +290,7 @@ export const buyers = [
     ratingsSubmitted: 12
   },
   {
-    id: 'BUY002',
+    id: 'buy002',
     name: 'Sarah Chen',
     company: 'NATO Allied Command',
     country: 'Belgium',
@@ -302,7 +302,7 @@ export const buyers = [
     ratingsSubmitted: 8
   },
   {
-    id: 'BUY003',
+    id: 'buy003',
     name: 'Hans Weber',
     company: 'Bundeswehr Procurement',
     country: 'Germany',
@@ -314,7 +314,7 @@ export const buyers = [
     ratingsSubmitted: 15
   },
   {
-    id: 'BUY004',
+    id: 'buy004',
     name: 'Marie Dubois',
     company: 'DGA France',
     country: 'France',
@@ -326,7 +326,7 @@ export const buyers = [
     ratingsSubmitted: 3
   },
   {
-    id: 'BUY005',
+    id: 'buy005',
     name: 'David Kim',
     company: 'ROK Defense Agency',
     country: 'South Korea',
@@ -342,9 +342,9 @@ export const buyers = [
 export const ratings = [
   {
     id: 'RAT001',
-    productId: 'PRD001',
+    productId: 'CAL001',
     productName: 'UAV Propulsion System MK-V',
-    buyerId: 'BUY001',
+    buyerId: 'buy001',
     buyerName: 'James Mitchell',
     rating: 5,
     review: 'Excellent propulsion system. Met all our requirements for tactical UAV operations.',
@@ -356,9 +356,9 @@ export const ratings = [
   },
   {
     id: 'RAT002',
-    productId: 'PRD002',
+    productId: 'CAL002',
     productName: 'Ballistic Armor Plates Level IV',
-    buyerId: 'BUY003',
+    buyerId: 'buy003',
     buyerName: 'Hans Weber',
     rating: 4,
     review: 'Good quality armor plates. Delivery was on time. Minor documentation issues.',
@@ -370,9 +370,9 @@ export const ratings = [
   },
   {
     id: 'RAT003',
-    productId: 'PRD004',
+    productId: 'CAL004',
     productName: 'Radar Signal Processing Unit RSP-500',
-    buyerId: 'BUY002',
+    buyerId: 'buy002',
     buyerName: 'Sarah Chen',
     rating: 5,
     review: 'Outstanding performance. Integration with existing systems was seamless.',
@@ -384,9 +384,9 @@ export const ratings = [
   },
   {
     id: 'RAT004',
-    productId: 'PRD006',
+    productId: 'CAL006',
     productName: 'Armored Vehicle Power Pack AVP-800',
-    buyerId: 'BUY005',
+    buyerId: 'buy005',
     buyerName: 'David Kim',
     rating: 4,
     review: 'Reliable power pack. Good technical support from the supplier.',
@@ -398,9 +398,9 @@ export const ratings = [
   },
   {
     id: 'RAT005',
-    productId: 'PRD003',
+    productId: 'CAL003',
     productName: 'Tactical Communication Module TCM-200',
-    buyerId: 'BUY001',
+    buyerId: 'buy001',
     buyerName: 'James Mitchell',
     rating: 3,
     review: 'Decent product but had some compatibility issues with legacy systems.',
@@ -415,11 +415,11 @@ export const ratings = [
 export const enquiries = [
   {
     id: 'ENQ001',
-    productId: 'PRD001',
+    productId: 'CAL001',
     productName: 'UAV Propulsion System MK-V',
-    supplierId: 'SUP001',
+    supplierId: 'sup001',
     supplierName: 'Orion Defense Systems',
-    buyerId: 'BUY001',
+    buyerId: 'buy001',
     buyerName: 'James Mitchell',
     buyerCompany: 'US Army Procurement Division',
     message: 'Interested in bulk order of 50 units. Please provide pricing and lead time.',
@@ -430,11 +430,11 @@ export const enquiries = [
   },
   {
     id: 'ENQ002',
-    productId: 'PRD003',
+    productId: 'CAL003',
     productName: 'Tactical Communication Module TCM-200',
-    supplierId: 'SUP004',
+    supplierId: 'sup004',
     supplierName: 'Vanguard Defense Electronics',
-    buyerId: 'BUY002',
+    buyerId: 'buy002',
     buyerName: 'Sarah Chen',
     buyerCompany: 'NATO Allied Command',
     message: 'Need technical specifications for interoperability assessment.',
@@ -445,11 +445,11 @@ export const enquiries = [
   },
   {
     id: 'ENQ003',
-    productId: 'PRD006',
+    productId: 'CAL006',
     productName: 'Armored Vehicle Power Pack AVP-800',
-    supplierId: 'SUP006',
+    supplierId: 'sup006',
     supplierName: 'Nordic Defense Industries',
-    buyerId: 'BUY003',
+    buyerId: 'buy003',
     buyerName: 'Hans Weber',
     buyerCompany: 'Bundeswehr Procurement',
     message: 'Requesting information on maintenance requirements and spare parts availability.',
@@ -460,11 +460,11 @@ export const enquiries = [
   },
   {
     id: 'ENQ004',
-    productId: 'PRD002',
+    productId: 'CAL002',
     productName: 'Ballistic Armor Plates Level IV',
-    supplierId: 'SUP003',
+    supplierId: 'sup003',
     supplierName: 'Titan Tactical Manufacturing',
-    buyerId: 'BUY005',
+    buyerId: 'buy005',
     buyerName: 'David Kim',
     buyerCompany: 'ROK Defense Agency',
     message: 'Can you provide samples for testing and certification verification?',
@@ -475,11 +475,11 @@ export const enquiries = [
   },
   {
     id: 'ENQ005',
-    productId: 'PRD007',
+    productId: 'CAL007',
     productName: 'Drone Detection System DDS-100',
-    supplierId: 'SUP001',
+    supplierId: 'sup001',
     supplierName: 'Orion Defense Systems',
-    buyerId: 'BUY002',
+    buyerId: 'buy002',
     buyerName: 'Sarah Chen',
     buyerCompany: 'NATO Allied Command',
     message: 'Interested in evaluation for base protection. What are the demo options?',

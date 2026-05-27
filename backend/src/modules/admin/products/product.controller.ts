@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
-import { createReadableId } from "../../../utils/id.js";
+import { createSequentialId } from "../../../utils/id.js";
 import { objectsToCsv } from "../../../utils/csv.js";
 import { ProductModel } from "./product.model.js";
 import { createAdminNotification } from "../notifications/notification.service.js";
@@ -72,7 +72,8 @@ export const getProduct = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
-  const payload = { ...req.body, id: req.body.id || createReadableId("PRD") };
+  const { id: _id, ...body } = req.body;
+  const payload = { ...body, id: await createSequentialId(ProductModel, "CAL") };
   const created = await ProductModel.create(payload);
   try {
     const productName = String((payload as { name?: string; productName?: string }).name || (payload as { productName?: string }).productName || created.toJSON().name || "Product");
@@ -102,9 +103,9 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
-  
+  const { id: _id, ...body } = req.body;
   const payload = { 
-    ...req.body,
+    ...body,
     status: "pending",
     updatedAt: new Date().toISOString(),
     approvalRequiredReason: "Product details updated",

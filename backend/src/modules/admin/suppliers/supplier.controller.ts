@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import crypto from "crypto";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { HttpError } from "../../../utils/httpError.js";
-import { createReadableId } from "../../../utils/id.js";
+import { createReadableId, createSequentialId } from "../../../utils/id.js";
 import { env } from "../../../config/env.js";
 import { sendSmtpEmail } from "../../../utils/smtpEmail.js";
 import { AuthUserModel } from "../../auth/auth.model.js";
@@ -78,7 +78,8 @@ export const getSupplier = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const createSupplier = asyncHandler(async (req: Request, res: Response) => {
-  const payload = { ...req.body, id: req.body.id || createReadableId("SUP") };
+  const { id: _id, ...body } = req.body;
+  const payload = { ...body, id: await createSequentialId(SupplierModel, "sup") };
   const created = await SupplierModel.create(payload);
   let credentials: { email: string; password: string } | null = null;
 
@@ -131,9 +132,10 @@ export const createSupplier = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const updateSupplier = asyncHandler(async (req: Request, res: Response) => {
+  const { id: _id, ...payload } = req.body;
   const updated = await SupplierModel.findOneAndUpdate(
     { id: req.params.supplierId },
-    { $set: req.body },
+    { $set: payload },
     { new: true, projection: { _id: 0 } },
   ).lean();
 
@@ -433,7 +435,7 @@ export const importSuppliersCsv = asyncHandler(async (req: Request, res: Respons
       await SupplierModel.updateOne({ id: existingByEmail.id }, { $set: payload });
       updated += 1;
     } else {
-      const newId = createReadableId("SUP");
+      const newId = await createSequentialId(SupplierModel, "sup");
       await SupplierModel.create({ id: newId, ...payload });
       created += 1;
     }

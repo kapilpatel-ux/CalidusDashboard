@@ -195,6 +195,11 @@ const getNotificationColor = (type, urgent) => {
   }
 };
 
+const getNotificationTime = (notification) => {
+  const time = new Date(notification?.date || notification?.createdAt || notification?.updatedAt || 0).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
+
 export const DashboardShell = ({ children }) => {
   const { currentRole, setCurrentRole } = useRole();
   const { currentUser, logout } = useAuth();
@@ -203,7 +208,12 @@ export const DashboardShell = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminRole = !["buyer", "supplier"].includes(currentRole);
-  const { data: adminNotifications = [] } = useGetNotificationsQuery(undefined, { skip: !isAdminRole });
+  const { data: adminNotifications = [] } = useGetNotificationsQuery(undefined, {
+    skip: !isAdminRole,
+    pollingInterval: isAdminRole ? 15000 : 0,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
   const [updateNotificationRead] = useUpdateNotificationReadMutation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -214,6 +224,9 @@ export const DashboardShell = ({ children }) => {
   const supplierProfileId = currentRole === "supplier" ? currentUser?.profileId : "";
   const { data: supplierNotifications = [] } = useGetSupplierNotificationsQuery(supplierProfileId, {
     skip: !supplierProfileId,
+    pollingInterval: supplierProfileId ? 15000 : 0,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
   });
   const [updateSupplierNotificationRead] = useUpdateSupplierNotificationReadMutation();
   const { data: buyerProfile = {} } = useGetBuyerProfileQuery(buyerProfileId, {
@@ -247,9 +260,14 @@ export const DashboardShell = ({ children }) => {
     return userCompany || userName || roleLabels[currentRole] || "User";
   }, [buyerProfile, currentRole, currentUser, isAdminRole, supplierProfile]);
   const notificationsList = useMemo(() => {
-    if (currentRole === "supplier") return supplierNotifications;
-    if (isAdminRole) return adminNotifications;
-    return [];
+    const source =
+      currentRole === "supplier"
+        ? supplierNotifications
+        : isAdminRole
+          ? adminNotifications
+          : [];
+    if (!Array.isArray(source)) return [];
+    return source.slice().sort((a, b) => getNotificationTime(b) - getNotificationTime(a));
   }, [adminNotifications, currentRole, isAdminRole, supplierNotifications]);
   const recentNotifications = useMemo(() => notificationsList.slice(0, 4), [notificationsList]);
 

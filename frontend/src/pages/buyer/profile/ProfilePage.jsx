@@ -1,9 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Select from "react-select";
-import countryList from "react-select-country-list";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import {
@@ -17,7 +15,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Building2, Edit, Mail, MapPin, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/App";
-import { validatePhoneNumber } from "@/lib/phoneValidation";
+import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
 
 import { currentBuyer } from "@/data/mockData";
 import {
@@ -33,21 +31,25 @@ export const BuyerProfile = () => {
   const [editProfileDialog, setEditProfileDialog] = useState(false);
   const [profileForm, setProfileForm] = useState({});
 
-  const countryOptions = useMemo(() => countryList().getData(), []);
-
   if (isLoading) return <p>Loading buyer profile...</p>;
   if (error) return <p>Failed to load buyer profile.</p>;
 
+  const displayCountry = getCountryNameFromDialCode(buyer.phone) || buyer.country;
+
   const openEditProfile = () => {
-    setProfileForm({ ...buyer });
+    setProfileForm({
+      ...buyer,
+      country: displayCountry,
+    });
     setEditProfileDialog(true);
   };
 
   const handleSaveProfile = async () => {
 
     const phone = String(profileForm.phone || "").trim();
+    const country = String(profileForm.country || getCountryNameFromDialCode(phone) || "").trim();
 
-    const phoneError = validatePhoneNumber(phone, profileForm.country);
+    const phoneError = validatePhoneNumber(phone, country);
     if (phoneError) {
       toast.error(phoneError);
       return;
@@ -68,8 +70,8 @@ export const BuyerProfile = () => {
       return;
     }
 
-    if (!String(profileForm.country || "").trim()) {
-      toast.error("Country is required");
+    if (!country) {
+      toast.error("Please select a valid mobile country code");
       return;
     }
 
@@ -80,7 +82,7 @@ export const BuyerProfile = () => {
           name: profileForm.name,
           company: profileForm.company,
           email: profileForm.email,
-          country: profileForm.country,
+          country,
           phone: profileForm.phone,
         },
       }).unwrap();
@@ -145,7 +147,7 @@ export const BuyerProfile = () => {
                     <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Country</p>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{buyer.country}</span>
+                      <span className="font-medium">{displayCountry}</span>
                     </div>
                   </div>
                 </div>
@@ -219,56 +221,19 @@ export const BuyerProfile = () => {
               <PhoneInput
                 country={"us"}
                 value={profileForm.phone || ""}
-                onChange={(value) =>
-                  setProfileForm({ ...profileForm, phone: value })
-                }
+                onChange={(value, data) => {
+                  const dialCode = data?.dialCode ? `+${data.dialCode}` : "";
+                  const country = String(getCountryNameFromDialCode(dialCode) || data?.name || "").trim();
+                  setProfileForm({
+                    ...profileForm,
+                    phone: value,
+                    ...(country ? { country } : {}),
+                  });
+                }}
                 inputClass="!w-full !h-[40px] !bg-black/20 !text-white !border-[#2a2a2a]"
                 buttonClass="!bg-black/20 !border-[#2a2a2a]"
                 dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"
               />
-            </div>
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country</Label>
-              <div className="mt-1">
-                <Select
-                  options={countryOptions}
-                  value={countryOptions.find(
-                    (option) => option.label === profileForm.country
-                  )}
-                  onChange={(selectedOption) =>
-                    setProfileForm({
-                      ...profileForm,
-                      country: selectedOption?.label || "",
-                    })
-                  }
-                  placeholder="Select Country"
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      backgroundColor: "#121212",
-                      borderColor: "#2a2a2a",
-                      color: "white",
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      backgroundColor: "#121212",
-                    }),
-                    singleValue: (base) => ({
-                      ...base,
-                      color: "white",
-                    }),
-                    option: (base, state) => ({
-                      ...base,
-                      backgroundColor: state.isFocused ? "#2563eb" : "#121212",
-                      color: "white",
-                    }),
-                    input: (base) => ({
-                      ...base,
-                      color: "white",
-                    }),
-                  }}
-                />
-              </div>
             </div>
           </div>
           <DialogFooter>

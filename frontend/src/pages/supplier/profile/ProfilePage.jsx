@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import ReactSelect from "react-select";
-import countryList from "react-select-country-list";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { toast } from "sonner";
@@ -14,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/App";
 import { currentSupplier } from "@/data/mockData";
 import { useGetSupplierProfileQuery, useUpdateSupplierProfileMutation } from "@/store/api/supplier/supplierProfileApi";
-import { validatePhoneNumber } from "@/lib/phoneValidation";
+import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
 
 const defaultProfileDocuments = [
   { name: "Trade License", type: "trade_license", status: "pending", expiryDate: "" },
@@ -127,6 +125,7 @@ export const SupplierProfile = () => {
   const openEdit = () => {
     setProfileForm({
       ...supplier,
+      country: supplier.country || getCountryNameFromDialCode(supplier.phone),
       documents: normalizeDocuments(supplier.documents || []),
     });
     setEditProfileDialog(true);
@@ -251,17 +250,18 @@ export const SupplierProfile = () => {
       errors.type = "Supplier type is required";
     }
 
-    if (!String(profileForm.country || "").trim()) {
-      errors.country = "Country is required";
-    }
+    const country = String(profileForm.country || getCountryNameFromDialCode(profileForm.phone) || "").trim();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(profileForm.email || "").trim())) {
       errors.email = "Enter a valid email address";
     }
 
-    const phoneError = validatePhoneNumber(profileForm.phone, profileForm.country);
+    const phoneError = validatePhoneNumber(profileForm.phone, country);
     if (phoneError) {
       errors.phone = phoneError;
+    }
+    if (!country) {
+      errors.phone = errors.phone || "Please select a valid mobile country code";
     }
 
     setProfileErrors(errors);
@@ -288,7 +288,7 @@ export const SupplierProfile = () => {
         payload: {
           name: profileForm.name,
           type: profileForm.type,
-          country: profileForm.country,
+          country: String(profileForm.country || getCountryNameFromDialCode(profileForm.phone) || "").trim(),
           email: profileForm.email,
           phone: profileForm.phone,
           image: profileForm.image || null,
@@ -304,10 +304,10 @@ export const SupplierProfile = () => {
     }
   };
 
-  const countryOptions = useMemo(() => countryList().getData(), []);
   if (isLoading) return <p>Loading company profile...</p>;
   if (error) return <p>Failed to load company profile.</p>;
   const profileDocuments = normalizeDocuments(supplier.documents || []);
+  const displayCountry = getCountryNameFromDialCode(supplier.phone) || supplier.country;
 
   const handleUploadDocument = async () => {
     if (!validateDocumentFile(selectedDocumentFile)) return;
@@ -379,7 +379,7 @@ export const SupplierProfile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Info label="Company Name" value={supplier.name} />
                   <Info label="Supplier Type" value={supplier.type} />
-                  <IconInfo label="Country" value={supplier.country} icon={MapPin} />
+                  <IconInfo label="Country" value={displayCountry} icon={MapPin} />
                   <IconInfo label="Email" value={supplier.email} icon={Mail} />
                   <IconInfo label="Phone" value={supplier.phone} icon={Phone} />
                   <IconInfo label="Member Since" value={supplier.joinDate} icon={Calendar} />
@@ -486,50 +486,6 @@ export const SupplierProfile = () => {
                 </Select>
                 <FieldError error={profileErrors.type} />
               </div>
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country</Label>
-                <div className="mt-1">
-                  <ReactSelect
-                    options={countryOptions}
-                    value={countryOptions.find(
-                      (option) => option.label === profileForm.country
-                    )}
-                    onChange={(selectedOption) =>
-                      setProfileForm({
-                        ...profileForm,
-                        country: selectedOption?.label || "",
-                      })
-                    }
-                    placeholder="Select Country"
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        backgroundColor: "#121212",
-                        borderColor: "#2a2a2a",
-                        color: "white",
-                      }),
-                      menu: (base) => ({
-                        ...base,
-                        backgroundColor: "#121212",
-                      }),
-                      singleValue: (base) => ({
-                        ...base,
-                        color: "white",
-                      }),
-                      option: (base, state) => ({
-                        ...base,
-                        backgroundColor: state.isFocused ? "#2563eb" : "#121212",
-                        color: "white",
-                      }),
-                      input: (base) => ({ 
-                        ...base,
-                        color: "white",
-                      }),
-                    }}
-                  />
-                  <FieldError error={profileErrors.country} />
-                </div>
-              </div>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
@@ -541,7 +497,15 @@ export const SupplierProfile = () => {
               <PhoneInput
                 country={"ae"}
                 value={profileForm.phone || ""}
-                onChange={(value) => setProfileForm({ ...profileForm, phone: value })}
+                onChange={(value, data) => {
+                  const dialCode = data?.dialCode ? `+${data.dialCode}` : "";
+                  const country = String(getCountryNameFromDialCode(dialCode) || data?.name || "").trim();
+                  setProfileForm({
+                    ...profileForm,
+                    phone: value,
+                    ...(country ? { country } : {}),
+                  });
+                }}
                 inputClass="!w-full !h-[40px] !bg-black/20 !text-white !border-[#2a2a2a]"
                 buttonClass="!bg-black/20 !border-[#2a2a2a]"
                 dropdownClass="!bg-[#070709] !text-white [&_.country:hover]:!bg-[#151518] [&_.country.highlight]:!bg-[#151518]"

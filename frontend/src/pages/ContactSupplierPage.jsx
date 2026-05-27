@@ -27,7 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { COUNTRIES } from "@/data/countries";
 import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
 import { copyCredentialsText, downloadCredentialsJson } from "@/lib/credentialDownload";
 
@@ -36,7 +35,6 @@ const initialForm = {
   company: "",
   buyerCountry: getCountryNameFromDialCode("+1") || "United States",
   phoneCountryCode: "+1",
-  supplierCountry: "",
   supplierId: "",
   email: "",
   phone: "",
@@ -63,15 +61,8 @@ export default function ContactSupplierPage() {
     isError: isProductsError,
   } = useGetProductsQuery();
 
-  const supplierCountry = String(form.supplierCountry || "").trim();
   const nonSuspendedSuppliers = suppliers.filter((supplier) => supplier.status !== "suspended");
-  const supplierCountryOptions = COUNTRIES;
-
-  const normalize = (value) => String(value || "").trim().toLowerCase();
-  const availableSuppliers = nonSuspendedSuppliers.filter((supplier) => {
-    if (!supplierCountry || supplierCountry === "all") return true;
-    return normalize(supplier.country) === normalize(supplierCountry);
-  });
+  const availableSuppliers = nonSuspendedSuppliers;
   const selectedSupplier = availableSuppliers.find((supplier) => supplier.id === form.supplierId);
   const supplierProducts = selectedSupplier
     ? products.filter((product) => product.supplierId === selectedSupplier.id && product.status === "approved")
@@ -277,31 +268,6 @@ export default function ContactSupplierPage() {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Field label="Supplier country">
-                <Select
-                  value={form.supplierCountry}
-	                  onValueChange={(value) => {
-	                    updateField("supplierCountry", value);
-	                    updateField("supplierId", "");
-	                    updateField("productId", "");
-	                  }}
-                >
-                  <SelectTrigger className={compactSelectTriggerClass}>
-                    <SelectValue placeholder="Select supplier country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="h-72">
-                      <SelectItem value="all">All Countries</SelectItem>
-                      {supplierCountryOptions.map((c) => (
-                        <SelectItem key={c} value={c} className="text-sm">
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
-              </Field>
-
               <Field label="Supplier company">
 	                <Select
 	                  value={form.supplierId}

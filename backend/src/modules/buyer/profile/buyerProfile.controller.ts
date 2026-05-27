@@ -14,9 +14,10 @@ export const getBuyerProfile = asyncHandler(async (req: Request, res: Response) 
 });
 
 export const updateBuyerProfile = asyncHandler(async (req: Request, res: Response) => {
+  const { id: _id, ...payload } = req.body;
   const updated = await BuyerModel.findOneAndUpdate(
     { id: req.params.buyerId },
-    { $set: req.body },
+    { $set: payload },
     { new: true, projection: { _id: 0 } },
   ).lean();
 

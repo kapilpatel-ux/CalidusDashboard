@@ -24,12 +24,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Loader2, Building2, MapPin, FileText, CheckCircle, Upload, ImagePlus } from "lucide-react";
-import { Country, State, City } from "country-state-city";
+import { State, City } from "country-state-city";
 import postalCodes from "postal-codes-js";
 import { useCreateSupplierMutation } from "@/store/api/admin/supplierApi";
 import logo from "@/assets/images/calidusheader.png";
 import { copyCredentialsText, downloadCredentialsJson } from "@/lib/credentialDownload";
-import { getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
+import { getCountryCodeFromDialCode, getCountryNameFromDialCode, validatePhoneNumber } from "@/lib/phoneValidation";
 
 const steps = [
   { id: "company", label: "Company Info", icon: Building2 },
@@ -200,6 +200,12 @@ const callingCodeOptions = [
   { label: "France (+33)", value: "+33" },
 ];
 
+const DEFAULT_PHONE_COUNTRY_CODE = "+971";
+const getCountryFromPhoneCode = (phoneCountryCode) => ({
+  country: getCountryNameFromDialCode(phoneCountryCode),
+  countryCode: getCountryCodeFromDialCode(phoneCountryCode),
+});
+
 const pad2 = (n) => String(n).padStart(2, "0");
 const localIsoDate = (date) =>
   `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
@@ -227,7 +233,7 @@ export const SupplierRegistrationPage = () => {
         .sort((a, b) => a.localeCompare(b))
         .map((code) => ({
           value: code,
-          label: displayNames ? `${code} — ${displayNames.of(code)}` : code,
+          label: displayNames ? `${code} - ${displayNames.of(code)}` : code,
         }));
     } catch (_) {
       return fallbackCurrencyOptions;
@@ -249,11 +255,10 @@ export const SupplierRegistrationPage = () => {
     productAndServices: "",
     businessDescription: "",
     email: "",
-    phoneCountryCode: "+971",
+    phoneCountryCode: DEFAULT_PHONE_COUNTRY_CODE,
     phoneNumber: "",
     currency: "",
-    country: "",
-    countryCode: "",
+    ...getCountryFromPhoneCode(DEFAULT_PHONE_COUNTRY_CODE),
     state: "",
     stateCode: "",
     addressLine1: "",
@@ -275,10 +280,6 @@ export const SupplierRegistrationPage = () => {
   const [errors, setErrors] = useState({});
   const [dragOverTarget, setDragOverTarget] = useState(null);
 
-  const countryOptions = useMemo(
-    () => Country.getAllCountries().slice().sort((a, b) => a.name.localeCompare(b.name)),
-    []
-  );
   const stateOptions = useMemo(
     () => form.countryCode ? State.getStatesOfCountry(form.countryCode) : [],
     [form.countryCode]
@@ -336,19 +337,27 @@ export const SupplierRegistrationPage = () => {
     });
   };
 
-  const setAddressCountry = (countryCode) => {
-    const country = countryOptions.find((option) => option.isoCode === countryCode);
-    setForm((prev) => ({
-      ...prev,
-      country: country?.name || "",
-      countryCode: country?.isoCode || "",
-      state: "",
-      stateCode: "",
-      cityState: "",
-      postalCode: "",
-    }));
+  const setPhoneCountryCode = (phoneCountryCode) => {
+    const derivedCountry = getCountryFromPhoneCode(phoneCountryCode);
+    setForm((prev) => {
+      const countryChanged = prev.countryCode !== derivedCountry.countryCode;
+      return {
+        ...prev,
+        phoneCountryCode,
+        ...derivedCountry,
+        ...(countryChanged
+          ? {
+              state: "",
+              stateCode: "",
+              cityState: "",
+              postalCode: "",
+            }
+          : {}),
+      };
+    });
     setErrors((prev) => {
       const next = { ...prev };
+      delete next.phoneCountryCode;
       delete next.country;
       delete next.state;
       delete next.cityState;
@@ -595,16 +604,16 @@ export const SupplierRegistrationPage = () => {
 	    }
 
     if (!stepId || stepId === "address") {
-      const country = String(form.country || "").trim();
-      const countryCode = String(form.countryCode || "").trim();
+      const country = String(form.country || getCountryNameFromDialCode(form.phoneCountryCode) || "").trim();
+      const countryCode = String(form.countryCode || getCountryCodeFromDialCode(form.phoneCountryCode) || "").trim();
       const state = String(form.state || "").trim();
       const city = String(form.cityState || "").trim();
       const postalCode = String(form.postalCode || "").trim();
 
       requireField("addressLine1", "Address line 1 is required");
       requireField("addressLine2", "Address line 2 is required");
-      if (!country) {
-        nextErrors.country = "Country is required";
+      if (!country || !countryCode) {
+        nextErrors.phoneCountryCode = "Select a valid phone country code";
       }
       if (!state) {
         nextErrors.state = "State is required";
@@ -723,7 +732,7 @@ export const SupplierRegistrationPage = () => {
 	    const payload = {
       name: form.name.trim(),
       type: form.businessType,
-      country: form.country.trim(),
+      country: String(form.country || getCountryNameFromDialCode(form.phoneCountryCode) || "").trim(),
       email: form.email.trim(),
       phone: `${String(form.phoneCountryCode || "").trim()}${phoneDigits(form.phoneNumber)}`,
       image: form.supplierImage,
@@ -746,8 +755,8 @@ export const SupplierRegistrationPage = () => {
         state,
         stateCode: form.stateCode,
         postalCode: form.postalCode,
-        country: form.country,
-        countryCode: form.countryCode,
+        country: String(form.country || getCountryNameFromDialCode(form.phoneCountryCode) || "").trim(),
+        countryCode: String(form.countryCode || getCountryCodeFromDialCode(form.phoneCountryCode) || "").trim(),
       },
       licenseNumber: form.licenseNumber,
       vatNumber: form.vatNumber,
@@ -1056,7 +1065,7 @@ export const SupplierRegistrationPage = () => {
                           Phone *
                         </Label>
                         <div className="mt-1 grid grid-cols-[140px_1fr] gap-2">
-                          <Select value={form.phoneCountryCode} onValueChange={(v) => setField("phoneCountryCode", v)}>
+                          <Select value={form.phoneCountryCode} onValueChange={setPhoneCountryCode}>
                             <SelectTrigger className="bg-black/20" data-testid="supplier-reg-phone-country-code">
                               <SelectValue placeholder="Code" />
                             </SelectTrigger>
@@ -1080,6 +1089,7 @@ export const SupplierRegistrationPage = () => {
 	                            data-testid="supplier-reg-phone"
 	                          />
                         </div>
+                        {errors.phoneCountryCode && <p className="text-xs text-red-400 mt-1">{errors.phoneCountryCode}</p>}
                         {errors.phoneNumber && <p className="text-xs text-red-400 mt-1">{errors.phoneNumber}</p>}
                       </div>
                     </div>
@@ -1118,7 +1128,7 @@ export const SupplierRegistrationPage = () => {
 	                        data-testid="supplier-reg-vat"
 	                      />
                       <p className="mt-1 text-[10px] text-muted-foreground">
-                        Format is checked by selected country, or by phone country code before country is selected.
+                        Format is checked using the country identified from the phone code.
                       </p>
                       {errors.vatNumber && <p className="text-xs text-red-400 mt-1">{errors.vatNumber}</p>}
                     </div>
@@ -1204,29 +1214,10 @@ export const SupplierRegistrationPage = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Country *
-                    </Label>
-                    <Select value={form.countryCode} onValueChange={setAddressCountry}>
-                      <SelectTrigger
-                        className={`bg-black/20 mt-1 ${errors.country ? "border-red-500/50" : ""}`}
-                        data-testid="supplier-reg-country"
-                      >
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                    <SelectContent>
-                        <ScrollArea className="h-72">
-                          {countryOptions.map((c) => (
-                            <SelectItem key={c.isoCode} value={c.isoCode}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </ScrollArea>
-                      </SelectContent>
-                    </Select>
-                    {errors.country && <p className="text-xs text-red-400 mt-1">{errors.country}</p>}
-                  </div>
+                  {/* <div className="rounded-sm border border-border bg-black/10 p-3">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Country</p>
+                    <p className="mt-1 text-sm font-medium">{form.country || "Select phone code first"}</p>
+                  </div> */}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -1238,7 +1229,7 @@ export const SupplierRegistrationPage = () => {
                           className={`bg-black/20 mt-1 ${errors.state ? "border-red-500/50" : ""}`}
                           data-testid="supplier-reg-state"
                         >
-                          <SelectValue placeholder={form.countryCode ? "Select state" : "Select country first"} />
+                          <SelectValue placeholder={form.countryCode ? "Select state" : "Select phone code first"} />
                         </SelectTrigger>
                         <SelectContent>
                           <ScrollArea className="h-72">
