@@ -4,6 +4,7 @@ import { HttpError } from "../../../utils/httpError.js";
 import { createSequentialId } from "../../../utils/id.js";
 import { objectsToCsv } from "../../../utils/csv.js";
 import { ProductModel } from "./product.model.js";
+import { SupplierModel } from "../suppliers/supplier.model.js";
 import { createAdminNotification } from "../notifications/notification.service.js";
 import { createSupplierNotification } from "../../supplier/notifications/supplierNotification.service.js";
 
@@ -17,9 +18,79 @@ const parsePositiveInt = (value: unknown, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+type ProductRecord = Record<string, unknown> & {
+  supplierId?: string;
+  supplierName?: string;
+  supplierSnapshot?: Record<string, unknown>;
+};
+
+const getSupplierMetrics = async (supplierIds: string[], approvedOnly = false) => {
+  const ids = [...new Set(supplierIds.filter(Boolean))];
+  if (ids.length === 0) return new Map<string, { totalProducts: number; totalCountries: number; countriesList: string[] }>();
+
+  const statusMatch = approvedOnly ? { status: { $regex: /^approved$/i } } : {};
+  const metrics = await ProductModel.aggregate([
+    { $match: { supplierId: { $in: ids }, ...statusMatch } },
+    {
+      $group: {
+        _id: "$supplierId",
+        totalProducts: { $sum: 1 },
+        countries: { $addToSet: "$countryOfOrigin" },
+      },
+    },
+  ]);
+
+  return metrics.reduce((map, item) => {
+    const countriesList = Array.isArray(item.countries)
+      ? item.countries.map((country: unknown) => String(country || "").trim()).filter(Boolean)
+      : [];
+
+    map.set(String(item._id), {
+      totalProducts: Number(item.totalProducts || 0),
+      totalCountries: countriesList.length,
+      countriesList,
+    });
+    return map;
+  }, new Map<string, { totalProducts: number; totalCountries: number; countriesList: string[] }>());
+};
+
+const enrichProductsWithSupplierMetrics = async <T extends ProductRecord>(products: T[], approvedOnly = false) => {
+  const supplierIds = products.map((product) => String(product.supplierId || "")).filter(Boolean);
+  const metricsBySupplierId = await getSupplierMetrics(supplierIds, approvedOnly);
+  const suppliers = await SupplierModel.find(
+    { id: { $in: [...new Set(supplierIds)] } },
+    { _id: 0, id: 1, name: 1, country: 1 },
+  ).lean();
+  const suppliersById = new Map(suppliers.map((supplier) => [String(supplier.id), supplier]));
+
+  return products.map((product) => {
+    const supplierId = String(product.supplierId || "");
+    const metrics = metricsBySupplierId.get(supplierId) || { totalProducts: 0, totalCountries: 0, countriesList: [] };
+    const supplier = suppliersById.get(supplierId);
+    const supplierSnapshot = product.supplierSnapshot && typeof product.supplierSnapshot === "object"
+      ? product.supplierSnapshot
+      : {};
+
+    return {
+      ...product,
+      supplierName: supplier?.name || product.supplierName,
+      supplierSnapshot: {
+        ...supplierSnapshot,
+        name: supplier?.name || supplierSnapshot.name || product.supplierName || "",
+        country: supplier?.country || supplierSnapshot.country || "",
+        activeProducts: metrics.totalProducts,
+        totalProducts: metrics.totalProducts,
+        countries: metrics.totalCountries,
+        totalCountries: metrics.totalCountries,
+        countriesList: metrics.countriesList,
+      },
+    };
+  });
+};
+
 export const listProducts = asyncHandler(async (_req: Request, res: Response) => {
   const products = await ProductModel.find({}, { _id: 0 }).lean();
-  res.json(products);
+  res.json(await enrichProductsWithSupplierMetrics(products));
 });
 
 // WordPress / public listing: approved-only + search + pagination
@@ -51,7 +122,7 @@ export const listApprovedProducts = asyncHandler(async (req: Request, res: Respo
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   res.json({
-    items,
+    items: await enrichProductsWithSupplierMetrics(items, true),
     page,
     limit,
     total,
@@ -62,13 +133,15 @@ export const listApprovedProducts = asyncHandler(async (req: Request, res: Respo
 export const getApprovedProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await ProductModel.findOne({ id: req.params.productId, status: { $regex: /^approved$/i } }, { _id: 0 }).lean();
   if (!product) throw new HttpError(404, "Product not found");
-  res.json(product);
+  const [enrichedProduct] = await enrichProductsWithSupplierMetrics([product], true);
+  res.json(enrichedProduct);
 });
 
 export const getProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await ProductModel.findOne({ id: req.params.productId }, { _id: 0 }).lean();
   if (!product) throw new HttpError(404, "Product not found");
-  res.json(product);
+  const [enrichedProduct] = await enrichProductsWithSupplierMetrics([product]);
+  res.json(enrichedProduct);
 });
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {

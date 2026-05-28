@@ -33,6 +33,45 @@ async function syncSupplierProductCount(supplierId: string) {
   await SupplierModel.updateOne({ id: supplierId }, { $set: { productsCount } });
 }
 
+async function getSupplierProductMetrics(supplierId: string) {
+  const [totalProducts, countries] = await Promise.all([
+    ProductModel.countDocuments({ supplierId }),
+    ProductModel.distinct("countryOfOrigin", { supplierId }),
+  ]);
+  const countriesList = countries.map((country) => String(country || "").trim()).filter(Boolean);
+
+  return {
+    totalProducts,
+    totalCountries: countriesList.length,
+    countriesList,
+  };
+}
+
+function enrichSupplierSnapshot<T extends Record<string, unknown>>(
+  product: T,
+  supplier: { name?: string; country?: string },
+  metrics: { totalProducts: number; totalCountries: number; countriesList: string[] },
+) {
+  const currentSnapshot = product.supplierSnapshot && typeof product.supplierSnapshot === "object"
+    ? product.supplierSnapshot as Record<string, unknown>
+    : {};
+
+  return {
+    ...product,
+    supplierName: supplier.name || product.supplierName,
+    supplierSnapshot: {
+      ...currentSnapshot,
+      name: supplier.name || currentSnapshot.name || product.supplierName || "",
+      country: supplier.country || currentSnapshot.country || "",
+      activeProducts: metrics.totalProducts,
+      totalProducts: metrics.totalProducts,
+      countries: metrics.totalCountries,
+      totalCountries: metrics.totalCountries,
+      countriesList: metrics.countriesList,
+    },
+  };
+}
+
 async function getSupplierOrThrow(supplierId: string) {
   const supplier = await SupplierModel.findOne(
     { id: supplierId },
@@ -45,11 +84,15 @@ async function getSupplierOrThrow(supplierId: string) {
 
 export const listSupplierProducts = asyncHandler(async (req: Request, res: Response) => {
   const supplierId = String(req.params.supplierId);
-  const products = await ProductModel.find({ supplierId })
-    .sort({ createdAt: -1, createdDate: -1, id: -1 })
-    .lean<ProductWithMongoId[]>();
+  const [supplier, metrics, products] = await Promise.all([
+    getSupplierOrThrow(supplierId),
+    getSupplierProductMetrics(supplierId),
+    ProductModel.find({ supplierId })
+      .sort({ createdAt: -1, createdDate: -1, id: -1 })
+      .lean<ProductWithMongoId[]>(),
+  ]);
 
-  res.json(products.map(normalizeProductDates));
+  res.json(products.map(normalizeProductDates).map((product) => enrichSupplierSnapshot(product, supplier, metrics)));
 });
 
 export const createSupplierProduct = asyncHandler(async (req: Request, res: Response) => {
@@ -69,6 +112,7 @@ export const createSupplierProduct = asyncHandler(async (req: Request, res: Resp
 
   const created = await ProductModel.create(payload);
   await syncSupplierProductCount(supplierId);
+  const metrics = await getSupplierProductMetrics(supplierId);
   try {
     const productName = String(req.body.name || req.body.productName || payload.name || "Product");
     await createAdminNotification({
@@ -80,7 +124,7 @@ export const createSupplierProduct = asyncHandler(async (req: Request, res: Resp
   } catch (err) {
     console.error("Failed to create admin notification for supplier product", err);
   }
-  res.status(201).json(created.toJSON());
+  res.status(201).json(enrichSupplierSnapshot(created.toJSON(), supplier, metrics));
 });
 
 export const updateSupplierProduct = asyncHandler(async (req: Request, res: Response) => {
@@ -109,7 +153,12 @@ export const updateSupplierProduct = asyncHandler(async (req: Request, res: Resp
     { new: true, projection: { _id: 0 } },
   ).lean();
 
-  res.json(updated);
+  const [supplier, metrics] = await Promise.all([
+    getSupplierOrThrow(supplierId),
+    getSupplierProductMetrics(supplierId),
+  ]);
+
+  res.json(updated ? enrichSupplierSnapshot(updated, supplier, metrics) : updated);
 });
 
 export const deleteSupplierProduct = asyncHandler(async (req: Request, res: Response) => {

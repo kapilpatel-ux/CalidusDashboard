@@ -53,6 +53,7 @@ import { useGetNotificationsQuery, useUpdateNotificationReadMutation } from "@/s
 import { useGetBuyerProfileQuery } from "@/store/api/buyer/buyerProfileApi";
 import { useGetSupplierProfileQuery } from "@/store/api/supplier/supplierProfileApi";
 import { useGetSupplierNotificationsQuery, useUpdateSupplierNotificationReadMutation } from "@/store/api/supplier/notificationApi";
+import { sortNotificationsNewestFirst } from "@/lib/notifications";
 
 // Navigation items for each role
 const navigationConfig = {
@@ -195,11 +196,6 @@ const getNotificationColor = (type, urgent) => {
   }
 };
 
-const getNotificationTime = (notification) => {
-  const time = new Date(notification?.date || notification?.createdAt || notification?.updatedAt || 0).getTime();
-  return Number.isNaN(time) ? 0 : time;
-};
-
 export const DashboardShell = ({ children }) => {
   const { currentRole, setCurrentRole } = useRole();
   const { currentUser, logout } = useAuth();
@@ -266,8 +262,7 @@ export const DashboardShell = ({ children }) => {
         : isAdminRole
           ? adminNotifications
           : [];
-    if (!Array.isArray(source)) return [];
-    return source.slice().sort((a, b) => getNotificationTime(b) - getNotificationTime(a));
+    return sortNotificationsNewestFirst(source);
   }, [adminNotifications, currentRole, isAdminRole, supplierNotifications]);
   const recentNotifications = useMemo(() => notificationsList.slice(0, 4), [notificationsList]);
 
