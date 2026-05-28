@@ -24,6 +24,13 @@ type ProductRecord = Record<string, unknown> & {
   supplierSnapshot?: Record<string, unknown>;
 };
 
+const getYearsInBusiness = (joinDate?: unknown) => {
+  if (!joinDate) return "";
+  const joinedYear = new Date(String(joinDate)).getFullYear();
+  if (!Number.isFinite(joinedYear)) return "";
+  return Math.max(0, new Date().getFullYear() - joinedYear);
+};
+
 const getSupplierMetrics = async (supplierIds: string[], approvedOnly = false) => {
   const ids = [...new Set(supplierIds.filter(Boolean))];
   if (ids.length === 0) return new Map<string, { totalProducts: number; totalCountries: number; countriesList: string[] }>();
@@ -59,7 +66,7 @@ const enrichProductsWithSupplierMetrics = async <T extends ProductRecord>(produc
   const metricsBySupplierId = await getSupplierMetrics(supplierIds, approvedOnly);
   const suppliers = await SupplierModel.find(
     { id: { $in: [...new Set(supplierIds)] } },
-    { _id: 0, id: 1, name: 1, country: 1 },
+    { _id: 0, id: 1, name: 1, country: 1, type: 1, rating: 1, businessDescription: 1, image: 1, joinDate: 1 },
   ).lean();
   const suppliersById = new Map(suppliers.map((supplier) => [String(supplier.id), supplier]));
 
@@ -78,6 +85,11 @@ const enrichProductsWithSupplierMetrics = async <T extends ProductRecord>(produc
         ...supplierSnapshot,
         name: supplier?.name || supplierSnapshot.name || product.supplierName || "",
         country: supplier?.country || supplierSnapshot.country || "",
+        rating: supplier?.rating ?? supplierSnapshot.rating ?? 0,
+        type: supplier?.type || supplierSnapshot.type || "",
+        description: supplier?.businessDescription || supplierSnapshot.description || "",
+        image: supplier?.image || supplierSnapshot.image || "",
+        yearsInBusiness: getYearsInBusiness(supplier?.joinDate) || supplierSnapshot.yearsInBusiness || "",
         activeProducts: metrics.totalProducts,
         totalProducts: metrics.totalProducts,
         countries: metrics.totalCountries,

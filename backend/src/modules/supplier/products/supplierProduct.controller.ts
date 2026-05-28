@@ -47,9 +47,16 @@ async function getSupplierProductMetrics(supplierId: string) {
   };
 }
 
+const getYearsInBusiness = (joinDate?: unknown) => {
+  if (!joinDate) return "";
+  const joinedYear = new Date(String(joinDate)).getFullYear();
+  if (!Number.isFinite(joinedYear)) return "";
+  return Math.max(0, new Date().getFullYear() - joinedYear);
+};
+
 function enrichSupplierSnapshot<T extends Record<string, unknown>>(
   product: T,
-  supplier: { name?: string; country?: string },
+  supplier: { name?: string; country?: string; type?: string; rating?: number; businessDescription?: string; image?: string | null; joinDate?: string },
   metrics: { totalProducts: number; totalCountries: number; countriesList: string[] },
 ) {
   const currentSnapshot = product.supplierSnapshot && typeof product.supplierSnapshot === "object"
@@ -63,6 +70,11 @@ function enrichSupplierSnapshot<T extends Record<string, unknown>>(
       ...currentSnapshot,
       name: supplier.name || currentSnapshot.name || product.supplierName || "",
       country: supplier.country || currentSnapshot.country || "",
+      rating: supplier.rating ?? currentSnapshot.rating ?? 0,
+      type: supplier.type || currentSnapshot.type || "",
+      description: supplier.businessDescription || currentSnapshot.description || "",
+      image: supplier.image || currentSnapshot.image || "",
+      yearsInBusiness: getYearsInBusiness(supplier.joinDate) || currentSnapshot.yearsInBusiness || "",
       activeProducts: metrics.totalProducts,
       totalProducts: metrics.totalProducts,
       countries: metrics.totalCountries,
@@ -75,11 +87,11 @@ function enrichSupplierSnapshot<T extends Record<string, unknown>>(
 async function getSupplierOrThrow(supplierId: string) {
   const supplier = await SupplierModel.findOne(
     { id: supplierId },
-    { _id: 0, id: 1, name: 1, country: 1 },
+    { _id: 0, id: 1, name: 1, country: 1, type: 1, rating: 1, businessDescription: 1, image: 1, joinDate: 1 },
   ).lean();
 
   if (!supplier) throw new HttpError(404, "Supplier not found");
-  return supplier as { id: string; name: string; country?: string };
+  return supplier as { id: string; name: string; country?: string; type?: string; rating?: number; businessDescription?: string; image?: string | null; joinDate?: string };
 }
 
 export const listSupplierProducts = asyncHandler(async (req: Request, res: Response) => {
