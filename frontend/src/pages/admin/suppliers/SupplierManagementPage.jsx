@@ -170,6 +170,40 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
     }
   };
 
+  const downloadDummyCsv = () => {
+    const sampleRow = {
+      id: "SUP001",
+      name: "Example Supplier",
+      email: "supplier@example.com",
+      phone: "+971501234567",
+      type: "OEM",
+      businessType: "Manufacturer",
+      calidusCluster: "Aerospace",
+      country: "United Arab Emirates",
+      productsCount: "0",
+      documentStatus: "active",
+      status: "pending",
+      joinDate: new Date().toISOString().slice(0, 10),
+      rating: "0",
+      totalEnquiries: "0",
+      profileViews: "0",
+    };
+    const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const csv = [
+      requiredSupplierColumns.join(","),
+      requiredSupplierColumns.map((column) => escapeCsv(sampleRow[column])).join(","),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const objectUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = "supplier_import_template.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(objectUrl);
+  };
+
   const getDocStatusBadge = (status) => {
     switch (status) {
       case "expired":
@@ -422,6 +456,17 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
                 />
                 {isImporting ? "Importing..." : "Import CSV"}
               </label>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-9 bg-black/20 border-border rounded-sm"
+              onClick={downloadDummyCsv}
+              disabled={isExporting || isImporting}
+              data-testid="download-supplier-dummy-csv"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Dummy CSV
             </Button>
           </div>
         }

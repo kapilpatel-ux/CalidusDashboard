@@ -106,6 +106,35 @@ export const BuyerManagement = ({ onView } = {}) => {
     }
   };
 
+  const downloadDummyCsv = () => {
+    const sampleRow = {
+      id: "BUY001",
+      name: "Example Buyer",
+      email: "buyer@example.com",
+      phone: "+971501234567",
+      company: "Example Company",
+      country: "United Arab Emirates",
+      status: "pending",
+      joinDate: new Date().toISOString().slice(0, 10),
+      enquiriesSent: "0",
+      ratingsSubmitted: "0",
+    };
+    const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const csv = [
+      requiredBuyerColumns.join(","),
+      requiredBuyerColumns.map((column) => escapeCsv(sampleRow[column])).join(","),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const objectUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = "buyer_import_template.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(objectUrl);
+  };
+
   const columns = [
     {
       key: "name",
@@ -282,6 +311,17 @@ export const BuyerManagement = ({ onView } = {}) => {
                 />
                 {isImporting ? "Importing..." : "Import CSV"}
               </label>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-9 bg-black/20 border-border rounded-sm"
+              onClick={downloadDummyCsv}
+              disabled={isExporting || isImporting}
+              data-testid="download-buyer-dummy-csv"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Dummy CSV
             </Button>
           </div>
         }
