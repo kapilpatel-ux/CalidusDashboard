@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Building2, Lock, Mail, Phone, Shield, User, UserCircle } from "lucide-react";
+import { Building2, Eye, EyeOff, Lock, Mail, Phone, Shield, User, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,23 @@ const roleIcons = {
   buyer: UserCircle,
 };
 
+const getAuthErrorMessage = (error) => {
+  const data = error?.data;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  return (
+    data?.detail ||
+    data?.message ||
+    data?.error ||
+    error?.error ||
+    error?.message ||
+    "Authentication failed"
+  );
+};
+
 export const AuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,6 +52,7 @@ export const AuthPage = () => {
   // const [mode, setMode] = useState(location.pathname.includes("signup") ? "signup" : "login");
   const [mode] = useState("login");
   const [form, setForm] = useState(initialForm);
+  const [showPassword, setShowPassword] = useState(false);
   const [login, { isLoading: isLoggingIn }] = useLoginMutation();
   const [signup, { isLoading: isSigningUp }] = useSignupMutation();
   const isSignup = mode === "signup";
@@ -66,7 +84,7 @@ export const AuthPage = () => {
       const result = await (isSignup ? signup(payload) : login(payload)).unwrap();
       handleAuthSuccess(result);
     } catch (error) {
-      toast.error(error?.data?.message || "Authentication failed");
+      toast.error(getAuthErrorMessage(error));
     }
   };
 
@@ -172,7 +190,25 @@ export const AuthPage = () => {
                   <Input type="email" value={form.email} onChange={(event) => updateForm("email", event.target.value)} className="bg-black/20" required data-testid="auth-email" />
                 </Field>
                 <Field icon={Lock} label="Password">
-                  <Input type="password" value={form.password} onChange={(event) => updateForm("password", event.target.value)} className="bg-black/20" required minLength={isSignup ? 6 : 1} data-testid="auth-password" />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={(event) => updateForm("password", event.target.value)}
+                      className="bg-black/20 pr-10"
+                      required
+                      minLength={isSignup ? 6 : 1}
+                      data-testid="auth-password"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword((value) => !value)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </Field>
               </div>
 

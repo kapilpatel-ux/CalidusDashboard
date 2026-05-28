@@ -47,6 +47,9 @@ function buildAuthResponse(user: {
 }
 
 const approvedSupplierStatuses = new Set(["active", "approved"]);
+const approvedBuyerStatuses = new Set(["active", "approved"]);
+
+const normalizeStatus = (value: unknown) => String(value || "").toLowerCase();
 
 export const signup = asyncHandler(async (req: Request, res: Response) => {
   const email = String(req.body.email).toLowerCase().trim();
@@ -150,14 +153,35 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (user.status === "suspended") {
-    throw new HttpError(403, "This account is suspended");
+    throw new HttpError(403, "Your account is suspended");
+  }
+
+  if (user.role === "buyer") {
+    const buyer = await BuyerModel.findOne({ id: user.profileId }, { _id: 0, status: 1 }).lean();
+    const buyerStatus = normalizeStatus(buyer?.status || user.status);
+
+    if (buyerStatus === "rejected" || user.status === "rejected") {
+      throw new HttpError(403, "Sorry, admin rejected you");
+    }
+
+    if (!buyer || !approvedBuyerStatuses.has(buyerStatus)) {
+      throw new HttpError(403, "Admin has not approved you yet. Please wait.");
+    }
+
+    if (user.status !== "active") {
+      await AuthUserModel.updateOne({ id: user.id }, { $set: { status: "active" } });
+      user.status = "active";
+    }
   }
 
   if (user.role === "supplier") {
     const supplier = await SupplierModel.findOne({ id: user.profileId }, { _id: 0, status: 1 }).lean();
-    const supplierStatus = String(supplier?.status || "").toLowerCase();
+    const supplierStatus = normalizeStatus(supplier?.status);
+    if (supplierStatus === "rejected" || user.status === "rejected") {
+      throw new HttpError(403, "Sorry, admin rejected you");
+    }
     if (!supplier || !approvedSupplierStatuses.has(supplierStatus)) {
-      throw new HttpError(403, "Your supplier account is not approved yet");
+      throw new HttpError(403, "Admin has not approved you yet. Please wait.");
     }
     if (user.status !== "active") {
       await AuthUserModel.updateOne({ id: user.id }, { $set: { status: "active" } });

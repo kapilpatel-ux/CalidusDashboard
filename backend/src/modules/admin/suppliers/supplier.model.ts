@@ -33,7 +33,7 @@ const supplierSchema = new Schema(
     documents: { type: [Schema.Types.Mixed], default: [] },
     documentStatus: { type: String, default: "active" },
   },
-  { collection: "suppliers", strict: false, versionKey: false },
+  { collection: "suppliers", strict: false, timestamps: true, versionKey: false },
 );
 
 supplierSchema.set("toJSON", {

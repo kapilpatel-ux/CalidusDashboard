@@ -1,7 +1,7 @@
 import { createReadableId } from "../../../utils/id.js";
 import { NotificationModel } from "./notification.model.js";
 
-const today = () => new Date().toISOString().split("T")[0];
+const nowIso = () => new Date().toISOString();
 
 export type AdminNotificationInput = {
   type?: string;
@@ -17,11 +17,10 @@ export async function createAdminNotification(input: AdminNotificationInput) {
     type: input.type || "info",
     title: input.title,
     message: input.message,
-    date: today(),
+    date: nowIso(),
     read: false,
     link: input.link || "notificationmanagement",
   });
 
   return created.toJSON();
 }
-

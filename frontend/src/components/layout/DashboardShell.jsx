@@ -53,7 +53,7 @@ import { useGetNotificationsQuery, useUpdateNotificationReadMutation } from "@/s
 import { useGetBuyerProfileQuery } from "@/store/api/buyer/buyerProfileApi";
 import { useGetSupplierProfileQuery } from "@/store/api/supplier/supplierProfileApi";
 import { useGetSupplierNotificationsQuery, useUpdateSupplierNotificationReadMutation } from "@/store/api/supplier/notificationApi";
-import { sortNotificationsNewestFirst } from "@/lib/notifications";
+import { formatNotificationDateTime, sortNotificationsNewestFirst } from "@/lib/notifications";
 
 // Navigation items for each role
 const navigationConfig = {
@@ -620,7 +620,7 @@ export const DashboardShell = ({ children }) => {
                                       {notification.message}
                                     </p>
                                     <p className="text-xs text-muted-foreground/70 mt-1">
-                                      {notification.date}
+                                      {formatNotificationDateTime(notification)}
                                     </p>
                                   </div>
                                   {!notification.read && (

@@ -76,12 +76,12 @@ export const updateBuyerStatus = asyncHandler(async (req: Request, res: Response
   );
 
   if (status === "active" && buyerEmail) {
-    const tempPassword = crypto.randomBytes(10).toString("base64url");
     const existingBuyerUser = await AuthUserModel.findOne(
       { role: "buyer", $or: [{ profileId: buyer.id }, { email: buyerEmail }] },
       { _id: 0, id: 1 },
     ).lean();
 
+    let tempPassword = "";
     if (existingBuyerUser) {
       await AuthUserModel.updateOne(
         { id: existingBuyerUser.id },
@@ -90,7 +90,6 @@ export const updateBuyerStatus = asyncHandler(async (req: Request, res: Response
             name: buyer.name || "Buyer",
             email: buyerEmail,
             phone: buyer.phone || "",
-            passwordHash: hashPassword(tempPassword),
             profileId: buyer.id,
             company: buyer.company || "",
             status: "active",
@@ -98,6 +97,7 @@ export const updateBuyerStatus = asyncHandler(async (req: Request, res: Response
         },
       );
     } else {
+      tempPassword = crypto.randomBytes(10).toString("base64url");
       await AuthUserModel.create({
         id: createReadableId("USR"),
         name: buyer.name || "Buyer",
@@ -121,7 +121,7 @@ export const updateBuyerStatus = asyncHandler(async (req: Request, res: Response
       "",
       `Login URL: ${appUrl}`,
       `Email: ${buyerEmail}`,
-      `Password: ${tempPassword}`,
+      tempPassword ? `Password: ${tempPassword}` : "Password: Use the password shown when you registered.",
       "",
       "For security, please change your password after logging in.",
     ].join("\n");
@@ -132,7 +132,7 @@ export const updateBuyerStatus = asyncHandler(async (req: Request, res: Response
         <p>Welcome to Calidus Dashboard. Your buyer account has been approved.</p>
         <p><strong>Login URL:</strong> <a href="${appUrl}">${appUrl}</a><br/>
         <strong>Email:</strong> ${buyerEmail}<br/>
-        <strong>Password:</strong> ${tempPassword}</p>
+        <strong>Password:</strong> ${tempPassword || "Use the password shown when you registered."}</p>
         <p>For security, please change your password after logging in.</p>
       </div>
     `;

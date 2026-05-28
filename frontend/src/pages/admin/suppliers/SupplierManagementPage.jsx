@@ -19,7 +19,7 @@ import { useAdminActions } from "../AdminContext";
 import { useRole } from "@/App";
 
 const getSupplierDate = (supplier = {}) =>
-  supplier.joinDate || supplier.createdAt || supplier.createdDate || supplier.date || "";
+  supplier.createdAt || supplier.createdDate || supplier.date || supplier.joinDate || "";
 
 const getSupplierDateTime = (supplier = {}) => {
   const value = getSupplierDate(supplier);
@@ -27,17 +27,29 @@ const getSupplierDateTime = (supplier = {}) => {
   return Number.isNaN(time) ? 0 : time;
 };
 
-const formatSupplierDate = (supplier = {}) => {
+const formatSupplierDateTime = (supplier = {}) => {
   const value = getSupplierDate(supplier);
   if (!value) return "N/A";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+    const [year, month, day] = String(value).split("-").map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString("en-GB", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+  }
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleString("en-GB", {
     year: "numeric",
     month: "short",
-    day: "numeric",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
 };
 
@@ -204,7 +216,7 @@ export const SupplierManagement = ({ onView, onConfirmAction } = {}) => {
       render: (_, row) => (
         <div className="flex items-center gap-2 text-sm">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          <span>{formatSupplierDate(row)}</span>
+          <span>{formatSupplierDateTime(row)}</span>
         </div>
       ),
     },
