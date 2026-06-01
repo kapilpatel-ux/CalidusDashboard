@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -471,7 +471,7 @@ export const SupplierRegistrationPage = () => {
     contactPerson: "",
     businessType: "",
     calidusCluster: "",
-    productAndServices: "",
+    productAndServices: [],
     businessDescription: "",
     email: "",
     phoneCountryCode: DEFAULT_PHONE_COUNTRY_CODE,
@@ -506,6 +506,42 @@ export const SupplierRegistrationPage = () => {
   const [errors, setErrors] = useState({});
   const [dragOverTarget, setDragOverTarget] = useState(null);
 
+  const [showCustomBusinessType, setShowCustomBusinessType] = useState(false);
+  const [customBusinessType, setCustomBusinessType] = useState("");
+
+  const [showCustomCalidusCluster, setShowCustomCalidusCluster] = useState(false);
+  const [customCalidusCluster, setCustomCalidusCluster] = useState("");
+
+  const [showCustomProductAndServices, setShowCustomProductAndServices] = useState(false);
+  const [customProductAndServices, setCustomProductAndServices] = useState("");
+
+  const [showProductServicesDropdown, setShowProductServicesDropdown] = useState(false);
+
+  const [customProductAndServicesOptions, setCustomProductAndServicesOptions] = useState([]);
+
+  const productServicesDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        productServicesDropdownRef.current &&
+        !productServicesDropdownRef.current.contains(event.target)
+      ) {
+        setShowProductServicesDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const allProductAndServicesOptions = useMemo(() => {
+    return [...customProductAndServicesOptions, ...productAndServicesOptions];
+  }, [customProductAndServicesOptions]);
+
   const stateOptions = useMemo(
     () => form.countryCode ? State.getStatesOfCountry(form.countryCode) : [],
     [form.countryCode]
@@ -525,6 +561,7 @@ export const SupplierRegistrationPage = () => {
   );
 
   const setField = (key, value) => {
+    console.log("FIELD UPDATE =>", key, value);
     setForm((prev) => {
       const next = { ...prev, [key]: value };
       if (key === "country") {
@@ -926,7 +963,9 @@ export const SupplierRegistrationPage = () => {
       requireField("contactPerson", "Contact person is required");
       requireField("businessType", "Business type is required");
       requireField("calidusCluster", "Calidus cluster is required");
-      requireField("productAndServices", "Product and Services is required");
+      if (!Array.isArray(form.productAndServices) || form.productAndServices.length === 0) {
+        nextErrors.productAndServices = "Product and Services is required";
+      }
       requireField("businessDescription", "Business description is required");
       if (!form.supplierImage) nextErrors.supplierImage = "Supplier image is required";
       if (String(form.businessDescription || "").trim().length > BUSINESS_DESCRIPTION_MAX_LEN) {
@@ -1348,69 +1387,278 @@ export const SupplierRegistrationPage = () => {
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                         Business Type *
                       </Label>
-                      <Select value={form.businessType} onValueChange={(v) => setField("businessType", v)}>
+
+                      <Select
+                        value={form.businessType}
+                        onValueChange={(v) => {
+                          if (v === "__add_custom__") {
+                            setShowCustomBusinessType(true);
+                            return;
+                          }
+
+                          setShowCustomBusinessType(false);
+                          setCustomBusinessType("");
+                          setField("businessType", v);
+                        }}
+                      >
                         <SelectTrigger
                           className={`bg-black/20 mt-1 ${errors.businessType ? "border-red-500/50" : ""}`}
                           data-testid="supplier-reg-business-type"
                         >
                           <SelectValue placeholder="Select business type" />
                         </SelectTrigger>
+
                         <SelectContent>
+                          {form.businessType &&
+                          !businessTypeOptions.includes(form.businessType) &&
+                          form.businessType !== "__add_custom__" && (
+                            <SelectItem value={form.businessType}>
+                              {form.businessType}
+                            </SelectItem>
+                          )}
                           {businessTypeOptions.map((option) => (
                             <SelectItem key={option} value={option}>
                               {option}
                             </SelectItem>
                           ))}
+
+                          <SelectItem value="__add_custom__">
+                            + Add your business type
+                          </SelectItem>
                         </SelectContent>
                       </Select>
-                      {errors.businessType && <p className="text-xs text-red-400 mt-1">{errors.businessType}</p>}
-                    </div>
 
+                      {showCustomBusinessType && (
+                        <div className="mt-2 flex gap-2">
+                          <Input
+                            value={customBusinessType}
+                            onChange={(e) => setCustomBusinessType(e.target.value)}
+                            className="bg-black/20"
+                            placeholder="Enter business type"
+                          />
+
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const value = customBusinessType.trim();
+
+                              if (!value) {
+                                setErrors((prev) => ({
+                                  ...prev,
+                                  businessType: "Business type is required",
+                                }));
+                                return;
+                              }
+
+                              setField("businessType", value);
+                              setShowCustomBusinessType(false);
+                            }}
+                          >
+                            Enter
+                          </Button>
+                        </div>
+                      )}
+
+                      {errors.businessType && (
+                        <p className="text-xs text-red-400 mt-1">{errors.businessType}</p>
+                      )}
+                    </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                         Calidus Cluster *
                       </Label>
-                      <Select value={form.calidusCluster} onValueChange={(v) => setField("calidusCluster", v)}>
+
+                      <Select
+                        value={form.calidusCluster}
+                        onValueChange={(v) => {
+                          if (v === "__add_custom_cluster__") {
+                            setShowCustomCalidusCluster(true);
+                            return;
+                          }
+
+                          setShowCustomCalidusCluster(false);
+                          setCustomCalidusCluster("");
+                          setField("calidusCluster", v);
+                        }}
+                      >
                         <SelectTrigger
                           className={`bg-black/20 mt-1 ${errors.calidusCluster ? "border-red-500/50" : ""}`}
                           data-testid="supplier-reg-calidus-cluster"
                         >
                           <SelectValue placeholder="Select calidus cluster" />
                         </SelectTrigger>
+
                         <SelectContent>
+                          {form.calidusCluster &&
+                            !calidusClusterOptions.includes(form.calidusCluster) &&
+                            form.calidusCluster !== "__add_custom_cluster__" && (
+                              <SelectItem value={form.calidusCluster}>
+                                {form.calidusCluster}
+                              </SelectItem>
+                            )}
+
                           {calidusClusterOptions.map((option) => (
                             <SelectItem key={option} value={option}>
                               {option}
                             </SelectItem>
                           ))}
+
+                          <SelectItem value="__add_custom_cluster__">
+                            + Add your cluster
+                          </SelectItem>
                         </SelectContent>
                       </Select>
-                      {errors.calidusCluster && <p className="text-xs text-red-400 mt-1">{errors.calidusCluster}</p>}
+
+                      {showCustomCalidusCluster && (
+                        <div className="mt-2 flex gap-2">
+                          <Input
+                            value={customCalidusCluster}
+                            onChange={(e) => setCustomCalidusCluster(e.target.value)}
+                            className="bg-black/20"
+                            placeholder="Enter cluster name"
+                          />
+
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const value = customCalidusCluster.trim();
+
+                              if (!value) {
+                                setErrors((prev) => ({
+                                  ...prev,
+                                  calidusCluster: "Calidus cluster is required",
+                                }));
+                                return;
+                              }
+
+                              setField("calidusCluster", value);
+                              setShowCustomCalidusCluster(false);
+                            }}
+                          >
+                            Enter
+                          </Button>
+                        </div>
+                      )}
+
+                      {errors.calidusCluster && (
+                        <p className="text-xs text-red-400 mt-1">
+                          {errors.calidusCluster}
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  <div>
+                  <div className="relative" ref={productServicesDropdownRef}>
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                       Product and Services *
                     </Label>
-                    <Select value={form.productAndServices} onValueChange={(v) => setField("productAndServices", v)}>
-                      <SelectTrigger
-                        className={`bg-black/20 mt-1 ${errors.productAndServices ? "border-red-500/50" : ""}`}
-                        data-testid="supplier-reg-product-services"
-                      >
-                        <SelectValue placeholder="Select Product and Services" />
-                      </SelectTrigger>
-                      <SelectContent>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowProductServicesDropdown((prev) => !prev)}
+                      className={`mt-1 flex min-h-10 w-full items-center justify-between rounded-md border bg-black/20 px-3 py-2 text-left text-sm ${
+                        errors.productAndServices ? "border-red-500/50" : "border-input"
+                      }`}
+                      data-testid="supplier-reg-product-services"
+                    >
+                      <span className="line-clamp-1">
+                        {Array.isArray(form.productAndServices) && form.productAndServices.length > 0
+                          ? form.productAndServices.join(", ")
+                          : "Select Product and Services"}
+                      </span>
+                    </button>
+
+                    {showProductServicesDropdown && (
+                      <div className="absolute z-50 mt-2 w-full rounded-md border border-border bg-card p-2 shadow-lg">
                         <ScrollArea className="h-72">
-                          {productAndServicesOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {setShowCustomProductAndServices(true);
+                                            setShowProductServicesDropdown(false);
+                            }}
+                            className="flex w-full items-center rounded-sm px-2 py-2 text-left text-sm hover:bg-muted/30"
+                          >
+                            + Add your product/service
+                          </button>
+
+                          {allProductAndServicesOptions.map((option) => {
+                            const selected =
+                              Array.isArray(form.productAndServices) &&
+                              form.productAndServices.includes(option);
+
+                            return (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => {
+                                  const prev = Array.isArray(form.productAndServices)
+                                    ? form.productAndServices
+                                    : [];
+
+                                  const next = selected
+                                    ? prev.filter((item) => item !== option)
+                                    : [...prev, option];
+
+                                  setField("productAndServices", next);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-muted/30"
+                              >
+                                <input type="checkbox" checked={selected} readOnly className="h-4 w-4" />
+                                <span>{option}</span>
+                              </button>
+                            );
+                          })}
                         </ScrollArea>
-                      </SelectContent>
-                    </Select>
-                    {errors.productAndServices && <p className="text-xs text-red-400 mt-1">{errors.productAndServices}</p>}
+                      </div>
+                    )}
+
+                    {showCustomProductAndServices && (
+                      <div className="mt-2 flex gap-2">
+                        <Input
+                          value={customProductAndServices}
+                          onChange={(e) => setCustomProductAndServices(e.target.value)}
+                          className="bg-black/20"
+                          placeholder="Enter product/service"
+                        />
+
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const value = customProductAndServices.trim();
+
+                            if (!value) {
+                              setErrors((prev) => ({
+                                ...prev,
+                                productAndServices: "Product and Services is required",
+                              }));
+                              return;
+                            }
+
+                            const prev = Array.isArray(form.productAndServices)
+                              ? form.productAndServices
+                              : [];
+
+                            setCustomProductAndServicesOptions((prevOptions) =>
+                              prevOptions.includes(value) || productAndServicesOptions.includes(value)
+                                ? prevOptions
+                                : [...prevOptions, value]
+                            );
+
+                            setField("productAndServices", prev.includes(value) ? prev : [...prev, value]);
+                            setCustomProductAndServices("");
+                            setShowCustomProductAndServices(false);
+                          }}
+                        >
+                          Enter
+                        </Button>
+                      </div>
+                    )}
+
+                    {errors.productAndServices && (
+                      <p className="text-xs text-red-400 mt-1">
+                        {errors.productAndServices}
+                      </p>
+                    )}
                   </div>
 
                   <div>

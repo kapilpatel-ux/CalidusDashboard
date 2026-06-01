@@ -66,7 +66,7 @@ const supplierBaseSchema = z.object({
   contactPerson: z.string().optional(),
   businessType: z.string().optional(),
   calidusCluster: z.string().optional(),
-  productAndServices: z.string().optional(),
+  productAndServices: z.array(z.string()).default([]),
   businessDescription: z.string().max(700).optional(),
   capabilities: z.array(z.string()).default([]),
   manufacturingCapabilities: z.array(z.string()).default([]),

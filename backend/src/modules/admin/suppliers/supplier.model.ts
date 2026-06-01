@@ -11,7 +11,7 @@ const supplierSchema = new Schema(
     contactPerson: { type: String, default: "" },
     businessType: { type: String, default: "" },
     calidusCluster: { type: String, default: "" },
-    productAndServices: { type: String, default: "" },
+    productAndServices: { type: [String], default: [] },
     businessDescription: { type: String, default: "" },
     capabilities: { type: [String], default: [] },
     manufacturingCapabilities: { type: [String], default: [] },
